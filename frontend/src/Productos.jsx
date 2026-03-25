@@ -100,6 +100,17 @@ export default function Productos() {
       .includes(texto);
   });
 
+  const calcularGanancia = (costo, venta) => {
+    const costoNum = Number(costo);
+    const ventaNum = Number(venta);
+
+    if (!Number.isFinite(costoNum) || !Number.isFinite(ventaNum) || costoNum <= 0) {
+      return null;
+    }
+
+    return ((ventaNum - costoNum) / costoNum) * 100;
+  };
+
   return (
     <div className="productos-main">
       <div className="productos-left">
@@ -150,6 +161,7 @@ export default function Productos() {
             <span>Costo</span>
             <span>Venta</span>
             <span>Empaque</span>
+            <span>Ganancia %</span>
             <span>Acciones</span> 
           </li>
           {productosFiltrados.length === 0 && <li className="vacio">No hay productos</li>}
@@ -167,6 +179,13 @@ export default function Productos() {
               <span className="campo" data-label="Costo">${p.costo}</span>
               <span className="campo" data-label="Venta">${p.venta}</span>
               <span className="campo" data-label="Empaque">{p.tipoEmpaque} x {p.cantidadEmpaque}</span>
+              <span className="campo" data-label="Ganancia">
+                {(() => {
+                  const ganancia = calcularGanancia(p.costo, p.venta);
+                  if (ganancia === null) return '-';
+                  return `${ganancia.toFixed(0)}%`;
+                })()}
+              </span>
               <span>
                 <button className="edit-btn" onClick={() => handleEditar(p)} title="Editar">✏️</button>
                 <button className="delete-btn" onClick={() => handleEliminar(p.id)} title="Eliminar">🗑️</button>

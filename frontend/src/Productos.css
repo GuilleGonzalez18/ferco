@@ -280,7 +280,7 @@
   }
 
   .lista-productos li:not(.vacio) > span:first-child {
-    grid-row: 1 / span 6;
+    grid-row: 1 / span 7;
   }
 
   .lista-productos li:not(.vacio) > span.campo {
