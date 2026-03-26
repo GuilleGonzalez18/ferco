@@ -25,10 +25,10 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  login: (username, password) =>
+  login: (correo, password) =>
     request('/usuarios/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ correo, password }),
     }),
 
   getProductos: () => request('/productos'),
@@ -40,7 +40,14 @@ export const api = {
     request(`/productos/${id}`, { method: 'DELETE' }),
 
   getClientes: () => request('/clientes'),
-  getVentas: () => request('/ventas'),
+  createCliente: (payload) =>
+    request('/clientes', { method: 'POST', body: JSON.stringify(payload) }),
+  updateCliente: (id, payload) =>
+    request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteCliente: (id) =>
+    request(`/clientes/${id}`, { method: 'DELETE' }),
+  getVentas: (fecha) =>
+    request(fecha ? `/ventas?fecha=${encodeURIComponent(fecha)}` : '/ventas'),
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
 };

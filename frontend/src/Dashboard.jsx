@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import Productos from './Productos';
 import Ventas from './Ventas';
+import VentasHistorial from './VentasHistorial';
+import Clientes from './Clientes';
 import './Dashboard.css';
 
 const OPCIONES = [
+  { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
   { key: 'ventas', label: 'Ventas', icon: '/cart.svg' },
   { key: 'productos', label: 'Productos', icon: '/product.svg' },
   { key: 'clientes', label: 'Clientes', icon: '/client.svg' },
   { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
-  { key: 'compras', label: 'Compras', icon: '/cart.svg' },
+  { key: 'compras', label: 'Compras', icon: '/buy.svg' },
   { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
 ];
 
@@ -22,8 +25,38 @@ function Placeholder({ titulo, icon }) {
   );
 }
 
+function DashboardLanding({ nombreUsuario }) {
+  return (
+    <div className="dashboard-landing">
+      <div className="landing-card">
+        <h2>Bienvenido, {nombreUsuario}</h2>
+        <p>Selecciona una opción del menú izquierdo para comenzar.</p>
+        <div className="landing-hint-grid">
+          <div className="landing-hint-item">
+            <img src="/newsale.svg" alt="" aria-hidden="true" />
+            <span>Nueva venta</span>
+          </div>
+          <div className="landing-hint-item">
+            <img src="/cart.svg" alt="" aria-hidden="true" />
+            <span>Ventas</span>
+          </div>
+          <div className="landing-hint-item">
+            <img src="/product.svg" alt="" aria-hidden="true" />
+            <span>Productos</span>
+          </div>
+          <div className="landing-hint-item">
+            <img src="/client.svg" alt="" aria-hidden="true" />
+            <span>Clientes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const nombreUsuario = user?.nombre || user?.username || user?.email || 'Usuario';
 
   const handleNavigate = (seccion) => {
     onNavigate(seccion);
@@ -37,13 +70,14 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
   const renderContent = () => {
     switch (pantalla) {
+      case 'nueva-venta':  return <Ventas user={user} productos={productos} setProductos={setProductos} />;
+      case 'ventas':       return <VentasHistorial />;
       case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
-      case 'ventas':       return <Ventas user={user} productos={productos} setProductos={setProductos} />;
-      case 'clientes':     return <Placeholder titulo="Clientes" icon="◎" />;
+      case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Placeholder titulo="Usuarios" icon="◉" />;
       case 'compras':      return <Placeholder titulo="Compras" icon="◌" />;
       case 'estadisticas': return <Placeholder titulo="Estadísticas" icon="▦" />;
-      default:             return <Placeholder titulo="Bienvenido" icon="◈" />;
+      default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;
     }
   };
 
@@ -63,8 +97,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           <img src="/images/logo2.png" alt="Logo" className="dashboard-logo" />
         </div>
         <div className="dashboard-welcome">
-          <span className="welcome-label">Bienvenido</span>
-          <span className="welcome-email">{user?.email || 'Usuario'}</span>
+          <span className="welcome-label">Bienvenido, {nombreUsuario}!</span>
         </div>
         <nav className="dashboard-nav">
           {OPCIONES.map(({ key, label, icon }) => (

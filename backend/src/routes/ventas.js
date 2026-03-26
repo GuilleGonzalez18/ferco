@@ -8,14 +8,26 @@ function toNumber(value) {
 
 export const ventasRouter = Router();
 
-ventasRouter.get('/', async (_req, res) => {
+ventasRouter.get('/', async (req, res) => {
+  const { fecha } = req.query;
+
+  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha))) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD' });
+  }
+
   const result = await pool.query(
     `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
-            v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total
+            v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total,
+            c.nombre AS cliente_nombre,
+            u.nombre AS usuario_nombre
      FROM public.ventas v
-     ORDER BY v.id DESC`
+     LEFT JOIN public.clientes c ON c.id = v.cliente_id
+     LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+     WHERE DATE(v.fecha) = COALESCE($1::date, CURRENT_DATE)
+     ORDER BY v.fecha DESC, v.id DESC`,
+    [fecha || null]
   );
-  res.json(result.rows);
+  return res.json(result.rows);
 });
 
 ventasRouter.post('/', async (req, res) => {

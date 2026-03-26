@@ -212,6 +212,76 @@
   font-size: 0.9rem;
 }
 
+.dashboard-landing {
+  min-height: calc(100vh - 66px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem;
+}
+
+.landing-card {
+  width: min(760px, 100%);
+  background: #fff;
+  border: 1px solid #e3e8f0;
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(55, 95, 140, 0.12);
+  padding: 1.5rem 1.4rem;
+  text-align: center;
+  animation: landingFadeIn 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-card h2 {
+  margin: 0 0 0.45rem;
+  color: #375f8c;
+  font-size: 1.35rem;
+}
+
+.landing-card p {
+  margin: 0;
+  color: #6b7787;
+  font-size: 0.94rem;
+}
+
+.landing-hint-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.landing-hint-item {
+  border: 1px solid #e2e8f3;
+  border-radius: 10px;
+  background: #f7f9fd;
+  padding: 0.75rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  color: #375f8c;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.landing-hint-item img {
+  width: 24px;
+  height: 24px;
+  filter: invert(32%) sepia(18%) saturate(1260%) hue-rotate(172deg) brightness(91%) contrast(90%);
+}
+
+@keyframes landingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 850px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
@@ -278,5 +348,9 @@
 
   .dashboard-topbar {
     top: 58px;
+  }
+
+  .landing-hint-grid {
+    grid-template-columns: 1fr;
   }
 }

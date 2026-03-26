@@ -9,7 +9,7 @@ export function fromApiProducto(row) {
     ean: row.ean || '',
     tipoEmpaque: row.empaque || '',
     cantidadEmpaque: String(row.cantidad_empaque ?? ''),
-    costo: '',
+    costo: String(row.costo ?? ''),
     venta: String(row.precio ?? ''),
     precioEmpaque: String(row.precio_empaque ?? ''),
   };
@@ -18,6 +18,7 @@ export function fromApiProducto(row) {
 export function toApiProducto(producto) {
   return {
     nombre: producto.nombre,
+    costo: Number(producto.costo || 0),
     precio: Number(producto.venta || 0),
     stock: Number(producto.stock || 0),
     unidad: producto.categoria || null,

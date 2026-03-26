@@ -5,7 +5,7 @@ export const productosRouter = Router();
 
 productosRouter.get('/', async (_req, res) => {
   const result = await query(
-    `SELECT id, nombre, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque
+    `SELECT id, nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque
      FROM public.productos
      ORDER BY id DESC`
   );
@@ -15,6 +15,7 @@ productosRouter.get('/', async (_req, res) => {
 productosRouter.post('/', async (req, res) => {
   const {
     nombre,
+    costo = 0,
     precio,
     stock,
     unidad = null,
@@ -27,10 +28,10 @@ productosRouter.post('/', async (req, res) => {
 
   const result = await query(
     `INSERT INTO public.productos
-      (nombre, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      RETURNING *`,
-    [nombre, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque]
+    [nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque]
   );
   res.status(201).json(result.rows[0]);
 });
@@ -39,6 +40,7 @@ productosRouter.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const {
     nombre,
+    costo = 0,
     precio,
     stock,
     unidad = null,
@@ -52,17 +54,18 @@ productosRouter.put('/:id', async (req, res) => {
   const result = await query(
     `UPDATE public.productos
      SET nombre = $1,
-         precio = $2,
-         stock = $3,
-         unidad = $4,
-         imagen = $5,
-         ean = $6,
-         cantidad_empaque = $7,
-         empaque = $8,
-         precio_empaque = $9
-     WHERE id = $10
+         costo = $2,
+         precio = $3,
+         stock = $4,
+         unidad = $5,
+         imagen = $6,
+         ean = $7,
+         cantidad_empaque = $8,
+         empaque = $9,
+         precio_empaque = $10
+     WHERE id = $11
      RETURNING *`,
-    [nombre, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque, id]
+    [nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque, id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   return res.json(result.rows[0]);

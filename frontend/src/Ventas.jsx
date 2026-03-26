@@ -26,8 +26,19 @@ export default function Ventas({ user, productos = [], setProductos }) {
   const [busquedaCliente, setBusquedaCliente] = useState('');
 
   const [carrito, setCarrito] = useState([]);
+  const [descuentoItemModal, setDescuentoItemModal] = useState({
+    open: false,
+    itemId: null,
+    tipo: 'porcentaje',
+    valor: '',
+  });
   const [descuentoTotalTipo, setDescuentoTotalTipo] = useState('ninguno');
   const [descuentoTotalValor, setDescuentoTotalValor] = useState('');
+  const [descuentoGlobalModal, setDescuentoGlobalModal] = useState({
+    open: false,
+    tipo: 'porcentaje',
+    valor: '',
+  });
 
   const [clienteId, setClienteId] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
@@ -79,15 +90,29 @@ export default function Ventas({ user, productos = [], setProductos }) {
     return clientes.filter((c) => c.nombre.toLowerCase().includes(q));
   }, [busquedaCliente, clientes]);
 
+  const stockReservadoPorProducto = useMemo(() => {
+    return carrito.reduce((acc, item) => {
+      acc[item.productoId] = (acc[item.productoId] || 0) + toNumber(item.unidadesSolicitadas);
+      return acc;
+    }, {});
+  }, [carrito]);
+
+  const getStockDisponible = (productoId) => {
+    const producto = productos.find((p) => p.id === productoId);
+    const stockBase = Math.floor(toNumber(producto?.stock || 0));
+    const reservado = Math.floor(toNumber(stockReservadoPorProducto[productoId] || 0));
+    return Math.max(0, stockBase - reservado);
+  };
+
   const addToCart = (producto, modo = 'unidad') => {
     const unidadesPorEmpaque = getEmpaqueUnits(producto);
     const unidadesAgregar = modo === 'empaque' ? unidadesPorEmpaque : 1;
 
-    const stockDisponible = Math.floor(toNumber(producto.stock));
+    const stockDisponible = getStockDisponible(producto.id);
     const itemExistente = carrito.find((i) => i.productoId === producto.id);
     const unidadesYaEnCarrito = toNumber(itemExistente?.unidadesSolicitadas || 0);
 
-    if (unidadesYaEnCarrito + unidadesAgregar > stockDisponible) {
+    if (unidadesYaEnCarrito + unidadesAgregar > stockDisponible + unidadesYaEnCarrito) {
       window.alert(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible} unidad(es).`);
       return;
     }
@@ -120,6 +145,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const removeItem = (itemId) => {
     setCarrito((prev) => prev.filter((i) => i.id !== itemId));
+    setDescuentoItemModal((prev) =>
+      prev.itemId === itemId ? { open: false, itemId: null, tipo: 'porcentaje', valor: '' } : prev
+    );
   };
 
   const updateItem = (itemId, patch) => {
@@ -131,12 +159,64 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const item = carrito.find((i) => i.id === itemId);
     if (!item) return;
     const producto = productos.find((p) => p.id === item.productoId);
-    const stock = Math.floor(toNumber(producto?.stock || 0));
+    const stockBase = Math.floor(toNumber(producto?.stock || 0));
+    const reservadoOtros = Math.floor(toNumber(stockReservadoPorProducto[item.productoId] || 0)) - toNumber(item.unidadesSolicitadas);
+    const stock = Math.max(0, stockBase - Math.max(0, reservadoOtros));
     if (unidades > stock) {
       window.alert(`Stock insuficiente para ${item.nombre}. Disponible: ${stock} unidad(es).`);
       return;
     }
     updateItem(itemId, { unidadesSolicitadas: unidades });
+  };
+
+  const openDiscountModal = (item) => {
+    setDescuentoItemModal({
+      open: true,
+      itemId: item.id,
+      tipo: item.descuentoTipo === 'fijo' ? 'fijo' : 'porcentaje',
+      valor: item.descuentoValor || '',
+    });
+  };
+
+  const closeDiscountModal = () => {
+    setDescuentoItemModal({ open: false, itemId: null, tipo: 'porcentaje', valor: '' });
+  };
+
+  const applyItemDiscount = () => {
+    if (!descuentoItemModal.itemId) return;
+    updateItem(descuentoItemModal.itemId, {
+      descuentoTipo: descuentoItemModal.tipo,
+      descuentoValor: descuentoItemModal.valor,
+    });
+    closeDiscountModal();
+  };
+
+  const removeItemDiscount = (itemId) => {
+    updateItem(itemId, { descuentoTipo: 'ninguno', descuentoValor: '' });
+  };
+
+  const openGlobalDiscountModal = () => {
+    setDescuentoGlobalModal({
+      open: true,
+      tipo: descuentoTotalTipo === 'fijo' ? 'fijo' : 'porcentaje',
+      valor: descuentoTotalValor || '',
+    });
+  };
+
+  const closeGlobalDiscountModal = () => {
+    setDescuentoGlobalModal({ open: false, tipo: 'porcentaje', valor: '' });
+  };
+
+  const applyGlobalDiscount = () => {
+    setDescuentoTotalTipo(descuentoGlobalModal.tipo);
+    setDescuentoTotalValor(descuentoGlobalModal.valor);
+    closeGlobalDiscountModal();
+  };
+
+  const removeGlobalDiscount = () => {
+    setDescuentoTotalTipo('ninguno');
+    setDescuentoTotalValor('');
+    closeGlobalDiscountModal();
   };
 
   const carritoCalculado = useMemo(() => {
@@ -178,6 +258,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
   }, [descuentoTotalTipo, descuentoTotalValor, subtotal]);
 
   const total = Math.max(0, subtotal - descuentoGlobal);
+  const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
 
   const goNext = () => {
     if (carrito.length === 0) {
@@ -254,21 +335,24 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   return (
     <div className="ventas-main">
-      <div className="ventas-steps">
-        {PASOS.map((titulo, i) => {
-          const n = i + 1;
-          const state = n < paso ? 'done' : n === paso ? 'active' : 'pending';
-          return (
-            <div className={`ventas-step ${state}`} key={titulo}>
-              <span className="step-index">{n}</span>
-              <span className="step-title">{titulo}</span>
-            </div>
-          );
-        })}
-      </div>
-
       <div className="ventas-layout">
         <section className="ventas-contenido">
+          <div className="ventas-steps">
+            {PASOS.map((titulo, i) => {
+              const n = i + 1;
+              const state = n < paso ? 'done' : n === paso ? 'active' : 'pending';
+              return (
+                <div className="ventas-step-wrap" key={titulo}>
+                  <div className={`ventas-step ${state}`}>
+                  <span className="step-index">{state === 'done' ? '✓' : `${n}.`}</span>
+                  <span className="step-title">{titulo}</span>
+                </div>
+                  {i < PASOS.length - 1 && <span className="step-arrow">→</span>}
+                </div>
+              );
+            })}
+          </div>
+
           {paso === 1 && (
             <div className="ventas-panel">
               <div className="catalogo-top">
@@ -308,11 +392,21 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       </div>
                     </div>
                     <div className="card-footer">
-                      <small>Stock: {p.stock}</small>
+                      <small>Stock disponible: {getStockDisponible(p.id)}</small>
                       <div className="card-actions">
-                        <button type="button" onClick={() => addToCart(p, 'unidad')}>+ Unidad</button>
-                        <button type="button" onClick={() => addToCart(p, 'empaque')}>
-                          + {p.tipoEmpaque || 'Empaque'}
+                        <button
+                          type="button"
+                          onClick={() => addToCart(p, 'unidad')}
+                          disabled={getStockDisponible(p.id) < 1}
+                        >
+                          + Unidad
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(p, 'empaque')}
+                          disabled={getStockDisponible(p.id) < getEmpaqueUnits(p)}
+                        >
+                          + {p.tipoEmpaque || 'Empaque'} ({getEmpaqueUnits(p)} u.)
                         </button>
                       </div>
                     </div>
@@ -355,19 +449,32 @@ export default function Ventas({ user, productos = [], setProductos }) {
                   />
                 </label>
               </div>
+
+              <div className="ticket-resumen">
+                <h4>Resumen de la venta</h4>
+                <div className="ticket-grid">
+                  <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
+                  <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
+                  <p><span>Ítems:</span> {carritoCalculado.length}</p>
+                  <p><span>Unidades:</span> {carritoCalculado.reduce((acc, i) => acc + toNumber(i.unidadesSolicitadas), 0)}</p>
+                </div>
+                <ul className="ticket-items">
+                  {carritoCalculado.map((item) => (
+                    <li key={item.id}>
+                      <span>{item.nombre} x {item.unidadesSolicitadas}</span>
+                      <strong>{money(item.subtotalFinal)}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <div className="ticket-totales">
+                  <p>Subtotal <strong>{money(subtotal)}</strong></p>
+                  <p>Descuento total <strong>-{money(descuentoGlobal)}</strong></p>
+                  <p className="ticket-total-final">Total <strong>{money(total)}</strong></p>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="ventas-footer">
-            {paso === 1 ? (
-              <button type="button" onClick={goNext}>Siguiente</button>
-            ) : (
-              <>
-                <button type="button" className="secundario" onClick={goBack}>Atrás</button>
-                <button type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</button>
-              </>
-            )}
-          </div>
         </section>
 
         <aside className="ventas-carrito">
@@ -405,26 +512,33 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       onChange={(e) => updateUnits(item.id, e.target.value)}
                     />
                   </div>
-                  <div className="descuentos-item">
-                    <select
-                      value={item.descuentoTipo}
-                      onChange={(e) => updateItem(item.id, { descuentoTipo: e.target.value, descuentoValor: '' })}
-                    >
-                      <option value="ninguno">Sin desc.</option>
-                      <option value="porcentaje">% item</option>
-                      <option value="fijo">$ item</option>
-                    </select>
-                    {item.descuentoTipo !== 'ninguno' && (
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.descuentoValor}
-                        onChange={(e) => updateItem(item.id, { descuentoValor: e.target.value })}
-                        placeholder={item.descuentoTipo === 'porcentaje' ? '%' : '$'}
-                      />
-                    )}
-                  </div>
+                   <div className="descuentos-item">
+                     {item.descuentoTipo === 'ninguno' ? (
+                       <button
+                         type="button"
+                         className="descuento-action-link"
+                         onClick={() => openDiscountModal(item)}
+                       >
+                         Dar descuento
+                       </button>
+                     ) : (
+                       <>
+                         <span className="descuento-aplicado">
+                           Descuento:{' '}
+                           {item.descuentoTipo === 'porcentaje'
+                             ? `${toNumber(item.descuentoValor)}%`
+                             : money(item.descuentoValor)}
+                         </span>
+                         <button
+                           type="button"
+                           className="descuento-action-link"
+                           onClick={() => removeItemDiscount(item.id)}
+                         >
+                           Eliminar descuento
+                         </button>
+                       </>
+                     )}
+                   </div>
                 </div>
                 <div className="carrito-right">
                   <span>{money(item.subtotalFinal)}</span>
@@ -434,34 +548,50 @@ export default function Ventas({ user, productos = [], setProductos }) {
             ))}
           </div>
 
-          <div className="carrito-totales">
-            <h4>Subtotal</h4>
-            <p>{money(subtotal)}</p>
-            <div className="descuento-global">
-              <select
-                value={descuentoTotalTipo}
-                onChange={(e) => {
-                  setDescuentoTotalTipo(e.target.value);
-                  setDescuentoTotalValor('');
-                }}
-              >
-                <option value="ninguno">Sin desc. global</option>
-                <option value="porcentaje">% global</option>
-                <option value="fijo">$ global</option>
-              </select>
-              {descuentoTotalTipo !== 'ninguno' && (
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={descuentoTotalValor}
-                  onChange={(e) => setDescuentoTotalValor(e.target.value)}
-                  placeholder={descuentoTotalTipo === 'porcentaje' ? '%' : '$'}
-                />
-              )}
-            </div>
-            <p className="total-final">Total: <strong>{money(total)}</strong></p>
-          </div>
+           <div className="carrito-footer">
+             <div className="carrito-totales">
+               <h4>Subtotal</h4>
+               <p>{money(subtotal)}</p>
+               <div className="descuento-global">
+                 {descuentoTotalTipo === 'ninguno' ? (
+                   <button
+                     type="button"
+                     className="descuento-action-link"
+                     onClick={openGlobalDiscountModal}
+                   >
+                     Dar descuento total
+                   </button>
+                 ) : (
+                   <>
+                     <span className="descuento-aplicado">
+                       Descuento total:{' '}
+                       {descuentoTotalTipo === 'porcentaje'
+                         ? `${toNumber(descuentoTotalValor)}%`
+                         : money(descuentoTotalValor)}
+                     </span>
+                     <button
+                       type="button"
+                       className="descuento-action-link"
+                       onClick={removeGlobalDiscount}
+                     >
+                       Eliminar descuento
+                     </button>
+                   </>
+                 )}
+               </div>
+               <p className="total-final">Total: <strong>{money(total)}</strong></p>
+             </div>
+             <div className="ventas-footer">
+               {paso === 1 ? (
+                 <button type="button" onClick={goNext}>Siguiente</button>
+               ) : (
+                 <>
+                   <button type="button" className="secundario" onClick={goBack}>Atrás</button>
+                   <button type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</button>
+                 </>
+               )}
+             </div>
+           </div>
         </aside>
       </div>
 
@@ -507,6 +637,92 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 {c.nombre}
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`descuento-modal-overlay ${descuentoItemModal.open ? 'open' : ''}`}
+        aria-hidden={!descuentoItemModal.open}
+      >
+        <div className="descuento-modal-backdrop" onClick={closeDiscountModal} />
+        <div className="descuento-modal" role="dialog" aria-modal="true" aria-label="Aplicar descuento">
+          <h4>Aplicar descuento</h4>
+          <p>Selecciona el tipo de descuento para este producto.</p>
+          <div className="descuento-modal-tipos">
+            <button
+              type="button"
+              className={descuentoItemModal.tipo === 'porcentaje' ? 'active' : ''}
+              onClick={() => setDescuentoItemModal((prev) => ({ ...prev, tipo: 'porcentaje' }))}
+            >
+              Porcentual (%)
+            </button>
+            <button
+              type="button"
+              className={descuentoItemModal.tipo === 'fijo' ? 'active' : ''}
+              onClick={() => setDescuentoItemModal((prev) => ({ ...prev, tipo: 'fijo' }))}
+            >
+              Fijo ($)
+            </button>
+          </div>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={descuentoItemModal.valor}
+            onChange={(e) => setDescuentoItemModal((prev) => ({ ...prev, valor: e.target.value }))}
+            placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
+          />
+          <div className="descuento-modal-actions">
+            <button type="button" className="secundario" onClick={closeDiscountModal}>
+              Cancelar
+            </button>
+            <button type="button" onClick={applyItemDiscount}>
+              Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`descuento-modal-overlay ${descuentoGlobalModal.open ? 'open' : ''}`}
+        aria-hidden={!descuentoGlobalModal.open}
+      >
+        <div className="descuento-modal-backdrop" onClick={closeGlobalDiscountModal} />
+        <div className="descuento-modal" role="dialog" aria-modal="true" aria-label="Aplicar descuento total">
+          <h4>Aplicar descuento total</h4>
+          <p>Selecciona el tipo de descuento para toda la venta.</p>
+          <div className="descuento-modal-tipos">
+            <button
+              type="button"
+              className={descuentoGlobalModal.tipo === 'porcentaje' ? 'active' : ''}
+              onClick={() => setDescuentoGlobalModal((prev) => ({ ...prev, tipo: 'porcentaje' }))}
+            >
+              Porcentual (%)
+            </button>
+            <button
+              type="button"
+              className={descuentoGlobalModal.tipo === 'fijo' ? 'active' : ''}
+              onClick={() => setDescuentoGlobalModal((prev) => ({ ...prev, tipo: 'fijo' }))}
+            >
+              Fijo ($)
+            </button>
+          </div>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={descuentoGlobalModal.valor}
+            onChange={(e) => setDescuentoGlobalModal((prev) => ({ ...prev, valor: e.target.value }))}
+            placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
+          />
+          <div className="descuento-modal-actions">
+            <button type="button" className="secundario" onClick={closeGlobalDiscountModal}>
+              Cancelar
+            </button>
+            <button type="button" onClick={applyGlobalDiscount}>
+              Aplicar
+            </button>
           </div>
         </div>
       </div>

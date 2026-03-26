@@ -8,7 +8,7 @@ import { fromApiProducto } from './productMapper';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [pantalla, setPantalla] = useState('ventas');
+  const [pantalla, setPantalla] = useState('');
   const [productos, setProductos] = useState([]);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ function App() {
       onNavigate={setPantalla}
       onLogout={() => {
         setUser(null);
-        setPantalla('ventas');
+        setPantalla('');
       }}
     />
   );
