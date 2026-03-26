@@ -51,6 +51,13 @@ export const api = {
       body: JSON.stringify({ correo, password }),
     }),
   me: () => request('/usuarios/me'),
+  getUsuarios: () => request('/usuarios'),
+  createUsuario: (payload) =>
+    request('/usuarios', { method: 'POST', body: JSON.stringify(payload) }),
+  updateUsuario: (id, payload) =>
+    request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteUsuario: (id) =>
+    request(`/usuarios/${id}`, { method: 'DELETE' }),
 
   getProductos: () => request('/productos'),
   createProducto: (payload) =>
