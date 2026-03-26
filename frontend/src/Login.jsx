@@ -1,19 +1,29 @@
 import { useState } from 'react';
 import './Login.css';
+import { api } from './api';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError('Completa todos los campos');
       return;
     }
-    setError('');
-    onLogin?.({ email });
+    try {
+      setError('');
+      const user = await api.login(email, password);
+      onLogin?.({
+        ...user,
+        email: user.correo || user.username || email,
+        tipo: 'vendedor',
+      });
+    } catch {
+      setError('Credenciales inválidas');
+    }
   };
 
   return (

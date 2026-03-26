@@ -2,13 +2,14 @@ import { useState } from 'react';
 import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { api } from './api';
+import { fromApiProducto, toApiProducto } from './productMapper';
 
 const categorias = ['Bebidas', 'Alimentos', 'Limpieza', 'Higiene', 'Otros'];
 const tiposEmpaque = ['Caja', 'Bolsa', 'Botella', 'Lata', 'Pack', 'Otro'];
 
-export default function Productos() {
+export default function Productos({ productos = [], setProductos }) {
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [productos, setProductos] = useState([]);
   const [editando, setEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [nuevo, setNuevo] = useState({
@@ -28,16 +29,24 @@ export default function Productos() {
     setNuevo(n => ({ ...n, [name]: value }));
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (editando !== null) {
-      setProductos(productos.map(p => p.id === editando ? { ...nuevo, id: editando } : p));
-      setEditando(null);
-    } else {
-      setProductos([...productos, { ...nuevo, id: Date.now() }]);
+    if (!setProductos) return;
+
+    try {
+      if (editando !== null) {
+        const updated = await api.updateProducto(editando, toApiProducto(nuevo));
+        setProductos(productos.map(p => p.id === editando ? fromApiProducto(updated) : p));
+        setEditando(null);
+      } else {
+        const created = await api.createProducto(toApiProducto(nuevo));
+        setProductos([fromApiProducto(created), ...productos]);
+      }
+      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+      setMostrarForm(false);
+    } catch (error) {
+      window.alert(`Error guardando producto: ${error.message}`);
     }
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
-    setMostrarForm(false);
   };
 
   const handleEditar = prod => {
@@ -46,9 +55,14 @@ export default function Productos() {
     setMostrarForm(true);
   };
 
-  const handleEliminar = id => {
+  const handleEliminar = async id => {
     if (window.confirm('¿Seguro que deseas eliminar este producto?')) {
-      setProductos(productos.filter(p => p.id !== id));
+      try {
+        await api.deleteProducto(id);
+        setProductos(productos.filter(p => p.id !== id));
+      } catch (error) {
+        window.alert(`No se pudo eliminar: ${error.message}`);
+      }
     }
   };
 

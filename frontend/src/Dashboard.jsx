@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import Productos from './Productos';
+import Ventas from './Ventas';
 import './Dashboard.css';
 
 const OPCIONES = [
-  { key: 'ventas',       label: 'Ventas',        icon: '🛒' },
-  { key: 'productos',    label: 'Productos',     icon: '📦' },
-  { key: 'clientes',     label: 'Clientes',      icon: '👥' },
-  { key: 'compras',      label: 'Compras',       icon: '🏪' },
-  { key: 'estadisticas', label: 'Estadísticas',  icon: '📊' },
+  { key: 'ventas', label: 'Ventas', icon: '/cart.svg' },
+  { key: 'productos', label: 'Productos', icon: '/product.svg' },
+  { key: 'clientes', label: 'Clientes', icon: '/client.svg' },
+  { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
+  { key: 'compras', label: 'Compras', icon: '/cart.svg' },
+  { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
 ];
 
 function Placeholder({ titulo, icon }) {
@@ -20,7 +22,7 @@ function Placeholder({ titulo, icon }) {
   );
 }
 
-export default function Dashboard({ user, pantalla, onNavigate, onLogout }) {
+export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
 
   const handleNavigate = (seccion) => {
@@ -35,12 +37,13 @@ export default function Dashboard({ user, pantalla, onNavigate, onLogout }) {
 
   const renderContent = () => {
     switch (pantalla) {
-      case 'productos':    return <Productos />;
-      case 'ventas':       return <Placeholder titulo="Ventas" icon="🛒" />;
-      case 'clientes':     return <Placeholder titulo="Clientes" icon="👥" />;
-      case 'compras':      return <Placeholder titulo="Compras" icon="🏪" />;
-      case 'estadisticas': return <Placeholder titulo="Estadísticas" icon="📊" />;
-      default:             return <Placeholder titulo="Bienvenido" icon="👋" />;
+      case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
+      case 'ventas':       return <Ventas user={user} productos={productos} setProductos={setProductos} />;
+      case 'clientes':     return <Placeholder titulo="Clientes" icon="◎" />;
+      case 'usuarios':     return <Placeholder titulo="Usuarios" icon="◉" />;
+      case 'compras':      return <Placeholder titulo="Compras" icon="◌" />;
+      case 'estadisticas': return <Placeholder titulo="Estadísticas" icon="▦" />;
+      default:             return <Placeholder titulo="Bienvenido" icon="◈" />;
     }
   };
 
@@ -71,13 +74,14 @@ export default function Dashboard({ user, pantalla, onNavigate, onLogout }) {
               className={pantalla === key ? 'active' : ''}
               onClick={() => handleNavigate(key)}
             >
-              <span className="nav-icon">{icon}</span>
+              <img src={icon} alt="" className="nav-icon-img" aria-hidden="true" />
               {label}
             </button>
           ))}
         </nav>
         <button type="button" className="dashboard-logout" onClick={handleLogout}>
-          🔒 Cerrar sesión
+          <img src="/logout.svg" alt="" className="logout-icon-img" aria-hidden="true" />
+          Cerrar sesión
         </button>
       </aside>
 
