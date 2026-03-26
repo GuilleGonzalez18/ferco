@@ -761,6 +761,119 @@
   background: #8090a4;
 }
 
+.venta-final-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.venta-final-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.venta-final-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.42);
+}
+
+.venta-final-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  width: min(520px, calc(100vw - 1.4rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 24, 36, 0.22);
+  padding: 0.9rem;
+  transition: transform 0.2s ease;
+}
+
+.venta-final-overlay.open .venta-final-modal {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.venta-final-modal h4 {
+  margin: 0 0 0.35rem;
+  color: #2e8b57;
+  font-size: 1rem;
+}
+
+.venta-final-cliente {
+  margin: 0 0 0.5rem;
+  color: #375f8c;
+  font-size: 0.86rem;
+}
+
+.venta-final-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.venta-final-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.82rem;
+  color: #3f5269;
+}
+
+.venta-final-items li + li {
+  border-top: 1px dashed #e7edf7;
+}
+
+.venta-final-totales {
+  margin-top: 0.55rem;
+}
+
+.venta-final-totales p {
+  margin: 0.2rem 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  color: #425771;
+}
+
+.venta-final-total {
+  font-size: 0.92rem !important;
+  color: #1f4266 !important;
+}
+
+.venta-final-actions {
+  margin-top: 0.7rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.venta-final-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.42rem 0.66rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: #375f8c;
+}
+
+.venta-final-actions .secundario {
+  background: #8090a4;
+}
+
 @media (max-width: 1100px) {
   .ventas-layout {
     grid-template-columns: 1fr;

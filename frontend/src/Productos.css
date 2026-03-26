@@ -67,6 +67,15 @@
   color: #222;
 }
 
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: #375f8c;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .input-error {
   margin: -0.15rem 0 0;
   color: #b42318;

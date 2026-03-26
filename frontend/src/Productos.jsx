@@ -345,31 +345,51 @@ export default function Productos({ productos = [], setProductos }) {
             <button type="button" className="side-panel-close" onClick={cerrarPanel}>✕</button>
           </div>
           <form className="form-producto" onSubmit={handleSubmit}>
-            <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
-            <input name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
-            <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
-            <select name="tipoEmpaque" value={nuevo.tipoEmpaque} onChange={handleChange} required>
-              <option value="">Tipo empaque</option>
-              {tiposEmpaque.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <input name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
-            <input name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
-            <input name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
-            <input name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
-            <input
-              name="imagenUrl"
-              value={nuevo.imagenPreview || ''}
-              onChange={handleChange}
-              placeholder="URL de imagen (https://...)"
-              type="url"
-            />
+            <label className="field-label">Nombre del producto
+              <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
+            </label>
+            <label className="field-label">Stock
+              <input name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
+            </label>
+            <label className="field-label">EAN / Código
+              <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
+            </label>
+            <label className="field-label">Tipo de empaque
+              <select name="tipoEmpaque" value={nuevo.tipoEmpaque} onChange={handleChange} required>
+                <option value="">Tipo empaque</option>
+                {tiposEmpaque.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className="field-label">Cantidad por empaque
+              <input name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
+            </label>
+            <label className="field-label">Precio de costo
+              <input name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
+            </label>
+            <label className="field-label">Precio de venta
+              <input name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
+            </label>
+            <label className="field-label">Precio por empaque
+              <input name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
+            </label>
+            <label className="field-label">URL de imagen
+              <input
+                name="imagenUrl"
+                value={nuevo.imagenPreview || ''}
+                onChange={handleChange}
+                placeholder="URL de imagen (https://...)"
+                type="url"
+              />
+            </label>
             {imagenUrlError && <p className="input-error">{imagenUrlError}</p>}
             {imagenPreviewValida && (
               <div className="panel-image-preview">
                 <img src={nuevo.imagenPreview} alt="Vista previa" />
               </div>
             )}
-            <input name="imagen" type="file" accept="image/*" onChange={handleChange} />
+            <label className="field-label">Archivo de imagen
+              <input name="imagen" type="file" accept="image/*" onChange={handleChange} />
+            </label>
             <div className="form-actions">
               <button type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</button>
               <button type="button" onClick={cerrarPanel}>Cancelar</button>

@@ -3,6 +3,7 @@ import Productos from './Productos';
 import Ventas from './Ventas';
 import VentasHistorial from './VentasHistorial';
 import Clientes from './Clientes';
+import Auditoria from './Auditoria';
 import './Dashboard.css';
 
 const OPCIONES = [
@@ -11,6 +12,7 @@ const OPCIONES = [
   { key: 'productos', label: 'Productos', icon: '/product.svg' },
   { key: 'clientes', label: 'Clientes', icon: '/client.svg' },
   { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
+  { key: 'auditoria', label: 'Auditoría', icon: '/auditory.svg' },
   { key: 'compras', label: 'Compras', icon: '/buy.svg' },
   { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
 ];
@@ -75,6 +77,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Placeholder titulo="Usuarios" icon="◉" />;
+      case 'auditoria':    return <Auditoria />;
       case 'compras':      return <Placeholder titulo="Compras" icon="◌" />;
       case 'estadisticas': return <Placeholder titulo="Estadísticas" icon="▦" />;
       default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;

@@ -65,6 +65,15 @@
   font-size: 0.82rem;
 }
 
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: #375f8c;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .cliente-form-actions {
   grid-column: 1 / -1;
   display: flex;

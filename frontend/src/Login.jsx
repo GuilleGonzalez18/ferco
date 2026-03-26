@@ -15,7 +15,8 @@ export default function Login({ onLogin }) {
     }
     try {
       setError('');
-      const user = await api.login(email, password);
+      const { user, token } = await api.login(email, password);
+      api.setAuthToken(token);
       onLogin?.({
         ...user,
         email: user.correo || user.username || email,

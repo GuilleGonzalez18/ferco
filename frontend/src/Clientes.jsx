@@ -137,26 +137,43 @@ export default function Clientes() {
   const exportarPDF = () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    doc.setFontSize(16);
-    doc.text('Lista de Clientes', 14, 18);
-    doc.setFontSize(10);
-    doc.text(`Emitido: ${fecha}`, 14, 24);
+    const renderPdf = (logoImage = null) => {
+      let startY = 30;
+      if (logoImage) {
+        doc.addImage(logoImage, 'PNG', 10, 10, 40, 20);
+        doc.setFontSize(16);
+        doc.text('Lista de Clientes', 55, 22);
+        doc.setFontSize(10);
+        doc.text(`Emitido: ${fecha}`, 55, 28);
+        startY = 35;
+      } else {
+        doc.setFontSize(16);
+        doc.text('Lista de Clientes', 14, 18);
+        doc.setFontSize(10);
+        doc.text(`Emitido: ${fecha}`, 14, 24);
+      }
 
-    autoTable(doc, {
-      startY: 30,
-      head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail']],
-      body: filtrados.map((c) => [
-        c.nombre || '',
-        c.rut || '',
-        c.direccion || '',
-        c.telefono || '',
-        c.correo || '',
-      ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [55, 95, 140] },
-    });
+      autoTable(doc, {
+        startY,
+        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail']],
+        body: filtrados.map((c) => [
+          c.nombre || '',
+          c.rut || '',
+          c.direccion || '',
+          c.telefono || '',
+          c.correo || '',
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [55, 95, 140] },
+      });
 
-    doc.save('clientes.pdf');
+      doc.save('clientes.pdf');
+    };
+
+    const logo = new Image();
+    logo.src = '/images/logo2.png';
+    logo.onload = () => renderPdf(logo);
+    logo.onerror = () => renderPdf();
   };
 
   const abrirAlta = () => {
@@ -255,11 +272,21 @@ export default function Clientes() {
             <button type="button" className="side-panel-close" onClick={cerrarPanel}>✕</button>
           </div>
           <form className="cliente-form" onSubmit={guardarCliente}>
-            <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
-            <input name="rut" value={nuevo.rut} onChange={handleChange} placeholder="Rut/C.I." required />
-            <input name="direccion" value={nuevo.direccion} onChange={handleChange} placeholder="Dirección" />
-            <input name="telefono" value={nuevo.telefono} onChange={handleChange} placeholder="Teléfono" />
-            <input name="correo" value={nuevo.correo} onChange={handleChange} placeholder="Mail" type="email" />
+            <label className="field-label">Nombre
+              <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
+            </label>
+            <label className="field-label">RUT / C.I.
+              <input name="rut" value={nuevo.rut} onChange={handleChange} placeholder="Rut/C.I." required />
+            </label>
+            <label className="field-label">Dirección
+              <input name="direccion" value={nuevo.direccion} onChange={handleChange} placeholder="Dirección" />
+            </label>
+            <label className="field-label">Teléfono
+              <input name="telefono" value={nuevo.telefono} onChange={handleChange} placeholder="Teléfono" />
+            </label>
+            <label className="field-label">Mail
+              <input name="correo" value={nuevo.correo} onChange={handleChange} placeholder="Mail" type="email" />
+            </label>
             <div className="cliente-form-actions">
               <button type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</button>
               <button type="button" onClick={cerrarPanel}>Cancelar</button>

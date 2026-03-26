@@ -74,7 +74,7 @@
 
 .lista-ventas li {
   display: grid;
-  grid-template-columns: 0.5fr 1.2fr 1.4fr 1.1fr 0.8fr;
+  grid-template-columns: 0.34fr 0.48fr 1.15fr 1.35fr 1.05fr 0.8fr 0.95fr 0.85fr 0.8fr;
   gap: 0.5rem;
   align-items: center;
   background: #fff;
@@ -85,10 +85,23 @@
   font-size: 0.82rem;
 }
 
+.lista-ventas li.venta-row-entregada {
+  background: #e4f6ea;
+  border-color: #b8e6c8;
+}
+
+.venta-row-wrap {
+  display: block;
+}
+
 .lista-ventas .header {
   font-weight: 700;
   color: #375f8c;
   background: #eaf0fa;
+}
+
+.lista-ventas .header span {
+  font-weight: 700;
 }
 
 .sort-header-btn {
@@ -105,6 +118,156 @@
 
 .sort-header-btn:hover {
   text-decoration: underline;
+}
+
+.venta-fecha-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+}
+
+.venta-fecha-cell small {
+  color: #6e7d90;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.entrega-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: #eef2f8;
+  color: #5b6b81 !important;
+}
+
+.entrega-badge.is-hoy {
+  background: #ffefc1;
+  color: #8a5a00 !important;
+}
+
+.entrega-badge.is-vencida {
+  background: #ffd8d8;
+  color: #9f1d1d !important;
+}
+
+.entrega-badge.is-entregado {
+  background: #d9f3e5;
+  color: #1f7a4d !important;
+}
+
+.entrega-badge.is-camino {
+  background: #d9ecff;
+  color: #1f5f9e !important;
+}
+
+.venta-expand-btn {
+  border: none;
+  background: transparent;
+  color: #375f8c;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  line-height: 1;
+}
+
+.estado-entrega-field select {
+  border: 1px solid #d3dbe8;
+  border-radius: 7px;
+  padding: 0.28rem 0.38rem;
+  font-size: 0.74rem;
+  color: #375f8c;
+  font-weight: 700;
+  background: #fff;
+}
+
+.entregado-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #506278;
+}
+
+.entregado-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: #2e8b57;
+  cursor: pointer;
+}
+
+.venta-detalle-panel {
+  margin: -0.18rem 0 0.5rem;
+  border: 1px dashed #d6e3f4;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 0.45rem 0.55rem;
+}
+
+.venta-detalle-panel p {
+  margin: 0;
+  color: #63758a;
+  font-size: 0.78rem;
+}
+
+.venta-detalle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.venta-detalle-list li {
+  display: grid;
+  grid-template-columns: 1.6fr 0.6fr 0.8fr 0.8fr;
+  gap: 0.45rem;
+  align-items: center;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0.28rem 0;
+  font-size: 0.78rem;
+}
+
+.venta-detalle-list li + li {
+  border-top: 1px dashed #deebfa;
+}
+
+.reprint-btn {
+  border: 1px solid #375f8c;
+  border-radius: 9px;
+  width: 42px;
+  height: 38px;
+  padding: 0;
+  cursor: pointer;
+  color: #fff;
+  background: #375f8c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.reprint-btn img {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.reprint-btn:hover:not(:disabled) {
+  background: #2f5279;
+  border-color: #2f5279;
+  box-shadow: 0 6px 14px rgba(47, 82, 121, 0.35);
+  transform: translateY(-1px);
+}
+
+.reprint-btn:disabled {
+  background: #9fb0c5;
+  border-color: #9fb0c5;
+  cursor: wait;
 }
 
 .lista-ventas .vacio {

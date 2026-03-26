@@ -10,8 +10,29 @@ function App() {
   const [user, setUser] = useState(null);
   const [pantalla, setPantalla] = useState('');
   const [productos, setProductos] = useState([]);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    const restoreSession = async () => {
+      const token = api.getAuthToken();
+      if (!token) {
+        setAuthReady(true);
+        return;
+      }
+      try {
+        const currentUser = await api.me();
+        setUser(currentUser);
+      } catch {
+        api.clearAuthToken();
+      } finally {
+        setAuthReady(true);
+      }
+    };
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
     const loadProductos = async () => {
       try {
         const rows = await api.getProductos();
@@ -21,7 +42,9 @@ function App() {
       }
     };
     loadProductos();
-  }, []);
+  }, [authReady]);
+
+  if (!authReady) return null;
 
   if (!user) {
     return <Login onLogin={setUser} />;
@@ -35,6 +58,7 @@ function App() {
       setProductos={setProductos}
       onNavigate={setPantalla}
       onLogout={() => {
+        api.clearAuthToken();
         setUser(null);
         setPantalla('');
       }}

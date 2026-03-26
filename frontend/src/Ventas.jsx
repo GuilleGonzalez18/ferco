@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from './api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PASOS = ['Productos y carrito', 'Datos de entrega'];
 
@@ -16,6 +18,12 @@ function money(value) {
 function getEmpaqueUnits(producto) {
   const n = Math.floor(toNumber(producto?.cantidadEmpaque));
   return n > 0 ? n : 1;
+}
+
+function todayISODate() {
+  const now = new Date();
+  const tzOffset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
 }
 
 export default function Ventas({ user, productos = [], setProductos }) {
@@ -43,6 +51,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
   const [clienteId, setClienteId] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [observacion, setObservacion] = useState('');
+  const [ventaFinalizada, setVentaFinalizada] = useState(null);
+  const [ticketImpreso, setTicketImpreso] = useState(false);
   const [clientes, setClientes] = useState([]);
   const clienteDropdownRef = useRef(null);
 
@@ -270,9 +280,107 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const goBack = () => setPaso(1);
 
+  const resetVenta = () => {
+    setPaso(1);
+    setBusqueda('');
+    setCarrito([]);
+    setSelectorClienteAbierto(false);
+    setBusquedaCliente('');
+    setDescuentoTotalTipo('ninguno');
+    setDescuentoTotalValor('');
+    setClienteId('');
+    setFechaEntrega('');
+    setObservacion('');
+  };
+
+  const loadImage = (src) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+
+  const imprimirTicket = async () => {
+    if (!ventaFinalizada) return;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let cursorY = 12;
+
+    try {
+      const logo = await loadImage('/images/encabezadofacturacion.png');
+      const logoWidth = 120;
+      const logoHeight = 24;
+      const x = (pageWidth - logoWidth) / 2;
+      doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
+      cursorY += logoHeight + 6;
+    } catch {
+      cursorY += 2;
+    }
+
+    doc.setFontSize(14);
+    doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
+    cursorY += 6;
+
+    doc.setFontSize(10);
+    doc.text(`Venta: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, 14, cursorY);
+    doc.text(`Fecha: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, 120, cursorY);
+    cursorY += 5;
+    doc.text(`Cliente: ${ventaFinalizada.clienteNombre}`, 14, cursorY);
+    cursorY += 5;
+    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre}`, 14, cursorY);
+    cursorY += 5;
+    doc.text(`Entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, 14, cursorY);
+    cursorY += 6;
+
+    autoTable(doc, {
+      startY: cursorY,
+      head: [['Producto', 'Cant.', 'P. Unit.', 'Desc.', 'Subtotal']],
+      body: ventaFinalizada.items.map((item) => [
+        item.nombre,
+        item.unidadesSolicitadas,
+        money(item.precioUnitario),
+        money(item.descuentoAplicado),
+        money(item.subtotalFinal),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [55, 95, 140] },
+    });
+
+    const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
+    doc.setFontSize(10);
+    doc.text(`Subtotal: ${money(ventaFinalizada.subtotal)}`, 14, finalY + 8);
+    doc.text(`Descuento total: -${money(ventaFinalizada.descuentoGlobal)}`, 14, finalY + 14);
+    doc.setFontSize(12);
+    doc.text(`TOTAL: ${money(ventaFinalizada.total)}`, 14, finalY + 22);
+
+    if (ventaFinalizada.observacion) {
+      doc.setFontSize(9);
+      doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, finalY + 30);
+    }
+
+    doc.save(`ticket-venta-${ventaFinalizada.id || Date.now()}.pdf`);
+    setTicketImpreso(true);
+  };
+
+  const iniciarNuevaVenta = () => {
+    setVentaFinalizada(null);
+    setTicketImpreso(false);
+    resetVenta();
+  };
+
+  const cerrarVentaFinalDesdeBackdrop = () => {
+    if (!ventaFinalizada) return;
+    if (!ticketImpreso) {
+      const ok = window.confirm('Aún no imprimiste el ticket. ¿Cerrar igual y comenzar nueva venta?');
+      if (!ok) return;
+    }
+    iniciarNuevaVenta();
+  };
+
   const confirmarVenta = async () => {
     if (!clienteId || !fechaEntrega) {
-      window.alert('Debes seleccionar cliente y fecha/hora de entrega.');
+      window.alert('Debes seleccionar cliente y fecha de entrega.');
       return;
     }
     if (!setProductos) return;
@@ -292,7 +400,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
     }
 
     try {
-      await api.createVenta({
+      const ventaCreada = await api.createVenta({
         usuario_id: user?.id ?? null,
         cliente_id: Number(clienteId),
         fecha_entrega: fechaEntrega,
@@ -316,18 +424,20 @@ export default function Ventas({ user, productos = [], setProductos }) {
       );
 
       const cliente = clientes.find((c) => String(c.id) === String(clienteId));
-      window.alert(`Venta registrada para ${cliente?.nombre || 'cliente'}.\nTotal: ${money(total)}`);
-
-      setPaso(1);
-      setBusqueda('');
-      setCarrito([]);
+      setVentaFinalizada({
+        id: ventaCreada?.id ?? null,
+        fecha: new Date().toISOString(),
+        clienteNombre: cliente?.nombre || 'Cliente',
+        vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
+        fechaEntrega,
+        observacion,
+        items: carritoCalculado,
+        subtotal,
+        descuentoGlobal,
+        total,
+      });
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
-      setDescuentoTotalTipo('ninguno');
-      setDescuentoTotalValor('');
-      setClienteId('');
-      setFechaEntrega('');
-      setObservacion('');
     } catch (error) {
       window.alert(`No se pudo registrar la venta: ${error.message}`);
     }
@@ -431,9 +541,10 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 </label>
 
                 <label>
-                  Fecha y hora de entrega
+                  Fecha de entrega
                   <input
-                    type="datetime-local"
+                    type="date"
+                    min={todayISODate()}
                     value={fechaEntrega}
                     onChange={(e) => setFechaEntrega(e.target.value)}
                   />
@@ -722,6 +833,44 @@ export default function Ventas({ user, productos = [], setProductos }) {
             </button>
             <button type="button" onClick={applyGlobalDiscount}>
               Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`venta-final-overlay ${ventaFinalizada ? 'open' : ''}`}
+        aria-hidden={!ventaFinalizada}
+      >
+        <div className="venta-final-backdrop" onClick={cerrarVentaFinalDesdeBackdrop} />
+        <div className="venta-final-modal" role="dialog" aria-modal="true" aria-label="Venta confirmada">
+          <h4>Venta confirmada</h4>
+          {ventaFinalizada && (
+            <>
+              <p className="venta-final-cliente">
+                Cliente: <strong>{ventaFinalizada.clienteNombre}</strong>
+              </p>
+              <ul className="venta-final-items">
+                {ventaFinalizada.items.map((item) => (
+                  <li key={item.id}>
+                    <span>{item.nombre} x {item.unidadesSolicitadas}</span>
+                    <strong>{money(item.subtotalFinal)}</strong>
+                  </li>
+                ))}
+              </ul>
+              <div className="venta-final-totales">
+                <p>Subtotal <strong>{money(ventaFinalizada.subtotal)}</strong></p>
+                <p>Descuento total <strong>-{money(ventaFinalizada.descuentoGlobal)}</strong></p>
+                <p className="venta-final-total">Total <strong>{money(ventaFinalizada.total)}</strong></p>
+              </div>
+            </>
+          )}
+          <div className="venta-final-actions">
+            <button type="button" className="secundario" onClick={iniciarNuevaVenta}>
+              Nueva venta
+            </button>
+            <button type="button" onClick={imprimirTicket}>
+              Imprimir ticket
             </button>
           </div>
         </div>
