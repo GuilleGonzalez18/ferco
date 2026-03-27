@@ -20,7 +20,7 @@ export default function Login({ onLogin }) {
       onLogin?.({
         ...user,
         email: user.correo || user.username || email,
-        tipo: 'vendedor',
+        tipo: user.tipo || 'vendedor',
       });
     } catch {
       setError('Credenciales inválidas');

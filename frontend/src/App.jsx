@@ -47,6 +47,16 @@ function App() {
     loadProductos();
   }, [authReady]);
 
+  useEffect(() => {
+    const onUserUpdated = (event) => {
+      const updated = event?.detail;
+      if (!updated?.id) return;
+      setUser((prev) => (prev && Number(prev.id) === Number(updated.id) ? { ...prev, ...updated } : prev));
+    };
+    window.addEventListener('ferco:user-updated', onUserUpdated);
+    return () => window.removeEventListener('ferco:user-updated', onUserUpdated);
+  }, []);
+
   if (!authReady) return null;
 
   if (!user) {

@@ -1,9 +1,10 @@
 .dashboard-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 1fr;
   background: #f5f6fa;
   overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 /* ── Sidebar ── */
@@ -25,6 +26,16 @@
 .dashboard-logo-wrap {
   padding: 1.2rem 1.1rem 0.9rem;
   border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.dashboard-logo-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .dashboard-logo {
@@ -163,13 +174,44 @@
 .dashboard-content {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   overflow-x: hidden;
+  overflow-y: hidden;
   margin-left: 260px;
+  position: relative;
+  isolation: isolate;
+}
+
+.dashboard-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(246, 249, 253, 0.84) 0%,
+      rgba(246, 249, 253, 0.72) 36%,
+      rgba(246, 249, 253, 0.88) 100%
+    ),
+    url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: blur(4px) saturate(0.96);
+  transform: scale(1.02);
+  z-index: -2;
+}
+
+.dashboard-content::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 52%);
+  z-index: -1;
 }
 
 .dashboard-topbar {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid #e3e8f0;
   padding: 0.8rem 1.4rem;
   font-size: 1.05rem;
@@ -183,6 +225,16 @@
 
 .dashboard-body {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dashboard-body.with-kpis .dashboard-landing {
+  padding-top: 0.85rem;
+  padding-bottom: 0.9rem;
 }
 
 /* ── Placeholder ── */
@@ -213,7 +265,8 @@
 }
 
 .dashboard-landing {
-  min-height: calc(100vh - 66px);
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,7 +275,8 @@
 
 .landing-card {
   width: min(760px, 100%);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
   border: 1px solid #e3e8f0;
   border-radius: 16px;
   box-shadow: 0 8px 28px rgba(55, 95, 140, 0.12);
@@ -243,32 +297,85 @@
   font-size: 0.94rem;
 }
 
-.landing-hint-grid {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+.dashboard-kpis-strip {
+  padding: 0.7rem 0.75rem 0.15rem;
+  display: flex;
+  gap: 0.45rem;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  overflow-x: hidden;
 }
 
-.landing-hint-item {
-  border: 1px solid #e2e8f3;
+.dashboard-kpi-card {
+  min-width: 0;
+  flex: 1 1 0;
+  border: 1px solid #dce6f4;
   border-radius: 10px;
-  background: #f7f9fd;
-  padding: 0.75rem 0.55rem;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(55, 95, 140, 0.1);
+  padding: 0.45rem 0.5rem;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 0.38rem;
+  align-items: stretch;
+  min-height: 64px;
+  animation: statsCardIn 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-kpi-icon-wrap {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.38rem;
-  color: #375f8c;
-  font-weight: 700;
-  font-size: 0.86rem;
 }
 
-.landing-hint-item img {
+.dashboard-kpi-icon {
   width: 24px;
   height: 24px;
-  filter: invert(32%) sepia(18%) saturate(1260%) hue-rotate(172deg) brightness(91%) contrast(90%);
+  object-fit: contain;
+  opacity: 0.9;
+  transform-origin: center;
+  animation: kpiIconSpinIn 1020ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--icon-delay, 0ms);
+}
+
+.dashboard-kpi-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.dashboard-kpi-card span {
+  display: block;
+  color: #5f7390;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-kpi-card strong {
+  display: block;
+  margin-top: 0.14rem;
+  color: #1f4266;
+  font-size: 0.9rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-kpi-card.sales-green {
+  border-color: #dce6f4;
+  background: #fff;
+}
+
+.dashboard-kpi-card.sales-green strong {
+  color: #1e8449;
 }
 
 @keyframes landingFadeIn {
@@ -279,6 +386,28 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes statsCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes kpiIconSpinIn {
+  from {
+    opacity: 0;
+    transform: rotate(-48deg) scale(0.78);
+  }
+  to {
+    opacity: 0.9;
+    transform: rotate(0deg) scale(1);
   }
 }
 
@@ -350,7 +479,18 @@
     top: 58px;
   }
 
-  .landing-hint-grid {
-    grid-template-columns: 1fr;
+  .dashboard-kpis-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-kpi-card {
+    grid-template-columns: 46px 1fr;
+    min-height: 82px;
+    padding: 0.62rem 0.7rem;
+  }
+
+  .dashboard-kpi-icon {
+    width: 34px;
+    height: 34px;
   }
 }

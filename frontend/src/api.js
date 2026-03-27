@@ -101,6 +101,7 @@ export const api = {
     }),
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
+  getDashboardResumen: () => request('/ventas/dashboard/resumen'),
   getEstadisticasResumen: (desde, hasta) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);

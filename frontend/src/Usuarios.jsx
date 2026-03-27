@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Usuarios.css';
 
-export default function Usuarios() {
+export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +22,8 @@ export default function Usuarios() {
     telefono: '',
     direccion: '',
   });
+  const esPropietario = String(currentUser?.tipo || '').toLowerCase() === 'propietario';
+  const currentUserId = Number(currentUser?.id || 0);
 
   useEffect(() => {
     const load = async () => {
@@ -91,6 +93,11 @@ export default function Usuarios() {
     return list;
   }, [usuariosFiltrados, sortBy, sortDir]);
 
+  const usuarioPropio = useMemo(
+    () => usuarios.find((u) => Number(u.id) === currentUserId) || null,
+    [usuarios, currentUserId]
+  );
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setNuevo((prev) => ({ ...prev, [name]: value }));
@@ -106,10 +113,16 @@ export default function Usuarios() {
         telefono: nuevo.telefono || null,
         direccion: nuevo.direccion || null,
       };
+      if (editandoId && !String(payload.password || '').trim()) {
+        delete payload.password;
+      }
 
       if (editandoId) {
         const actualizado = await api.updateUsuario(editandoId, payload);
         setUsuarios((prev) => prev.map((u) => (u.id === editandoId ? actualizado : u)));
+        if (Number(actualizado.id) === currentUserId && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ferco:user-updated', { detail: actualizado }));
+        }
       } else {
         const creado = await api.createUsuario(payload);
         setUsuarios((prev) => [creado, ...prev]);
@@ -163,8 +176,27 @@ export default function Usuarios() {
     }
   };
 
+  useEffect(() => {
+    if (onlySelf && !esPropietario && usuarioPropio) {
+      setEditandoId(usuarioPropio.id);
+      setUsuarioExpandidoId(null);
+      setNuevo({
+        nombre: usuarioPropio.nombre || '',
+        apellido: usuarioPropio.apellido || '',
+        username: usuarioPropio.username || '',
+        correo: usuarioPropio.correo || '',
+        password: '',
+        tipo: usuarioPropio.tipo || 'vendedor',
+        telefono: usuarioPropio.telefono || '',
+        direccion: usuarioPropio.direccion || '',
+      });
+      setMostrarForm(true);
+    }
+  }, [onlySelf, esPropietario, usuarioPropio]);
+
   return (
     <div className="usuarios-main">
+      {!onlySelf && (
       <div className="usuarios-toolbar">
         <h3>Usuarios del sistema</h3>
         <input
@@ -174,33 +206,36 @@ export default function Usuarios() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => {
-            setEditandoId(null);
-            setNuevo({
-              nombre: '',
-              apellido: '',
-              username: '',
-              correo: '',
-              password: '',
-              tipo: 'vendedor',
-              telefono: '',
-              direccion: '',
-            });
-            setMostrarForm(true);
-          }}
-        >
-          <img src="/add.svg" alt="" aria-hidden="true" />
-          <span>USUARIO</span>
-        </button>
+        {esPropietario && (
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => {
+              setEditandoId(null);
+              setNuevo({
+                nombre: '',
+                apellido: '',
+                username: '',
+                correo: '',
+                password: '',
+                tipo: 'vendedor',
+                telefono: '',
+                direccion: '',
+              });
+              setMostrarForm(true);
+            }}
+          >
+            <img src="/add.svg" alt="" aria-hidden="true" />
+            <span>USUARIO</span>
+          </button>
+        )}
       </div>
+      )}
 
       {loading && <div className="usuarios-msg">Cargando usuarios...</div>}
       {!loading && error && <div className="usuarios-msg error">{error}</div>}
 
-      {!loading && !error && (
+      {!onlySelf && !loading && !error && (
         <ul className="lista-usuarios">
           <li className="header">
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
@@ -222,8 +257,12 @@ export default function Usuarios() {
                 <span>{u.telefono || '-'}</span>
                 <span>{u.direccion || '-'}</span>
                 <div className={`usuario-actions ${expanded ? 'show' : ''}`}>
-                  <button type="button" className="edit-btn" onClick={(e) => { e.stopPropagation(); editarUsuario(u); }}>Editar</button>
-                  <button type="button" className="delete-btn" onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id); }}>Eliminar</button>
+                  {(esPropietario || Number(u.id) === currentUserId) && (
+                    <button type="button" className="edit-btn" onClick={(e) => { e.stopPropagation(); editarUsuario(u); }}>Editar</button>
+                  )}
+                  {esPropietario && Number(u.id) !== currentUserId && (
+                    <button type="button" className="delete-btn" onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id); }}>Eliminar</button>
+                  )}
                 </div>
               </li>
             );
@@ -231,12 +270,12 @@ export default function Usuarios() {
         </ul>
       )}
 
-      <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
-        <div className="side-panel-backdrop" onClick={() => setMostrarForm(false)} />
+      <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''} ${onlySelf ? 'only-self' : ''}`} aria-hidden={!mostrarForm}>
+        {!onlySelf && <div className="side-panel-backdrop" onClick={() => setMostrarForm(false)} />}
         <aside className="side-panel">
           <div className="side-panel-header">
-            <h3>{editandoId ? 'Editar usuario' : 'Nuevo usuario'}</h3>
-            <button type="button" className="side-panel-close" onClick={() => setMostrarForm(false)}>✕</button>
+            <h3>{onlySelf ? 'Mi usuario' : (editandoId ? 'Editar usuario' : 'Nuevo usuario')}</h3>
+            {!onlySelf && <button type="button" className="side-panel-close" onClick={() => setMostrarForm(false)}>✕</button>}
           </div>
           <form className="usuario-form" onSubmit={guardarUsuario}>
             <label className="field-label">Nombre
@@ -252,12 +291,19 @@ export default function Usuarios() {
               <input name="correo" type="email" value={nuevo.correo} onChange={handleChange} required />
             </label>
             <label className="field-label">Contraseña
-              <input name="password" type="password" value={nuevo.password} onChange={handleChange} required />
+              <input
+                name="password"
+                type="password"
+                value={nuevo.password}
+                onChange={handleChange}
+                required={!editandoId}
+                placeholder={editandoId ? 'Dejar en blanco para mantener' : ''}
+              />
             </label>
             <label className="field-label">Tipo
-              <select name="tipo" value={nuevo.tipo} onChange={handleChange}>
+              <select name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>
                 <option value="vendedor">Vendedor</option>
-                <option value="admin">Admin</option>
+                <option value="propietario">Propietario</option>
               </select>
             </label>
             <label className="field-label">Teléfono

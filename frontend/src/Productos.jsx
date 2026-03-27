@@ -15,6 +15,11 @@ function stockState(stockValue) {
   return 'normal';
 }
 
+function formatMoney(value) {
+  const n = Math.round(Number(value || 0));
+  return `$${n.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+}
+
 export default function Productos({ productos = [], setProductos }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -135,8 +140,8 @@ export default function Productos({ productos = [], setProductos }) {
         body: productos.map(p => [
           p.nombre,
           p.stock,
-          `$${p.costo}`,
-          `$${p.venta}`,
+          formatMoney(p.costo),
+          formatMoney(p.venta),
           `${p.tipoEmpaque} x ${p.cantidadEmpaque}`
         ]),
         didParseCell: function (data) {
@@ -296,8 +301,8 @@ export default function Productos({ productos = [], setProductos }) {
                   </span>
                   <span className="campo" data-label="Nombre">{p.nombre}</span>
                   <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
-                  <span className="campo" data-label="Costo">${p.costo}</span>
-                  <span className="campo" data-label="Venta">${p.venta}</span>
+                  <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>
+                  <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>
                   <span className="campo" data-label="Empaque">{p.tipoEmpaque} x {p.cantidadEmpaque}</span>
                   <span className="campo" data-label="Ganancia">
                     {(() => {

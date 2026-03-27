@@ -18,14 +18,14 @@ export function fromApiProducto(row) {
 export function toApiProducto(producto) {
   return {
     nombre: producto.nombre,
-    costo: Number(producto.costo || 0),
-    precio: Number(producto.venta || 0),
+    costo: Math.round(Number(producto.costo || 0)),
+    precio: Math.round(Number(producto.venta || 0)),
     stock: Number(producto.stock || 0),
     unidad: producto.categoria || null,
     imagen: producto.imagenPreview || null,
     ean: producto.ean || '',
     cantidad_empaque: producto.cantidadEmpaque ? Number(producto.cantidadEmpaque) : null,
     empaque: producto.tipoEmpaque || null,
-    precio_empaque: Number(producto.precioEmpaque || 0),
+    precio_empaque: Math.round(Number(producto.precioEmpaque || 0)),
   };
 }

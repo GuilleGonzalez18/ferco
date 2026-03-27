@@ -17,8 +17,13 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function roundMoney(value) {
+  return Math.round(toNumber(value));
+}
+
 function money(value) {
-  return `$${toNumber(value).toFixed(2)}`;
+  const rounded = roundMoney(value);
+  return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
 }
 
 function getEmpaqueUnits(producto) {
@@ -147,7 +152,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
       return;
     }
 
-    const precioUnitario = toNumber(producto.venta);
+    const precioUnitario = roundMoney(producto.venta);
     if (itemExistente) {
       setCarrito((prev) =>
         prev.map((item) =>
@@ -251,7 +256,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const carritoCalculado = useMemo(() => {
     return carrito.map((item) => {
-      const base = toNumber(item.unidadesSolicitadas) * toNumber(item.precioUnitario);
+      const base = roundMoney(toNumber(item.unidadesSolicitadas) * toNumber(item.precioUnitario));
       const valor = toNumber(item.descuentoValor);
       let descuento = 0;
 
@@ -259,13 +264,15 @@ export default function Ventas({ user, productos = [], setProductos }) {
         const pct = Math.max(0, Math.min(100, valor));
         descuento = (base * pct) / 100;
       } else if (item.descuentoTipo === 'fijo') {
-        descuento = Math.max(0, Math.min(base, valor));
+        const fijo = roundMoney(valor);
+        descuento = Math.max(0, Math.min(base, fijo));
       }
 
+      const descuentoAplicado = roundMoney(descuento);
       return {
         ...item,
-        descuentoAplicado: descuento,
-        subtotalFinal: Math.max(0, base - descuento),
+        descuentoAplicado,
+        subtotalFinal: Math.max(0, base - descuentoAplicado),
       };
     });
   }, [carrito]);
@@ -279,10 +286,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const v = toNumber(descuentoTotalValor);
     if (descuentoTotalTipo === 'porcentaje') {
       const pct = Math.max(0, Math.min(100, v));
-      return (subtotal * pct) / 100;
+      return roundMoney((subtotal * pct) / 100);
     }
     if (descuentoTotalTipo === 'fijo') {
-      return Math.max(0, Math.min(subtotal, v));
+      const fijo = roundMoney(v);
+      return Math.max(0, Math.min(subtotal, fijo));
     }
     return 0;
   }, [descuentoTotalTipo, descuentoTotalValor, subtotal]);
@@ -300,7 +308,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
         return [{ ...pagosActivos[0], montoNumber: total }];
       }
       return pagosActivos
-        .map((p) => ({ ...p, montoNumber: toNumber(p.monto) }))
+        .map((p) => ({ ...p, montoNumber: roundMoney(p.monto) }))
         .filter((p) => p.montoNumber > 0);
     },
     [pagosActivos, total]
@@ -440,7 +448,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
       window.alert('Debes cargar al menos un medio de pago con monto.');
       return;
     }
-    if (Math.abs(totalPagos - total) > 0.01) {
+    if (totalPagos !== total) {
       window.alert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
@@ -469,11 +477,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
         pagos: pagosConMonto.map((p) => ({ medio_pago: p.medio_pago, monto: p.montoNumber })),
         observacion,
         descuento_total_tipo: descuentoTotalTipo,
-        descuento_total_valor: toNumber(descuentoTotalValor),
+        descuento_total_valor: descuentoTotalTipo === 'fijo' ? roundMoney(descuentoTotalValor) : toNumber(descuentoTotalValor),
         detalle: carritoCalculado.map((item) => ({
           producto_id: item.productoId,
           cantidad: item.unidadesSolicitadas,
-          precio_unitario: item.precioUnitario,
+          precio_unitario: roundMoney(item.precioUnitario),
         })),
       });
 
@@ -627,9 +635,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="1"
                           placeholder="Monto"
-                          value={esPagoUnico ? total.toFixed(2) : pago.monto}
+                          value={esPagoUnico ? total : pago.monto}
                           readOnly={esPagoUnico}
                           onChange={(e) => {
                             if (esPagoUnico) return;
@@ -647,7 +655,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       Monto automático: se completa con el total al usar un solo medio.
                     </small>
                   )}
-                  <div className={`pagos-total ${Math.abs(totalPagos - total) <= 0.01 ? 'ok' : 'warn'}`}>
+                  <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
                     Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
                   </div>
                 </div>
@@ -897,7 +905,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="0.01"
+            step="1"
             value={descuentoItemModal.valor}
             onChange={(e) => setDescuentoItemModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -940,7 +948,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="0.01"
+            step="1"
             value={descuentoGlobalModal.valor}
             onChange={(e) => setDescuentoGlobalModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
