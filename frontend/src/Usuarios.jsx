@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Usuarios.css';
 
-export default function Usuarios() {
+export default function Usuarios({ currentUser }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +22,8 @@ export default function Usuarios() {
     telefono: '',
     direccion: '',
   });
+  const esPropietario = String(currentUser?.tipo || '').toLowerCase() === 'propietario';
+  const currentUserId = Number(currentUser?.id || 0);
 
   useEffect(() => {
     const load = async () => {
@@ -110,6 +112,9 @@ export default function Usuarios() {
       if (editandoId) {
         const actualizado = await api.updateUsuario(editandoId, payload);
         setUsuarios((prev) => prev.map((u) => (u.id === editandoId ? actualizado : u)));
+        if (Number(actualizado.id) === currentUserId && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ferco:user-updated', { detail: actualizado }));
+        }
       } else {
         const creado = await api.createUsuario(payload);
         setUsuarios((prev) => [creado, ...prev]);
@@ -174,27 +179,29 @@ export default function Usuarios() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => {
-            setEditandoId(null);
-            setNuevo({
-              nombre: '',
-              apellido: '',
-              username: '',
-              correo: '',
-              password: '',
-              tipo: 'vendedor',
-              telefono: '',
-              direccion: '',
-            });
-            setMostrarForm(true);
-          }}
-        >
-          <img src="/add.svg" alt="" aria-hidden="true" />
-          <span>USUARIO</span>
-        </button>
+        {esPropietario && (
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => {
+              setEditandoId(null);
+              setNuevo({
+                nombre: '',
+                apellido: '',
+                username: '',
+                correo: '',
+                password: '',
+                tipo: 'vendedor',
+                telefono: '',
+                direccion: '',
+              });
+              setMostrarForm(true);
+            }}
+          >
+            <img src="/add.svg" alt="" aria-hidden="true" />
+            <span>USUARIO</span>
+          </button>
+        )}
       </div>
 
       {loading && <div className="usuarios-msg">Cargando usuarios...</div>}
@@ -222,8 +229,12 @@ export default function Usuarios() {
                 <span>{u.telefono || '-'}</span>
                 <span>{u.direccion || '-'}</span>
                 <div className={`usuario-actions ${expanded ? 'show' : ''}`}>
-                  <button type="button" className="edit-btn" onClick={(e) => { e.stopPropagation(); editarUsuario(u); }}>Editar</button>
-                  <button type="button" className="delete-btn" onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id); }}>Eliminar</button>
+                  {(esPropietario || Number(u.id) === currentUserId) && (
+                    <button type="button" className="edit-btn" onClick={(e) => { e.stopPropagation(); editarUsuario(u); }}>Editar</button>
+                  )}
+                  {esPropietario && Number(u.id) !== currentUserId && (
+                    <button type="button" className="delete-btn" onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id); }}>Eliminar</button>
+                  )}
                 </div>
               </li>
             );
@@ -255,9 +266,9 @@ export default function Usuarios() {
               <input name="password" type="password" value={nuevo.password} onChange={handleChange} required />
             </label>
             <label className="field-label">Tipo
-              <select name="tipo" value={nuevo.tipo} onChange={handleChange}>
+              <select name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>
                 <option value="vendedor">Vendedor</option>
-                <option value="admin">Admin</option>
+                <option value="propietario">Propietario</option>
               </select>
             </label>
             <label className="field-label">Teléfono

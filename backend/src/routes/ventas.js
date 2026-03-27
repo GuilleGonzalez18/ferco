@@ -32,6 +32,117 @@ function normalizePaymentMethods(pagos = []) {
   });
 }
 
+function normalizeTipo(tipo) {
+  const value = String(tipo || '').trim().toLowerCase();
+  if (value === 'admin' || value === 'propietario') return 'propietario';
+  return 'vendedor';
+}
+
+ventasRouter.get('/dashboard/resumen', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+
+  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  const userClauseVentas = esPropietario ? '' : 'AND v.usuario_id = $1';
+  const userParams = esPropietario ? [] : [Number(authUser.id)];
+
+  const ventasHoyQ = await pool.query(
+    `SELECT COALESCE(SUM(v.total), 0) AS total,
+            COUNT(*) AS cantidad
+     FROM public.ventas v
+     WHERE v.cancelada = false
+       AND v.fecha >= CURRENT_DATE
+       AND v.fecha < CURRENT_DATE + INTERVAL '1 day'
+       ${userClauseVentas}`,
+    userParams
+  );
+
+  const ventasMesQ = await pool.query(
+    `SELECT COALESCE(SUM(v.total), 0) AS total,
+            COUNT(*) AS cantidad
+     FROM public.ventas v
+     WHERE v.cancelada = false
+       AND v.fecha >= date_trunc('month', CURRENT_DATE)
+       AND v.fecha < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+       ${userClauseVentas}`,
+    userParams
+  );
+
+  const promedioMensualCantidadQ = await pool.query(
+    `SELECT COALESCE(AVG(m.cantidad), 0) AS promedio
+     FROM (
+       SELECT months.mes, COUNT(v.id) AS cantidad
+       FROM generate_series(
+              date_trunc('month', CURRENT_DATE) - INTERVAL '5 month',
+              date_trunc('month', CURRENT_DATE),
+              INTERVAL '1 month'
+            ) AS months(mes)
+       LEFT JOIN public.ventas v
+         ON v.cancelada = false
+        AND date_trunc('month', v.fecha) = months.mes
+        ${userClauseVentas}
+       GROUP BY months.mes
+     ) m`,
+    userParams
+  );
+
+  const ventasHoy = Number(ventasHoyQ.rows[0]?.total || 0);
+  const cantidadVentasHoy = Number(ventasHoyQ.rows[0]?.cantidad || 0);
+  const ventasMes = Number(ventasMesQ.rows[0]?.total || 0);
+  const cantidadVentasMes = Number(ventasMesQ.rows[0]?.cantidad || 0);
+  const promedioVentasMensual = Number(promedioMensualCantidadQ.rows[0]?.promedio || 0);
+
+  if (!esPropietario) {
+    return res.json({
+      scope: 'vendedor',
+      ventasHoy,
+      ventasMes,
+      cantidadVentasHoy,
+      cantidadVentasMes,
+      promedioVentasMensual,
+    });
+  }
+
+  const costoHoyQ = await pool.query(
+    `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
+     FROM public.venta_detalle vd
+     INNER JOIN public.ventas v ON v.id = vd.venta_id
+     LEFT JOIN public.productos p ON p.id = vd.producto_id
+     WHERE v.cancelada = false
+       AND v.fecha >= CURRENT_DATE
+       AND v.fecha < CURRENT_DATE + INTERVAL '1 day'`
+  );
+  const ventasTotalEmpresaQ = await pool.query(
+    `SELECT COALESCE(SUM(v.total), 0) AS total
+     FROM public.ventas v
+     WHERE v.cancelada = false`
+  );
+  const costoTotalEmpresaQ = await pool.query(
+    `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
+     FROM public.venta_detalle vd
+     INNER JOIN public.ventas v ON v.id = vd.venta_id
+     LEFT JOIN public.productos p ON p.id = vd.producto_id
+     WHERE v.cancelada = false`
+  );
+
+  const costoHoy = Number(costoHoyQ.rows[0]?.total || 0);
+  const ventasTotalEmpresa = Number(ventasTotalEmpresaQ.rows[0]?.total || 0);
+  const costoTotalEmpresa = Number(costoTotalEmpresaQ.rows[0]?.total || 0);
+
+  return res.json({
+    scope: 'propietario',
+    ventasHoy,
+    ventasMes,
+    cantidadVentasHoy,
+    cantidadVentasMes,
+    promedioVentasMensual,
+    gananciaHoy: ventasHoy - costoHoy,
+    gananciaTotalEmpresa: ventasTotalEmpresa - costoTotalEmpresa,
+  });
+});
+
 ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   const { desde, hasta } = req.query;
 
