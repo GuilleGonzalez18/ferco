@@ -4,7 +4,13 @@ import { api } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const PASOS = ['Productos y carrito', 'Datos de entrega'];
+const PASOS = ['Productos y carrito', 'Pago y preventa'];
+const MEDIOS_PAGO = [
+  { key: 'efectivo', label: 'Efectivo', icon: '/cash.svg' },
+  { key: 'debito', label: 'Débito', icon: '/debit.svg' },
+  { key: 'credito', label: 'Crédito', icon: '/credit.svg' },
+  { key: 'transferencia', label: 'Transferencia', icon: '/transfer.svg' },
+];
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -24,6 +30,14 @@ function todayISODate() {
   const now = new Date();
   const tzOffset = now.getTimezoneOffset() * 60000;
   return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function formatMedioPago(value) {
+  const v = String(value || 'efectivo').toLowerCase();
+  if (v === 'credito') return 'Crédito';
+  if (v === 'debito') return 'Débito';
+  if (v === 'transferencia') return 'Transferencia';
+  return 'Efectivo';
 }
 
 export default function Ventas({ user, productos = [], setProductos }) {
@@ -50,6 +64,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const [clienteId, setClienteId] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
+  const [pagos, setPagos] = useState([
+    { medio_pago: 'efectivo', activo: true, monto: '' },
+    { medio_pago: 'debito', activo: false, monto: '' },
+    { medio_pago: 'credito', activo: false, monto: '' },
+    { medio_pago: 'transferencia', activo: false, monto: '' },
+  ]);
   const [observacion, setObservacion] = useState('');
   const [ventaFinalizada, setVentaFinalizada] = useState(null);
   const [ticketImpreso, setTicketImpreso] = useState(false);
@@ -269,6 +289,26 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const total = Math.max(0, subtotal - descuentoGlobal);
   const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
+  const pagosActivos = useMemo(
+    () => pagos.filter((p) => p.activo),
+    [pagos]
+  );
+  const esPagoUnico = pagosActivos.length === 1;
+  const pagosConMonto = useMemo(
+    () => {
+      if (pagosActivos.length === 1) {
+        return [{ ...pagosActivos[0], montoNumber: total }];
+      }
+      return pagosActivos
+        .map((p) => ({ ...p, montoNumber: toNumber(p.monto) }))
+        .filter((p) => p.montoNumber > 0);
+    },
+    [pagosActivos, total]
+  );
+  const totalPagos = useMemo(
+    () => pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0),
+    [pagosConMonto]
+  );
 
   const goNext = () => {
     if (carrito.length === 0) {
@@ -290,6 +330,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
     setDescuentoTotalValor('');
     setClienteId('');
     setFechaEntrega('');
+    setPagos([
+      { medio_pago: 'efectivo', activo: true, monto: '' },
+      { medio_pago: 'debito', activo: false, monto: '' },
+      { medio_pago: 'credito', activo: false, monto: '' },
+      { medio_pago: 'transferencia', activo: false, monto: '' },
+    ]);
     setObservacion('');
   };
 
@@ -332,6 +378,13 @@ export default function Ventas({ user, productos = [], setProductos }) {
     cursorY += 5;
     doc.text(`Entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, 14, cursorY);
     cursorY += 6;
+    doc.text(`Medio(s) de pago:`, 14, cursorY);
+    cursorY += 5;
+    (ventaFinalizada.pagos || []).forEach((pago) => {
+      doc.text(`- ${formatMedioPago(pago.medio_pago)}: ${money(pago.monto)}`, 18, cursorY);
+      cursorY += 4;
+    });
+    cursorY += 2;
 
     autoTable(doc, {
       startY: cursorY,
@@ -383,6 +436,14 @@ export default function Ventas({ user, productos = [], setProductos }) {
       window.alert('Debes seleccionar cliente y fecha de entrega.');
       return;
     }
+    if (pagosConMonto.length === 0) {
+      window.alert('Debes cargar al menos un medio de pago con monto.');
+      return;
+    }
+    if (Math.abs(totalPagos - total) > 0.01) {
+      window.alert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
+      return;
+    }
     if (!setProductos) return;
 
     const demanda = carritoCalculado.reduce((acc, i) => {
@@ -404,6 +465,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
         usuario_id: user?.id ?? null,
         cliente_id: Number(clienteId),
         fecha_entrega: fechaEntrega,
+        medio_pago: pagosConMonto[0]?.medio_pago || 'efectivo',
+        pagos: pagosConMonto.map((p) => ({ medio_pago: p.medio_pago, monto: p.montoNumber })),
         observacion,
         descuento_total_tipo: descuentoTotalTipo,
         descuento_total_valor: toNumber(descuentoTotalValor),
@@ -430,6 +493,10 @@ export default function Ventas({ user, productos = [], setProductos }) {
         clienteNombre: cliente?.nombre || 'Cliente',
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
         fechaEntrega,
+        pagos: (ventaCreada?.pagos || pagosConMonto).map((p) => ({
+          medio_pago: p.medio_pago,
+          monto: toNumber(p.montoNumber ?? p.monto),
+        })),
         observacion,
         items: carritoCalculado,
         subtotal,
@@ -528,51 +595,91 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
           {paso === 2 && (
             <div className="ventas-panel">
-              <h3>Cliente y entrega</h3>
+              <h3>Pago y preventa</h3>
               <div className="form-entrega">
-                <label>
-                  Cliente
-                  <select value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-                    <option value="">Seleccionar cliente</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                <div className="pagos-box full">
+                  <span className="pagos-label">Selecciona uno o más medios de pago</span>
+                  <div className="pago-grid">
+                    {MEDIOS_PAGO.map((method) => {
+                      const row = pagos.find((p) => p.medio_pago === method.key);
+                      const activo = Boolean(row?.activo);
+                      return (
+                        <button
+                          key={method.key}
+                          type="button"
+                          className={`pago-card ${activo ? 'active' : ''}`}
+                          onClick={() => {
+                            setPagos((prev) => prev.map((p) => (
+                              p.medio_pago === method.key ? { ...p, activo: !p.activo } : p
+                            )));
+                          }}
+                        >
+                          <img src={method.icon} alt="" aria-hidden="true" />
+                          <span>{method.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="pago-inputs">
+                    {pagosActivos.map((pago) => (
+                      <label key={`monto-${pago.medio_pago}`}>
+                        <span>{formatMedioPago(pago.medio_pago)}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Monto"
+                          value={esPagoUnico ? total.toFixed(2) : pago.monto}
+                          readOnly={esPagoUnico}
+                          onChange={(e) => {
+                            if (esPagoUnico) return;
+                            const value = e.target.value;
+                            setPagos((prev) => prev.map((p) => (
+                              p.medio_pago === pago.medio_pago ? { ...p, monto: value } : p
+                            )));
+                          }}
+                        />
+                      </label>
                     ))}
-                  </select>
-                </label>
-
-                <label>
-                  Fecha de entrega
-                  <input
-                    type="date"
-                    min={todayISODate()}
-                    value={fechaEntrega}
-                    onChange={(e) => setFechaEntrega(e.target.value)}
-                  />
-                </label>
-
-                <label className="full">
-                  Observación (opcional)
-                  <textarea
-                    rows="4"
-                    value={observacion}
-                    onChange={(e) => setObservacion(e.target.value)}
-                    placeholder="Detalle para entrega..."
-                  />
-                </label>
+                  </div>
+                  {esPagoUnico && (
+                    <small className="pago-auto-info">
+                      Monto automático: se completa con el total al usar un solo medio.
+                    </small>
+                  )}
+                  <div className={`pagos-total ${Math.abs(totalPagos - total) <= 0.01 ? 'ok' : 'warn'}`}>
+                    Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
+                  </div>
+                </div>
               </div>
 
               <div className="ticket-resumen">
-                <h4>Resumen de la venta</h4>
+                <div className="ticket-header">
+                  <div>
+                    <h4>Pre-ticket de venta</h4>
+                    <span>Vista previa del comprobante</span>
+                  </div>
+                  <strong className="ticket-total-chip">{money(total)}</strong>
+                </div>
                 <div className="ticket-grid">
                   <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
                   <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
+                  <p><span>Pagos:</span> {pagosConMonto.length}</p>
                   <p><span>Ítems:</span> {carritoCalculado.length}</p>
                   <p><span>Unidades:</span> {carritoCalculado.reduce((acc, i) => acc + toNumber(i.unidadesSolicitadas), 0)}</p>
                 </div>
+                <ul className="ticket-pagos">
+                  {pagosConMonto.map((pago) => (
+                    <li key={`preview-pago-${pago.medio_pago}`}>
+                      <span>{formatMedioPago(pago.medio_pago)}</span>
+                      <strong>{money(pago.montoNumber)}</strong>
+                    </li>
+                  ))}
+                </ul>
                 <ul className="ticket-items">
                   {carritoCalculado.map((item) => (
                     <li key={item.id}>
-                      <span>{item.nombre} x {item.unidadesSolicitadas}</span>
+                      <span><b>{item.nombre}</b> x {item.unidadesSolicitadas}</span>
                       <strong>{money(item.subtotalFinal)}</strong>
                     </li>
                   ))}
@@ -602,6 +709,17 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 ? `Cliente: ${clientes.find((c) => String(c.id) === String(clienteId))?.nombre || 'Seleccionado'}`
                 : 'Agregar cliente'}
             </button>
+          </div>
+          <div className="sidebar-entrega">
+            <label>
+              Fecha de entrega
+              <input
+                type="date"
+                min={todayISODate()}
+                value={fechaEntrega}
+                onChange={(e) => setFechaEntrega(e.target.value)}
+              />
+            </label>
           </div>
 
           <h3>Carrito</h3>
@@ -850,6 +968,17 @@ export default function Ventas({ user, productos = [], setProductos }) {
               <p className="venta-final-cliente">
                 Cliente: <strong>{ventaFinalizada.clienteNombre}</strong>
               </p>
+              <p className="venta-final-cliente">
+                Pagos: <strong>{(ventaFinalizada.pagos || []).length}</strong>
+              </p>
+              <ul className="venta-final-pagos">
+                {(ventaFinalizada.pagos || []).map((pago, idx) => (
+                  <li key={`pay-${idx}`}>
+                    <span>{formatMedioPago(pago.medio_pago)}</span>
+                    <strong>{money(pago.monto)}</strong>
+                  </li>
+                ))}
+              </ul>
               <ul className="venta-final-items">
                 {ventaFinalizada.items.map((item) => (
                   <li key={item.id}>

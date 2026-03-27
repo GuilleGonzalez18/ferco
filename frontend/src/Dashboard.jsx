@@ -5,6 +5,7 @@ import VentasHistorial from './VentasHistorial';
 import Clientes from './Clientes';
 import Auditoria from './Auditoria';
 import Usuarios from './Usuarios';
+import Estadisticas from './Estadisticas';
 import './Dashboard.css';
 
 const OPCIONES = [
@@ -80,7 +81,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       case 'usuarios':     return <Usuarios />;
       case 'auditoria':    return <Auditoria />;
       case 'compras':      return <Placeholder titulo="Compras" icon="◌" />;
-      case 'estadisticas': return <Placeholder titulo="Estadísticas" icon="▦" />;
+      case 'estadisticas': return <Estadisticas />;
       default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;
     }
   };

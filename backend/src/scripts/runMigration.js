@@ -5,6 +5,8 @@ const statements = [
   ALTER TABLE public.ventas
     ADD COLUMN IF NOT EXISTS cliente_id integer,
     ADD COLUMN IF NOT EXISTS fecha_entrega timestamp without time zone,
+    ADD COLUMN IF NOT EXISTS medio_pago varchar(20) DEFAULT 'efectivo',
+    ADD COLUMN IF NOT EXISTS cancelada boolean DEFAULT false,
     ADD COLUMN IF NOT EXISTS entregado boolean DEFAULT false,
     ADD COLUMN IF NOT EXISTS estado_entrega varchar(20) DEFAULT 'pendiente',
     ADD COLUMN IF NOT EXISTS observacion text,
@@ -63,6 +65,15 @@ const statements = [
     detalle text NULL,
     usuario_id integer NULL,
     usuario_nombre varchar(120) NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.pagos (
+    id bigserial PRIMARY KEY,
+    venta_id integer NOT NULL REFERENCES public.ventas(id) ON DELETE CASCADE,
+    medio_pago varchar(20) NOT NULL,
+    monto numeric(12,2) NOT NULL,
     created_at timestamp without time zone NOT NULL DEFAULT now()
   );
   `,

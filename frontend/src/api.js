@@ -16,14 +16,22 @@ function setToken(token) {
 async function request(path, options = {}) {
   const token = getToken();
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('No se pudo conectar con el backend. Verifica que esté corriendo en http://localhost:3001.');
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
@@ -87,8 +95,19 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ estado_entrega }),
     }),
+  cancelarVenta: (id) =>
+    request(`/ventas/${id}/cancelar`, {
+      method: 'PUT',
+    }),
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
+  getEstadisticasResumen: (desde, hasta) => {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const suffix = q.toString();
+    return request(`/ventas/estadisticas/resumen${suffix ? `?${suffix}` : ''}`);
+  },
   getAuditoriaEventos: (desde, hasta) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);

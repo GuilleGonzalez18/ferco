@@ -39,6 +39,15 @@
   color: #1f2933;
 }
 
+.ventas-fecha-filter select {
+  border: 1px solid #d3dbe8;
+  border-radius: 8px;
+  padding: 0.48rem 0.56rem;
+  font-size: 0.84rem;
+  color: #1f2933;
+  background: #fff;
+}
+
 .ventas-resumen {
   background: #fff;
   border: 1px solid #e4ebf4;
@@ -70,11 +79,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  overflow-x: auto;
 }
 
 .lista-ventas li {
   display: grid;
-  grid-template-columns: 0.34fr 0.48fr 1.15fr 1.35fr 1.05fr 0.8fr 0.95fr 0.85fr 0.8fr;
+  grid-template-columns: 34px 56px 1.2fr 1.2fr 0.9fr 0.95fr 1fr 0.9fr 56px 84px;
   gap: 0.5rem;
   align-items: center;
   background: #fff;
@@ -83,11 +93,44 @@
   padding: 0.55rem 0.65rem;
   margin-bottom: 0.42rem;
   font-size: 0.82rem;
+  min-width: 0;
+}
+
+@media (max-width: 1320px) {
+  .lista-ventas li {
+    grid-template-columns: 26px 44px 1.1fr 1.05fr 0.82fr 0.9fr 0.86fr 0.72fr 42px 74px;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+    padding: 0.48rem 0.5rem;
+  }
+
+  .reprint-btn {
+    width: 36px;
+    height: 34px;
+  }
+
+  .reprint-btn img {
+    width: 17px;
+    height: 17px;
+  }
+
+  .cancel-btn {
+    height: 31px;
+    width: 31px;
+    min-width: 31px;
+    padding: 0;
+    font-size: 0.84rem;
+  }
 }
 
 .lista-ventas li.venta-row-entregada {
   background: #e4f6ea;
   border-color: #b8e6c8;
+}
+
+.lista-ventas li.venta-row-cancelada {
+  background: #fff3f3;
+  border-color: #f1c2c2;
 }
 
 .venta-row-wrap {
@@ -114,22 +157,45 @@
   font-size: inherit;
   text-align: left;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .sort-header-btn:hover {
   text-decoration: underline;
 }
 
+.lista-ventas li > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .venta-fecha-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.06rem;
+  align-items: flex-start;
+  gap: 0.08rem;
+  min-width: 0;
 }
 
 .venta-fecha-cell small {
   color: #6e7d90;
-  font-size: 0.72rem;
+  font-size: 0.69rem;
   font-weight: 600;
+  white-space: normal;
+  flex-shrink: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.pago-resumen-cell {
+  color: #3d5879;
+  font-weight: 600;
+  font-size: 0.78rem;
 }
 
 .entrega-badge {
@@ -270,6 +336,37 @@
   cursor: wait;
 }
 
+.acciones-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.cancel-btn {
+  border: 1px solid #d05454;
+  border-radius: 8px;
+  height: 34px;
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  background: #fff5f5;
+  color: #9f1d1d;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.cancel-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .lista-ventas .vacio {
   display: block;
   text-align: center;
@@ -282,12 +379,52 @@
     align-items: stretch;
   }
 
-  .lista-ventas .header {
-    display: none;
+  .lista-ventas li {
+    grid-template-columns: 20px 32px 1fr 0.95fr 0.72fr 0.72fr 0.68fr 0.66fr 30px 62px;
+    gap: 0.22rem;
+    font-size: 0.68rem;
+    padding: 0.36rem 0.34rem;
   }
 
-  .lista-ventas li:not(.vacio) {
-    grid-template-columns: 1fr;
-    gap: 0.18rem;
+  .sort-header-btn,
+  .lista-ventas .header span {
+    font-size: 0.66rem;
+  }
+
+  .estado-entrega-field select {
+    padding: 0.2rem 0.2rem;
+    font-size: 0.64rem;
+  }
+
+  .entregado-check {
+    gap: 0.15rem;
+    font-size: 0.64rem;
+  }
+
+  .entregado-check input {
+    width: 12px;
+    height: 12px;
+  }
+
+  .reprint-btn {
+    width: 28px;
+    height: 26px;
+  }
+
+  .reprint-btn img {
+    width: 13px;
+    height: 13px;
+  }
+
+  .cancel-btn {
+    height: 24px;
+    width: 24px;
+    min-width: 24px;
+    padding: 0;
+    font-size: 0.72rem;
+  }
+
+  .acciones-cell {
+    gap: 0.2rem;
   }
 }

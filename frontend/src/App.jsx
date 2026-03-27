@@ -10,6 +10,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [pantalla, setPantalla] = useState('');
   const [productos, setProductos] = useState([]);
+  const [productosError, setProductosError] = useState('');
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -37,8 +38,10 @@ function App() {
       try {
         const rows = await api.getProductos();
         setProductos(rows.map(fromApiProducto));
+        setProductosError('');
       } catch (error) {
         console.error('Error cargando productos', error);
+        setProductosError(error.message || 'No se pudieron cargar productos.');
       }
     };
     loadProductos();
@@ -51,18 +54,25 @@ function App() {
   }
 
   return (
-    <Dashboard
-      user={user}
-      pantalla={pantalla}
-      productos={productos}
-      setProductos={setProductos}
-      onNavigate={setPantalla}
-      onLogout={() => {
-        api.clearAuthToken();
-        setUser(null);
-        setPantalla('');
-      }}
-    />
+    <>
+      {productosError ? (
+        <div style={{ margin: '0.7rem 1rem', padding: '0.55rem 0.7rem', border: '1px solid #f4c7c3', background: '#fff5f4', color: '#b42318', borderRadius: '8px', fontSize: '0.82rem' }}>
+          {productosError}
+        </div>
+      ) : null}
+      <Dashboard
+        user={user}
+        pantalla={pantalla}
+        productos={productos}
+        setProductos={setProductos}
+        onNavigate={setPantalla}
+        onLogout={() => {
+          api.clearAuthToken();
+          setUser(null);
+          setPantalla('');
+        }}
+      />
+    </>
   );
 }
 

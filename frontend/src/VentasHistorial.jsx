@@ -47,8 +47,23 @@ function toISODateOnly(value) {
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
 }
 
+function formatMedioPago(value) {
+  const v = String(value || 'efectivo').toLowerCase();
+  if (v === 'credito') return 'Crédito';
+  if (v === 'debito') return 'Débito';
+  if (v === 'transferencia') return 'Transferencia';
+  return 'Efectivo';
+}
+
+function formatPagosResumen(pagos = []) {
+  if (!Array.isArray(pagos) || pagos.length === 0) return '-';
+  const labels = [...new Set(pagos.map((p) => formatMedioPago(p.medio_pago)))];
+  return labels.join(' + ');
+}
+
 export default function VentasHistorial() {
   const [fecha, setFecha] = useState(todayISO());
+  const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [ventas, setVentas] = useState([]);
   const [sortBy, setSortBy] = useState('id');
   const [sortDir, setSortDir] = useState('desc');
@@ -56,9 +71,15 @@ export default function VentasHistorial() {
   const [error, setError] = useState('');
   const [printingId, setPrintingId] = useState(null);
   const [updatingEntregaId, setUpdatingEntregaId] = useState(null);
+  const [cancelandoVentaId, setCancelandoVentaId] = useState(null);
   const [expandedVentaId, setExpandedVentaId] = useState(null);
   const [detalleByVentaId, setDetalleByVentaId] = useState({});
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
+
+  const normalizarEstadoEntrega = (venta) => {
+    if (venta?.estado_entrega) return String(venta.estado_entrega);
+    return venta?.entregado ? 'entregado' : 'pendiente';
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -78,12 +99,25 @@ export default function VentasHistorial() {
   }, [fecha]);
 
   const totalDelDia = useMemo(
-    () => ventas.reduce((acc, v) => acc + Number(v.total || 0), 0),
-    [ventas]
+    () => ventas.filter((v) => {
+      if (v.cancelada) return false;
+      if (estadoFiltro === 'canceladas') return false;
+      if (estadoFiltro === 'todos') return true;
+      const estado = normalizarEstadoEntrega(v);
+      return estado === estadoFiltro;
+    }).reduce((acc, v) => acc + Number(v.total || 0), 0),
+    [ventas, estadoFiltro]
   );
 
+  const ventasFiltradas = useMemo(() => {
+    if (estadoFiltro === 'canceladas') return ventas.filter((v) => Boolean(v.cancelada));
+    if (estadoFiltro === 'todos') return ventas;
+    const activas = ventas.filter((v) => !v.cancelada);
+    return activas.filter((v) => normalizarEstadoEntrega(v) === estadoFiltro);
+  }, [ventas, estadoFiltro]);
+
   const ventasOrdenadas = useMemo(() => {
-    const list = [...ventas];
+    const list = [...ventasFiltradas];
     const dir = sortDir === 'asc' ? 1 : -1;
     const asText = (v) => String(v ?? '').toLowerCase();
     const asNumber = (v) => {
@@ -112,7 +146,7 @@ export default function VentasHistorial() {
     });
 
     return list;
-  }, [ventas, sortBy, sortDir]);
+  }, [ventasFiltradas, sortBy, sortDir]);
 
   const toggleSort = (column) => {
     if (sortBy === column) {
@@ -164,6 +198,8 @@ export default function VentasHistorial() {
       cursorY += 5;
       doc.text(`Entrega: ${formatDateOnly(venta.fecha_entrega)}`, 14, cursorY);
       cursorY += 6;
+      doc.text(`Medio de pago: ${formatMedioPago(venta.medio_pago)}`, 14, cursorY);
+      cursorY += 6;
 
       autoTable(doc, {
         startY: cursorY,
@@ -200,11 +236,6 @@ export default function VentasHistorial() {
     } finally {
       setPrintingId(null);
     }
-  };
-
-  const normalizarEstadoEntrega = (venta) => {
-    if (venta?.estado_entrega) return String(venta.estado_entrega);
-    return venta?.entregado ? 'entregado' : 'pendiente';
   };
 
   const getEntregaEstadoClass = (venta) => {
@@ -273,6 +304,25 @@ export default function VentasHistorial() {
     }
   };
 
+  const cancelarVenta = async (ventaId) => {
+    const ok = window.confirm('¿Seguro que deseas cancelar esta venta? La acción no elimina el registro.');
+    if (!ok) return;
+    setCancelandoVentaId(ventaId);
+    try {
+      await api.cancelarVenta(ventaId);
+      setVentas((prev) =>
+        prev.map((v) => (v.id === ventaId ? { ...v, cancelada: true } : v))
+      );
+      if (expandedVentaId === ventaId) {
+        setExpandedVentaId(null);
+      }
+    } catch (err) {
+      window.alert(err.message || 'No se pudo cancelar la venta.');
+    } finally {
+      setCancelandoVentaId(null);
+    }
+  };
+
   return (
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
@@ -284,10 +334,20 @@ export default function VentasHistorial() {
           <span>Fecha</span>
           <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
         </label>
+        <label className="ventas-fecha-filter">
+          <span>Estado</span>
+          <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+            <option value="todos">Todos</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="en_camino">En camino</option>
+            <option value="entregado">Entregadas</option>
+            <option value="canceladas">Canceladas</option>
+          </select>
+        </label>
       </div>
 
       <div className="ventas-resumen">
-        <span>{ventas.length} ventas</span>
+        <span>{ventasFiltradas.length} ventas</span>
         <strong>Total: {formatCurrency(totalDelDia)}</strong>
       </div>
 
@@ -297,23 +357,25 @@ export default function VentasHistorial() {
       {!loading && !error && (
         <ul className="lista-ventas">
           <li className="header">
+            <span aria-hidden="true" />
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('id')}># {sortBy === 'id' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('fecha')}>Fecha {sortBy === 'fecha' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('cliente')}>Cliente {sortBy === 'cliente' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('vendedor')}>Vendedor {sortBy === 'vendedor' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('total')}>Total {sortBy === 'total' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <span>Pago</span>
             <span>Estado entrega</span>
             <span>Entregado</span>
-            <span aria-hidden="true" />
+            <span>Acciones</span>
           </li>
-          {ventas.length === 0 && <li className="vacio">No hay ventas para la fecha seleccionada.</li>}
+          {ventasFiltradas.length === 0 && <li className="vacio">No hay ventas para los filtros seleccionados.</li>}
           {ventasOrdenadas.map((v) => {
             const expanded = expandedVentaId === v.id;
             const estadoEntrega = normalizarEstadoEntrega(v);
             const detalleVenta = detalleByVentaId[v.id] || [];
             return (
               <div key={v.id} className="venta-row-wrap">
-                <li className={v.entregado ? 'venta-row-entregada' : ''}>
+                <li className={v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : '')}>
                   <button
                     type="button"
                     className="venta-expand-btn"
@@ -327,16 +389,19 @@ export default function VentasHistorial() {
                   <span className="venta-fecha-cell">
                     <span>{formatDateTime(v.fecha)}</span>
                     <small className={`entrega-badge ${getEntregaEstadoClass(v)}`}>
-                      {estadoEntrega === 'entregado' ? '✓ Entregada' : `Entrega: ${formatDateOnly(v.fecha_entrega)}`}
+                      {v.cancelada
+                        ? '✕ Cancelada'
+                        : (estadoEntrega === 'entregado' ? '✓ Entregada' : `Entrega: ${formatDateOnly(v.fecha_entrega)}`)}
                     </small>
                   </span>
                   <span>{v.cliente_nombre || 'Consumidor final'}</span>
                   <span>{v.usuario_nombre || '-'}</span>
                   <span>{formatCurrency(v.total)}</span>
+                  <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>
                   <label className="estado-entrega-field">
                     <select
                       value={estadoEntrega}
-                      disabled={updatingEntregaId === v.id}
+                      disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
                       onChange={(e) => updateEstadoEntrega(v.id, e.target.value)}
                     >
                       <option value="pendiente">Pendiente</option>
@@ -348,21 +413,33 @@ export default function VentasHistorial() {
                     <input
                       type="checkbox"
                       checked={Boolean(v.entregado)}
-                      disabled={updatingEntregaId === v.id}
+                      disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
                       onChange={(e) => toggleEntregado(v.id, e.target.checked)}
                     />
                     <span>{v.entregado ? 'Sí' : 'No'}</span>
                   </label>
-                  <button
-                    type="button"
-                    className="reprint-btn"
-                    onClick={() => imprimirVenta(v.id)}
-                    disabled={printingId === v.id}
-                    title="Reimprimir ticket"
-                    aria-label="Reimprimir ticket"
-                  >
-                    <img src="/print.svg" alt="" aria-hidden="true" />
-                  </button>
+                  <div className="acciones-cell">
+                    <button
+                      type="button"
+                      className="reprint-btn"
+                      onClick={() => imprimirVenta(v.id)}
+                      disabled={printingId === v.id}
+                      title="Reimprimir ticket"
+                      aria-label="Reimprimir ticket"
+                    >
+                      <img src="/print.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => cancelarVenta(v.id)}
+                      disabled={cancelandoVentaId === v.id || Boolean(v.cancelada)}
+                      title="Cancelar venta"
+                      aria-label="Cancelar venta"
+                    >
+                      {v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}
+                    </button>
+                  </div>
                 </li>
                 {expanded && (
                   <div className="venta-detalle-panel">

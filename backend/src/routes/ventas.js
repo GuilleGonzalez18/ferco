@@ -9,11 +9,240 @@ function toNumber(value) {
 
 export const ventasRouter = Router();
 const ESTADOS_ENTREGA = new Set(['pendiente', 'en_camino', 'entregado']);
+const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
 
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
 }
+
+function normalizePaymentMethods(pagos = []) {
+  const list = Array.isArray(pagos) ? pagos : [];
+  if (!list.length) return [];
+  return list.map((p) => {
+    const medioPago = String(p?.medio_pago || '').trim().toLowerCase();
+    const monto = toNumber(p?.monto);
+    if (!MEDIOS_PAGO.has(medioPago)) {
+      throw new Error('Medio de pago inválido');
+    }
+    if (monto <= 0) {
+      throw new Error('Monto de pago inválido');
+    }
+    return { medio_pago: medioPago, monto };
+  });
+}
+
+ventasRouter.get('/estadisticas/resumen', async (req, res) => {
+  const { desde, hasta } = req.query;
+
+  if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(String(desde))) {
+    return res.status(400).json({ error: 'Formato de fecha "desde" inválido. Usa YYYY-MM-DD' });
+  }
+  if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(String(hasta))) {
+    return res.status(400).json({ error: 'Formato de fecha "hasta" inválido. Usa YYYY-MM-DD' });
+  }
+  if (desde && hasta && String(desde) > String(hasta)) {
+    return res.status(400).json({ error: 'La fecha "desde" no puede ser mayor que "hasta"' });
+  }
+
+  const fechaDesde = desde || null;
+  const fechaHasta = hasta || null;
+  const whereVentas = `WHERE v.cancelada = false
+    AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))`;
+
+  const whereMovimientos = `WHERE DATE(m.created_at) BETWEEN COALESCE($1::date, DATE(m.created_at)) AND COALESCE($2::date, DATE(m.created_at))`;
+
+  const [mejorClienteQ, mayorVentaQ, promedioVentaQ, articuloMasVendidoQ, ventasPorUsuarioQ, comprasTotalesQ, serieVentasQ, serieComprasQ, medioPagoMasUsadoQ] = await Promise.all([
+    pool.query(
+      `SELECT
+         c.id,
+         c.nombre,
+         COUNT(v.id) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_comprado
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       ${whereVentas}
+       GROUP BY c.id, c.nombre
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC
+       LIMIT 1`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         v.id,
+         v.total,
+         v.fecha,
+         c.nombre AS cliente_nombre,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo) AS usuario_nombre
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+       ${whereVentas}
+       ORDER BY v.total DESC, v.fecha DESC
+       LIMIT 1`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*) AS cantidad_ventas,
+         COALESCE(AVG(v.total), 0) AS promedio_venta,
+         COALESCE(SUM(v.total), 0) AS ventas_totales
+       FROM public.ventas v
+       ${whereVentas}`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         p.id,
+         p.nombre,
+         COALESCE(SUM(vd.cantidad), 0) AS total_unidades,
+         COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) AS total_facturado
+       FROM public.venta_detalle vd
+       INNER JOIN public.ventas v ON v.id = vd.venta_id
+       LEFT JOIN public.productos p ON p.id = vd.producto_id
+       ${whereVentas}
+       GROUP BY p.id, p.nombre
+       ORDER BY COALESCE(SUM(vd.cantidad), 0) DESC, COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) DESC
+       LIMIT 1`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         u.id AS usuario_id,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo, 'Sin usuario') AS usuario_nombre,
+         COUNT(v.id) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_vendido
+       FROM public.ventas v
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+       ${whereVentas}
+       GROUP BY u.id, u.nombre, u.apellido, u.username, u.correo
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS compras_totales
+       FROM public.movimientos_stock m
+       LEFT JOIN public.productos p ON p.id = m.producto_id
+       ${whereMovimientos}
+         AND m.tipo = 'entrada'
+         AND COALESCE(m.origen, '') <> 'creacion_producto'`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         DATE(v.fecha) AS fecha,
+         COALESCE(SUM(v.total), 0) AS total_ventas
+       FROM public.ventas v
+       ${whereVentas}
+       GROUP BY DATE(v.fecha)
+       ORDER BY DATE(v.fecha) ASC`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         DATE(m.created_at) AS fecha,
+         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS total_compras
+       FROM public.movimientos_stock m
+       LEFT JOIN public.productos p ON p.id = m.producto_id
+       ${whereMovimientos}
+         AND m.tipo = 'entrada'
+         AND COALESCE(m.origen, '') <> 'creacion_producto'
+       GROUP BY DATE(m.created_at)
+       ORDER BY DATE(m.created_at) ASC`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         p.medio_pago,
+         COUNT(*) AS cantidad,
+         COALESCE(SUM(p.monto), 0) AS total
+       FROM public.pagos p
+       INNER JOIN public.ventas v ON v.id = p.venta_id
+       ${whereVentas}
+       GROUP BY p.medio_pago
+       ORDER BY COUNT(*) DESC, COALESCE(SUM(p.monto), 0) DESC
+       LIMIT 1`,
+      [fechaDesde, fechaHasta]
+    ),
+  ]);
+
+  const mejorCliente = mejorClienteQ.rows[0]
+    ? {
+        id: mejorClienteQ.rows[0].id,
+        nombre: mejorClienteQ.rows[0].nombre || 'Consumidor final',
+        cantidad_ventas: Number(mejorClienteQ.rows[0].cantidad_ventas || 0),
+        total_comprado: Number(mejorClienteQ.rows[0].total_comprado || 0),
+      }
+    : null;
+
+  const mayorVenta = mayorVentaQ.rows[0]
+    ? {
+        id: mayorVentaQ.rows[0].id,
+        total: Number(mayorVentaQ.rows[0].total || 0),
+        fecha: mayorVentaQ.rows[0].fecha,
+        cliente_nombre: mayorVentaQ.rows[0].cliente_nombre || 'Consumidor final',
+        usuario_nombre: mayorVentaQ.rows[0].usuario_nombre || 'Sin usuario',
+      }
+    : null;
+
+  const promedioVenta = promedioVentaQ.rows[0]
+    ? {
+        cantidad_ventas: Number(promedioVentaQ.rows[0].cantidad_ventas || 0),
+        promedio: Number(promedioVentaQ.rows[0].promedio_venta || 0),
+        ventas_totales: Number(promedioVentaQ.rows[0].ventas_totales || 0),
+      }
+    : { cantidad_ventas: 0, promedio: 0, ventas_totales: 0 };
+
+  const articuloMasVendido = articuloMasVendidoQ.rows[0]
+    ? {
+        id: articuloMasVendidoQ.rows[0].id,
+        nombre: articuloMasVendidoQ.rows[0].nombre || 'Producto sin nombre',
+        unidades: Number(articuloMasVendidoQ.rows[0].total_unidades || 0),
+        total_facturado: Number(articuloMasVendidoQ.rows[0].total_facturado || 0),
+      }
+    : null;
+
+  const ventasPorUsuario = ventasPorUsuarioQ.rows.map((row) => ({
+    usuario_id: row.usuario_id,
+    usuario_nombre: row.usuario_nombre || 'Sin usuario',
+    cantidad_ventas: Number(row.cantidad_ventas || 0),
+    total_vendido: Number(row.total_vendido || 0),
+  }));
+
+  const comprasTotales = Number(comprasTotalesQ.rows[0]?.compras_totales || 0);
+  const ganancia = Number(promedioVenta.ventas_totales || 0) - comprasTotales;
+  const ventasSerie = serieVentasQ.rows.map((row) => ({
+    fecha: row.fecha,
+    total: Number(row.total_ventas || 0),
+  }));
+  const comprasSerie = serieComprasQ.rows.map((row) => ({
+    fecha: row.fecha,
+    total: Number(row.total_compras || 0),
+  }));
+  const medioPagoMasUsado = medioPagoMasUsadoQ.rows[0]
+    ? {
+        medio_pago: medioPagoMasUsadoQ.rows[0].medio_pago,
+        cantidad: Number(medioPagoMasUsadoQ.rows[0].cantidad || 0),
+        total: Number(medioPagoMasUsadoQ.rows[0].total || 0),
+      }
+    : null;
+
+  return res.json({
+    desde: fechaDesde,
+    hasta: fechaHasta,
+    mejorCliente,
+    mayorVenta,
+    promedioVenta,
+    articuloMasVendido,
+    ventasPorUsuario,
+    comprasTotales,
+    ganancia,
+    ventasSerie,
+    comprasSerie,
+    medioPagoMasUsado,
+  });
+});
 
 ventasRouter.get('/', async (req, res) => {
   const { fecha } = req.query;
@@ -22,19 +251,41 @@ ventasRouter.get('/', async (req, res) => {
     return res.status(400).json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD' });
   }
 
-  const result = await pool.query(
-    `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
-            v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.entregado, v.estado_entrega,
-            c.nombre AS cliente_nombre,
-            u.nombre AS usuario_nombre
-     FROM public.ventas v
-     LEFT JOIN public.clientes c ON c.id = v.cliente_id
-     LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+   const result = await pool.query(
+      `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
+              v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
+              c.nombre AS cliente_nombre,
+              u.nombre AS usuario_nombre
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
      WHERE DATE(v.fecha) = COALESCE($1::date, CURRENT_DATE)
      ORDER BY v.fecha DESC, v.id DESC`,
     [fecha || null]
+   );
+  const ventas = result.rows;
+  const ventaIds = ventas.map((v) => Number(v.id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (!ventaIds.length) return res.json(ventas.map((v) => ({ ...v, pagos: [] })));
+  const pagosResult = await pool.query(
+    `SELECT id, venta_id, medio_pago, monto, created_at
+     FROM public.pagos
+     WHERE venta_id = ANY($1::int[])
+     ORDER BY id ASC`,
+    [ventaIds]
   );
-  return res.json(result.rows);
+  const pagosByVentaId = pagosResult.rows.reduce((acc, p) => {
+    const key = Number(p.venta_id);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push({
+      id: p.id,
+      venta_id: key,
+      medio_pago: p.medio_pago,
+      monto: Number(p.monto || 0),
+      created_at: p.created_at,
+    });
+    return acc;
+  }, {});
+  return res.json(ventas.map((v) => ({ ...v, pagos: pagosByVentaId[Number(v.id)] || [] })));
 });
 
 ventasRouter.get('/:id', async (req, res) => {
@@ -44,13 +295,13 @@ ventasRouter.get('/:id', async (req, res) => {
   }
 
   const ventaResult = await pool.query(
-    `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
-            v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.entregado, v.estado_entrega,
-            c.nombre AS cliente_nombre,
-            u.nombre AS usuario_nombre
-     FROM public.ventas v
-     LEFT JOIN public.clientes c ON c.id = v.cliente_id
-     LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+      `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
+              v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
+              c.nombre AS cliente_nombre,
+              u.nombre AS usuario_nombre
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
      WHERE v.id = $1`,
     [ventaId]
   );
@@ -68,10 +319,24 @@ ventasRouter.get('/:id', async (req, res) => {
      ORDER BY vd.id ASC`,
     [ventaId]
   );
+  const pagosResult = await pool.query(
+    `SELECT id, venta_id, medio_pago, monto, created_at
+     FROM public.pagos
+     WHERE venta_id = $1
+     ORDER BY id ASC`,
+    [ventaId]
+  );
 
   return res.json({
     ...ventaResult.rows[0],
     detalle: detalleResult.rows,
+    pagos: pagosResult.rows.map((p) => ({
+      id: p.id,
+      venta_id: Number(p.venta_id),
+      medio_pago: p.medio_pago,
+      monto: Number(p.monto || 0),
+      created_at: p.created_at,
+    })),
   });
 });
 
@@ -80,6 +345,8 @@ ventasRouter.post('/', async (req, res) => {
     usuario_id = null,
     cliente_id = null,
     fecha_entrega = null,
+    medio_pago = 'efectivo',
+    pagos = [],
     entregado = false,
     estado_entrega = 'pendiente',
     observacion = null,
@@ -93,6 +360,8 @@ ventasRouter.post('/', async (req, res) => {
 
   try {
     await client.query('BEGIN');
+
+    const pagosNormalizados = normalizePaymentMethods(pagos);
 
     let subtotal = 0;
     const movimientosPendientes = [];
@@ -143,12 +412,23 @@ ventasRouter.post('/', async (req, res) => {
       : (Boolean(entregado) ? 'entregado' : 'pendiente');
     const entregadoFinal = estadoNormalizado === 'entregado' ? true : Boolean(entregado);
 
+    const totalPagos = pagosNormalizados.reduce((acc, p) => acc + toNumber(p.monto), 0);
+    if (pagosNormalizados.length > 0 && Math.abs(totalPagos - total) > 0.01) {
+      throw new Error('La suma de pagos debe coincidir con el total de la venta');
+    }
+    const medioPagoPrincipal = pagosNormalizados.length
+      ? pagosNormalizados[0].medio_pago
+      : String(medio_pago || 'efectivo').trim().toLowerCase();
+    if (!MEDIOS_PAGO.has(medioPagoPrincipal)) {
+      throw new Error('Medio de pago inválido');
+    }
+
     const ventaResult = await client.query(
       `INSERT INTO public.ventas
-        (usuario_id, cliente_id, fecha_entrega, entregado, estado_entrega, observacion, subtotal, descuento_total_tipo, descuento_total_valor, total)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (usuario_id, cliente_id, fecha_entrega, medio_pago, cancelada, entregado, estado_entrega, observacion, subtotal, descuento_total_tipo, descuento_total_valor, total)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
-      [usuario_id, cliente_id, fecha_entrega, entregadoFinal, estadoNormalizado, observacion, subtotal, descuento_total_tipo, descuentoValor, total]
+      [usuario_id, cliente_id, fecha_entrega, medioPagoPrincipal, false, entregadoFinal, estadoNormalizado, observacion, subtotal, descuento_total_tipo, descuentoValor, total]
     );
 
     const ventaId = ventaResult.rows[0].id;
@@ -158,6 +438,21 @@ ventasRouter.post('/', async (req, res) => {
         `INSERT INTO public.venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
          VALUES ($1,$2,$3,$4)`,
         [ventaId, Number(item.producto_id), Math.floor(toNumber(item.cantidad)), toNumber(item.precio_unitario)]
+      );
+    }
+    if (pagosNormalizados.length > 0) {
+      for (const pago of pagosNormalizados) {
+        await client.query(
+          `INSERT INTO public.pagos (venta_id, medio_pago, monto)
+           VALUES ($1,$2,$3)`,
+          [ventaId, pago.medio_pago, pago.monto]
+        );
+      }
+    } else {
+      await client.query(
+        `INSERT INTO public.pagos (venta_id, medio_pago, monto)
+         VALUES ($1,$2,$3)`,
+        [ventaId, medioPagoPrincipal, total]
       );
     }
 
@@ -197,8 +492,24 @@ ventasRouter.post('/', async (req, res) => {
       ]
     );
 
+    const pagosResult = await client.query(
+      `SELECT id, venta_id, medio_pago, monto, created_at
+       FROM public.pagos
+       WHERE venta_id = $1
+       ORDER BY id ASC`,
+      [ventaId]
+    );
     await client.query('COMMIT');
-    return res.status(201).json(ventaResult.rows[0]);
+    return res.status(201).json({
+      ...ventaResult.rows[0],
+      pagos: pagosResult.rows.map((p) => ({
+        id: p.id,
+        venta_id: Number(p.venta_id),
+        medio_pago: p.medio_pago,
+        monto: Number(p.monto || 0),
+        created_at: p.created_at,
+      })),
+    });
   } catch (error) {
     await client.query('ROLLBACK');
     return res.status(400).json({ error: error.message });
@@ -222,14 +533,18 @@ ventasRouter.put('/:id/entregado', async (req, res) => {
   const result = await pool.query(
     `UPDATE public.ventas
      SET entregado = $1,
-         estado_entrega = CASE WHEN $1 THEN 'entregado' ELSE 'pendiente' END
-     WHERE id = $2
+          estado_entrega = CASE WHEN $1 THEN 'entregado' ELSE 'pendiente' END
+     WHERE id = $2 AND cancelada = false
      RETURNING id, entregado, estado_entrega`,
     [entregado, ventaId]
   );
 
   if (!result.rowCount) {
-    return res.status(404).json({ error: 'Venta no encontrada' });
+    const exists = await pool.query(`SELECT id, cancelada FROM public.ventas WHERE id = $1`, [ventaId]);
+    if (!exists.rowCount) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    return res.status(400).json({ error: 'No se puede actualizar una venta cancelada' });
   }
   await pool.query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -262,15 +577,19 @@ ventasRouter.put('/:id/estado-entrega', async (req, res) => {
 
   const result = await pool.query(
     `UPDATE public.ventas
-     SET estado_entrega = $1,
-         entregado = CASE WHEN $1 = 'entregado' THEN true ELSE false END
-     WHERE id = $2
+     SET estado_entrega = $1::varchar(20),
+          entregado = CASE WHEN $1::varchar(20) = 'entregado' THEN true ELSE false END
+     WHERE id = $2 AND cancelada = false
      RETURNING id, estado_entrega, entregado`,
     [estado, ventaId]
   );
 
   if (!result.rowCount) {
-    return res.status(404).json({ error: 'Venta no encontrada' });
+    const exists = await pool.query(`SELECT id, cancelada FROM public.ventas WHERE id = $1`, [ventaId]);
+    if (!exists.rowCount) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    return res.status(400).json({ error: 'No se puede actualizar una venta cancelada' });
   }
   await pool.query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -280,6 +599,46 @@ ventasRouter.put('/:id/estado-entrega', async (req, res) => {
       ventaId,
       'actualizar_estado_entrega',
       `Estado de entrega cambiado a ${result.rows[0].estado_entrega}`,
+      authUser?.id || null,
+      actorName(authUser),
+    ]
+  );
+
+  return res.json(result.rows[0]);
+});
+
+ventasRouter.put('/:id/cancelar', async (req, res) => {
+  const ventaId = Number(req.params.id);
+  const authUser = getAuthUserFromRequest(req);
+
+  if (!Number.isInteger(ventaId) || ventaId <= 0) {
+    return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+
+  const result = await pool.query(
+    `UPDATE public.ventas
+     SET cancelada = true
+     WHERE id = $1 AND cancelada = false
+     RETURNING id, cancelada`,
+    [ventaId]
+  );
+
+  if (!result.rowCount) {
+    const exists = await pool.query(`SELECT id, cancelada FROM public.ventas WHERE id = $1`, [ventaId]);
+    if (!exists.rowCount) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    return res.status(400).json({ error: 'La venta ya está cancelada' });
+  }
+
+  await pool.query(
+    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [
+      'venta',
+      ventaId,
+      'cancelar',
+      'Venta marcada como cancelada',
       authUser?.id || null,
       actorName(authUser),
     ]
