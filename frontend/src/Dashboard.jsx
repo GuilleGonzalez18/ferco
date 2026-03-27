@@ -15,6 +15,7 @@ const OPCIONES = [
   { key: 'productos', label: 'Productos', icon: '/product.svg' },
   { key: 'clientes', label: 'Clientes', icon: '/client.svg' },
   { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
+  { key: 'mi-usuario', label: 'Mi usuario', icon: '/user.svg' },
   { key: 'auditoria', label: 'Auditoría', icon: '/auditory.svg' },
   { key: 'compras', label: 'Compras', icon: '/buy.svg' },
   { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
@@ -46,7 +47,11 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [resumen, setResumen] = useState(null);
   const nombreUsuario = user?.nombre || user?.username || user?.email || 'Usuario';
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
-  const opcionesMenu = OPCIONES.filter((op) => (op.key === 'usuarios' ? esPropietario : true));
+  const opcionesMenu = OPCIONES.filter((op) => {
+    if (op.key === 'usuarios' || op.key === 'compras') return esPropietario;
+    if (op.key === 'mi-usuario') return !esPropietario;
+    return true;
+  });
 
   const handleNavigate = (seccion) => {
     onNavigate(seccion);
@@ -70,10 +75,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     loadResumen();
   }, [user?.id, user?.tipo]);
 
-  const money = (value) =>
-    `$${Number(value || 0).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const money = (value) => {
+    const rounded = Math.round(Number(value || 0));
+    return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  };
   const count = (value) => Number(value || 0).toLocaleString('es-UY');
-  const avgCount = (value) => Number(value || 0).toFixed(1);
+  const avgCount = (value) => Math.round(Number(value || 0)).toLocaleString('es-UY');
 
   const cardsResumen = esPropietario
     ? [
@@ -100,14 +107,19 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Usuarios currentUser={user} />;
+      case 'mi-usuario':   return <Usuarios currentUser={user} onlySelf />;
       case 'auditoria':    return <Auditoria />;
-      case 'compras':      return <Placeholder titulo="Compras" icon="◌" />;
+      case 'compras':
+        return esPropietario
+          ? <Placeholder titulo="Compras" icon="◌" />
+          : <Placeholder titulo="Acceso restringido" icon="X" />;
       case 'estadisticas': return <Estadisticas />;
       default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;
     }
   };
 
-  const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? 'Dashboard';
+  const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? '';
+  const esPantallaDashboard = !pantalla;
 
   return (
     <div className="dashboard-layout">
@@ -154,12 +166,9 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
       <main className="dashboard-content">
         <div className="dashboard-topbar">{tituloActual}</div>
-        <div className={`dashboard-body ${resumen ? 'with-kpis' : ''}`}>
-          {resumen && (
-            <section
-              className="dashboard-kpis-strip"
-              style={{ gridTemplateColumns: `repeat(${cardsResumen.length}, minmax(0, 1fr))` }}
-            >
+        <div className={`dashboard-body ${resumen && esPantallaDashboard ? 'with-kpis' : ''}`}>
+          {resumen && esPantallaDashboard && (
+            <section className="dashboard-kpis-strip">
               {cardsResumen.map((card, idx) => (
                 <article
                   key={card.key}

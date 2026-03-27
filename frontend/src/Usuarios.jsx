@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Usuarios.css';
 
-export default function Usuarios({ currentUser }) {
+export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,6 +93,11 @@ export default function Usuarios({ currentUser }) {
     return list;
   }, [usuariosFiltrados, sortBy, sortDir]);
 
+  const usuarioPropio = useMemo(
+    () => usuarios.find((u) => Number(u.id) === currentUserId) || null,
+    [usuarios, currentUserId]
+  );
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setNuevo((prev) => ({ ...prev, [name]: value }));
@@ -108,6 +113,9 @@ export default function Usuarios({ currentUser }) {
         telefono: nuevo.telefono || null,
         direccion: nuevo.direccion || null,
       };
+      if (editandoId && !String(payload.password || '').trim()) {
+        delete payload.password;
+      }
 
       if (editandoId) {
         const actualizado = await api.updateUsuario(editandoId, payload);
@@ -168,8 +176,27 @@ export default function Usuarios({ currentUser }) {
     }
   };
 
+  useEffect(() => {
+    if (onlySelf && !esPropietario && usuarioPropio) {
+      setEditandoId(usuarioPropio.id);
+      setUsuarioExpandidoId(null);
+      setNuevo({
+        nombre: usuarioPropio.nombre || '',
+        apellido: usuarioPropio.apellido || '',
+        username: usuarioPropio.username || '',
+        correo: usuarioPropio.correo || '',
+        password: '',
+        tipo: usuarioPropio.tipo || 'vendedor',
+        telefono: usuarioPropio.telefono || '',
+        direccion: usuarioPropio.direccion || '',
+      });
+      setMostrarForm(true);
+    }
+  }, [onlySelf, esPropietario, usuarioPropio]);
+
   return (
     <div className="usuarios-main">
+      {!onlySelf && (
       <div className="usuarios-toolbar">
         <h3>Usuarios del sistema</h3>
         <input
@@ -203,11 +230,12 @@ export default function Usuarios({ currentUser }) {
           </button>
         )}
       </div>
+      )}
 
       {loading && <div className="usuarios-msg">Cargando usuarios...</div>}
       {!loading && error && <div className="usuarios-msg error">{error}</div>}
 
-      {!loading && !error && (
+      {!onlySelf && !loading && !error && (
         <ul className="lista-usuarios">
           <li className="header">
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
@@ -242,12 +270,12 @@ export default function Usuarios({ currentUser }) {
         </ul>
       )}
 
-      <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
-        <div className="side-panel-backdrop" onClick={() => setMostrarForm(false)} />
+      <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''} ${onlySelf ? 'only-self' : ''}`} aria-hidden={!mostrarForm}>
+        {!onlySelf && <div className="side-panel-backdrop" onClick={() => setMostrarForm(false)} />}
         <aside className="side-panel">
           <div className="side-panel-header">
-            <h3>{editandoId ? 'Editar usuario' : 'Nuevo usuario'}</h3>
-            <button type="button" className="side-panel-close" onClick={() => setMostrarForm(false)}>✕</button>
+            <h3>{onlySelf ? 'Mi usuario' : (editandoId ? 'Editar usuario' : 'Nuevo usuario')}</h3>
+            {!onlySelf && <button type="button" className="side-panel-close" onClick={() => setMostrarForm(false)}>✕</button>}
           </div>
           <form className="usuario-form" onSubmit={guardarUsuario}>
             <label className="field-label">Nombre
@@ -263,7 +291,14 @@ export default function Usuarios({ currentUser }) {
               <input name="correo" type="email" value={nuevo.correo} onChange={handleChange} required />
             </label>
             <label className="field-label">Contraseña
-              <input name="password" type="password" value={nuevo.password} onChange={handleChange} required />
+              <input
+                name="password"
+                type="password"
+                value={nuevo.password}
+                onChange={handleChange}
+                required={!editandoId}
+                placeholder={editandoId ? 'Dejar en blanco para mantener' : ''}
+              />
             </label>
             <label className="field-label">Tipo
               <select name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>

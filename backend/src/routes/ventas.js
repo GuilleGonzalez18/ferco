@@ -145,6 +145,11 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
 
 ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   const { desde, hasta } = req.query;
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) {
+    return res.status(401).json({ error: 'No autorizado' });
+  }
+  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
 
   if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(String(desde))) {
     return res.status(400).json({ error: 'Formato de fecha "desde" inválido. Usa YYYY-MM-DD' });
@@ -158,12 +163,18 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
 
   const fechaDesde = desde || null;
   const fechaHasta = hasta || null;
+  const userParams = [fechaDesde, fechaHasta];
+  const userClauseVentas = esPropietario ? '' : 'AND v.usuario_id = $3';
+  if (!esPropietario) {
+    userParams.push(Number(authUser.id));
+  }
   const whereVentas = `WHERE v.cancelada = false
-    AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))`;
+    AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))
+    ${userClauseVentas}`;
 
   const whereMovimientos = `WHERE DATE(m.created_at) BETWEEN COALESCE($1::date, DATE(m.created_at)) AND COALESCE($2::date, DATE(m.created_at))`;
 
-  const [mejorClienteQ, mayorVentaQ, promedioVentaQ, articuloMasVendidoQ, ventasPorUsuarioQ, comprasTotalesQ, serieVentasQ, serieComprasQ, medioPagoMasUsadoQ] = await Promise.all([
+  const [mejorClienteQ, mayorVentaQ, promedioVentaQ, articuloMasVendidoQ] = await Promise.all([
     pool.query(
       `SELECT
          c.id,
@@ -176,7 +187,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
        GROUP BY c.id, c.nombre
        ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC
        LIMIT 1`,
-      [fechaDesde, fechaHasta]
+      userParams
     ),
     pool.query(
       `SELECT
@@ -191,7 +202,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
        ${whereVentas}
        ORDER BY v.total DESC, v.fecha DESC
        LIMIT 1`,
-      [fechaDesde, fechaHasta]
+      userParams
     ),
     pool.query(
       `SELECT
@@ -200,7 +211,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
          COALESCE(SUM(v.total), 0) AS ventas_totales
        FROM public.ventas v
        ${whereVentas}`,
-      [fechaDesde, fechaHasta]
+      userParams
     ),
     pool.query(
       `SELECT
@@ -215,66 +226,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
        GROUP BY p.id, p.nombre
        ORDER BY COALESCE(SUM(vd.cantidad), 0) DESC, COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) DESC
        LIMIT 1`,
-      [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         u.id AS usuario_id,
-         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo, 'Sin usuario') AS usuario_nombre,
-         COUNT(v.id) AS cantidad_ventas,
-         COALESCE(SUM(v.total), 0) AS total_vendido
-       FROM public.ventas v
-       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
-       ${whereVentas}
-       GROUP BY u.id, u.nombre, u.apellido, u.username, u.correo
-       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC`,
-      [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS compras_totales
-       FROM public.movimientos_stock m
-       LEFT JOIN public.productos p ON p.id = m.producto_id
-       ${whereMovimientos}
-         AND m.tipo = 'entrada'
-         AND COALESCE(m.origen, '') <> 'creacion_producto'`,
-      [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         DATE(v.fecha) AS fecha,
-         COALESCE(SUM(v.total), 0) AS total_ventas
-       FROM public.ventas v
-       ${whereVentas}
-       GROUP BY DATE(v.fecha)
-       ORDER BY DATE(v.fecha) ASC`,
-      [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         DATE(m.created_at) AS fecha,
-         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS total_compras
-       FROM public.movimientos_stock m
-       LEFT JOIN public.productos p ON p.id = m.producto_id
-       ${whereMovimientos}
-         AND m.tipo = 'entrada'
-         AND COALESCE(m.origen, '') <> 'creacion_producto'
-       GROUP BY DATE(m.created_at)
-       ORDER BY DATE(m.created_at) ASC`,
-      [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         p.medio_pago,
-         COUNT(*) AS cantidad,
-         COALESCE(SUM(p.monto), 0) AS total
-       FROM public.pagos p
-       INNER JOIN public.ventas v ON v.id = p.venta_id
-       ${whereVentas}
-       GROUP BY p.medio_pago
-       ORDER BY COUNT(*) DESC, COALESCE(SUM(p.monto), 0) DESC
-       LIMIT 1`,
-      [fechaDesde, fechaHasta]
+      userParams
     ),
   ]);
 
@@ -314,6 +266,80 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
       }
     : null;
 
+  if (!esPropietario) {
+    return res.json({
+      scope: 'vendedor',
+      desde: fechaDesde,
+      hasta: fechaHasta,
+      mejorCliente,
+      mayorVenta,
+      promedioVenta,
+      articuloMasVendido,
+    });
+  }
+
+  const [ventasPorUsuarioQ, comprasTotalesQ, serieVentasQ, serieComprasQ, medioPagoMasUsadoQ] = await Promise.all([
+    pool.query(
+      `SELECT
+         u.id AS usuario_id,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo, 'Sin usuario') AS usuario_nombre,
+         COUNT(v.id) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_vendido
+       FROM public.ventas v
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+       ${whereVentas}
+       GROUP BY u.id, u.nombre, u.apellido, u.username, u.correo
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC`,
+      userParams
+    ),
+    pool.query(
+      `SELECT
+         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS compras_totales
+       FROM public.movimientos_stock m
+       LEFT JOIN public.productos p ON p.id = m.producto_id
+       ${whereMovimientos}
+         AND m.tipo = 'entrada'
+         AND COALESCE(m.origen, '') <> 'creacion_producto'`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         DATE(v.fecha) AS fecha,
+         COALESCE(SUM(v.total), 0) AS total_ventas
+       FROM public.ventas v
+       ${whereVentas}
+       GROUP BY DATE(v.fecha)
+       ORDER BY DATE(v.fecha) ASC`,
+      userParams
+    ),
+    pool.query(
+      `SELECT
+         DATE(m.created_at) AS fecha,
+         COALESCE(SUM(m.cantidad * COALESCE(p.costo, 0)), 0) AS total_compras
+       FROM public.movimientos_stock m
+       LEFT JOIN public.productos p ON p.id = m.producto_id
+       ${whereMovimientos}
+         AND m.tipo = 'entrada'
+         AND COALESCE(m.origen, '') <> 'creacion_producto'
+       GROUP BY DATE(m.created_at)
+       ORDER BY DATE(m.created_at) ASC`,
+      [fechaDesde, fechaHasta]
+    ),
+    pool.query(
+      `SELECT
+         p.medio_pago,
+         COUNT(*) AS cantidad,
+         COALESCE(SUM(p.monto), 0) AS total
+       FROM public.pagos p
+       INNER JOIN public.ventas v ON v.id = p.venta_id
+       ${whereVentas}
+       GROUP BY p.medio_pago
+       ORDER BY COUNT(*) DESC, COALESCE(SUM(p.monto), 0) DESC
+       LIMIT 1`,
+      userParams
+    ),
+  ]);
+
   const ventasPorUsuario = ventasPorUsuarioQ.rows.map((row) => ({
     usuario_id: row.usuario_id,
     usuario_nombre: row.usuario_nombre || 'Sin usuario',
@@ -340,6 +366,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
     : null;
 
   return res.json({
+    scope: 'propietario',
     desde: fechaDesde,
     hasta: fechaHasta,
     mejorCliente,

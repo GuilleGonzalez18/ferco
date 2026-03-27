@@ -3,8 +3,8 @@ import { api } from './api';
 import './Estadisticas.css';
 
 function money(value) {
-  const n = Number(value || 0);
-  return n.toLocaleString('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 2 });
+  const n = Math.round(Number(value || 0));
+  return n.toLocaleString('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 0 });
 }
 
 function qty(value) {
@@ -83,9 +83,10 @@ function MiniBars({ items, valueKey = 'value' }) {
     >
       {items.map((item) => {
         const value = Number(item[valueKey] || 0);
+        const valueRounded = Math.round(value);
         const height = value <= 0 ? '0%' : `${Math.max(8, (value / max) * 100)}%`;
         return (
-          <div key={item.key} className="mini-bar-col" title={`${item.label}: ${value.toLocaleString('es-UY')}`}>
+          <div key={item.key} className="mini-bar-col" title={`${item.label}: ${valueRounded.toLocaleString('es-UY')}`}>
             <div className="mini-bar-track">
               <div className="mini-bar" style={{ height }} />
             </div>
@@ -104,6 +105,7 @@ export default function Estadisticas() {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [quickRange, setQuickRange] = useState('');
+  const esVendedor = stats?.scope === 'vendedor';
 
   const loadStats = async (nextDesde = desde, nextHasta = hasta) => {
     setLoading(true);
@@ -132,7 +134,7 @@ export default function Estadisticas() {
     return rows.map((u, idx) => ({
       key: `${u.usuario_id || idx}-${u.usuario_nombre}`,
       label: u.usuario_nombre || 'N/A',
-      value: Number(u.total_vendido || 0),
+      value: Math.round(Number(u.total_vendido || 0)),
     }));
   }, [stats]);
 
@@ -251,15 +253,19 @@ export default function Estadisticas() {
               <h4 className="stats-big-number">{money(stats?.promedioVenta?.ventas_totales || 0)}</h4>
             </article>
 
-            <article className="stats-card">
-              <span className="stats-kicker">Compras totales</span>
-              <h4 className="stats-big-number">{money(stats?.comprasTotales || 0)}</h4>
-            </article>
+            {!esVendedor && (
+              <>
+                <article className="stats-card">
+                  <span className="stats-kicker">Compras totales</span>
+                  <h4 className="stats-big-number">{money(stats?.comprasTotales || 0)}</h4>
+                </article>
 
-            <article className={`stats-card ${(stats?.ganancia || 0) >= 0 ? 'gain-positive' : 'gain-negative'}`}>
-              <span className="stats-kicker">Ganancia</span>
-              <h4 className="stats-big-number">{money(stats?.ganancia || 0)}</h4>
-            </article>
+                <article className={`stats-card ${(stats?.ganancia || 0) >= 0 ? 'gain-positive' : 'gain-negative'}`}>
+                  <span className="stats-kicker">Ganancia</span>
+                  <h4 className="stats-big-number">{money(stats?.ganancia || 0)}</h4>
+                </article>
+              </>
+            )}
 
             <article className="stats-card">
               <span className="stats-kicker">Artículo más vendido</span>
@@ -268,84 +274,92 @@ export default function Estadisticas() {
               <p>Total facturado: <strong>{money(stats?.articuloMasVendido?.total_facturado || 0)}</strong></p>
             </article>
 
-            <article className="stats-card">
-              <span className="stats-kicker">Ventas por usuario (top)</span>
-              <h4>{topUsuario?.usuario_nombre || '-'}</h4>
-              <p>Total vendido: <strong>{money(topUsuario?.total_vendido || 0)}</strong></p>
-              <p>Cantidad de ventas: <strong>{qty(topUsuario?.cantidad_ventas || 0)}</strong></p>
-            </article>
+            {!esVendedor && (
+              <>
+                <article className="stats-card">
+                  <span className="stats-kicker">Ventas por usuario (top)</span>
+                  <h4>{topUsuario?.usuario_nombre || '-'}</h4>
+                  <p>Total vendido: <strong>{money(topUsuario?.total_vendido || 0)}</strong></p>
+                  <p>Cantidad de ventas: <strong>{qty(topUsuario?.cantidad_ventas || 0)}</strong></p>
+                </article>
 
-            <article className="stats-card">
-              <span className="stats-kicker">Medio de pago más usado</span>
-              <h4>{formatMedioPago(stats?.medioPagoMasUsado?.medio_pago)}</h4>
-              <p>Usos: <strong>{qty(stats?.medioPagoMasUsado?.cantidad || 0)}</strong></p>
-              <p>Monto: <strong>{money(stats?.medioPagoMasUsado?.total || 0)}</strong></p>
-            </article>
+                <article className="stats-card">
+                  <span className="stats-kicker">Medio de pago más usado</span>
+                  <h4>{formatMedioPago(stats?.medioPagoMasUsado?.medio_pago)}</h4>
+                  <p>Usos: <strong>{qty(stats?.medioPagoMasUsado?.cantidad || 0)}</strong></p>
+                  <p>Monto: <strong>{money(stats?.medioPagoMasUsado?.total || 0)}</strong></p>
+                </article>
+              </>
+            )}
           </section>
 
-          <section className="stats-charts-grid">
-            <article className="stats-table-card chart-card">
-              <div className="stats-table-head">
-                <h4>Mini gráfico: ventas por usuario</h4>
-              </div>
-              {ventasUsuarioChart.length ? (
-                <MiniBars items={ventasUsuarioChart} valueKey="value" />
-              ) : (
-                <div className="stats-msg">Sin datos para mostrar.</div>
-              )}
-            </article>
+          {!esVendedor && (
+            <>
+              <section className="stats-charts-grid">
+                <article className="stats-table-card chart-card">
+                  <div className="stats-table-head">
+                    <h4>Mini gráfico: ventas por usuario</h4>
+                  </div>
+                  {ventasUsuarioChart.length ? (
+                    <MiniBars items={ventasUsuarioChart} valueKey="value" />
+                  ) : (
+                    <div className="stats-msg">Sin datos para mostrar.</div>
+                  )}
+                </article>
 
-            <article className="stats-table-card chart-card">
-              <div className="stats-table-head">
-                <h4>Mini gráfico: ventas vs compras (por fecha)</h4>
-              </div>
-              <div className="mini-legend">
-                <span><i className="dot ventas" />Ventas</span>
-                <span><i className="dot compras" />Compras</span>
-              </div>
-              <div className="mini-double-bars">
-                {ventasComprasChart.length === 0 && <div className="stats-msg">Sin datos para mostrar.</div>}
-                {ventasComprasChart.map((row) => {
-                  const hVentas = row.ventas <= 0 ? '0%' : `${Math.max(8, (row.ventas / maxVentasComprasChart) * 100)}%`;
-                  const hCompras = row.compras <= 0 ? '0%' : `${Math.max(8, (row.compras / maxVentasComprasChart) * 100)}%`;
-                  return (
-                    <div key={row.key} className="mini-double-col" title={`${row.label} | Ventas ${row.ventas.toLocaleString('es-UY')} - Compras ${row.compras.toLocaleString('es-UY')}`}>
-                      <div className="mini-double-track">
-                        <div className="mini-double-pair">
-                          <span className="mini-double-bar ventas" style={{ height: hVentas }} />
-                          <span className="mini-double-bar compras" style={{ height: hCompras }} />
+                <article className="stats-table-card chart-card">
+                  <div className="stats-table-head">
+                    <h4>Mini gráfico: ventas vs compras (por fecha)</h4>
+                  </div>
+                  <div className="mini-legend">
+                    <span><i className="dot ventas" />Ventas</span>
+                    <span><i className="dot compras" />Compras</span>
+                  </div>
+                  <div className="mini-double-bars">
+                    {ventasComprasChart.length === 0 && <div className="stats-msg">Sin datos para mostrar.</div>}
+                    {ventasComprasChart.map((row) => {
+                      const hVentas = row.ventas <= 0 ? '0%' : `${Math.max(8, (row.ventas / maxVentasComprasChart) * 100)}%`;
+                      const hCompras = row.compras <= 0 ? '0%' : `${Math.max(8, (row.compras / maxVentasComprasChart) * 100)}%`;
+                      return (
+                        <div key={row.key} className="mini-double-col" title={`${row.label} | Ventas ${Math.round(row.ventas).toLocaleString('es-UY')} - Compras ${Math.round(row.compras).toLocaleString('es-UY')}`}>
+                          <div className="mini-double-track">
+                            <div className="mini-double-pair">
+                              <span className="mini-double-bar ventas" style={{ height: hVentas }} />
+                              <span className="mini-double-bar compras" style={{ height: hCompras }} />
+                            </div>
+                          </div>
+                          <span className="mini-bar-label">{row.label}</span>
                         </div>
-                      </div>
-                      <span className="mini-bar-label">{row.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </article>
-          </section>
+                      );
+                    })}
+                  </div>
+                </article>
+              </section>
 
-          <section className="stats-table-card">
-            <div className="stats-table-head">
-              <h4>Detalle de ventas por usuario</h4>
-            </div>
-            <ul className="stats-table">
-              <li className="header">
-                <span>Usuario</span>
-                <span>Ventas</span>
-                <span>Total vendido</span>
-              </li>
-              {(stats?.ventasPorUsuario || []).length === 0 && (
-                <li className="empty">Aún no hay ventas registradas.</li>
-              )}
-              {(stats?.ventasPorUsuario || []).map((u) => (
-                <li key={`${u.usuario_id || 'na'}-${u.usuario_nombre}`}>
-                  <span>{u.usuario_nombre || '-'}</span>
-                  <span>{qty(u.cantidad_ventas)}</span>
-                  <span>{money(u.total_vendido)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+              <section className="stats-table-card">
+                <div className="stats-table-head">
+                  <h4>Detalle de ventas por usuario</h4>
+                </div>
+                <ul className="stats-table">
+                  <li className="header">
+                    <span>Usuario</span>
+                    <span>Ventas</span>
+                    <span>Total vendido</span>
+                  </li>
+                  {(stats?.ventasPorUsuario || []).length === 0 && (
+                    <li className="empty">Aún no hay ventas registradas.</li>
+                  )}
+                  {(stats?.ventasPorUsuario || []).map((u) => (
+                    <li key={`${u.usuario_id || 'na'}-${u.usuario_nombre}`}>
+                      <span>{u.usuario_nombre || '-'}</span>
+                      <span>{qty(u.cantidad_ventas)}</span>
+                      <span>{money(u.total_vendido)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </>
+          )}
         </>
       )}
     </div>

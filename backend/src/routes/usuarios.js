@@ -110,10 +110,11 @@ usuariosRouter.put('/:id', async (req, res) => {
   if (!canManageAll && !isSelf) {
     return res.status(403).json({ error: 'Solo puedes editar tu propio usuario' });
   }
-  if (!username || !password || !correo) {
-    return res.status(400).json({ error: 'username, password y correo son requeridos' });
+  if (!username || !correo) {
+    return res.status(400).json({ error: 'username y correo son requeridos' });
   }
 
+  const passwordValue = typeof password === 'string' ? password.trim() : '';
   const currentUserQ = await query(
     `SELECT id, tipo
      FROM public.usuarios
@@ -149,7 +150,7 @@ usuariosRouter.put('/:id', async (req, res) => {
   const result = await query(
     `UPDATE public.usuarios
      SET username = $1,
-          password = $2,
+          password = COALESCE(NULLIF($2, ''), password),
           tipo = $3,
          nombre = $4,
          apellido = $5,
@@ -158,7 +159,7 @@ usuariosRouter.put('/:id', async (req, res) => {
          direccion = $8
      WHERE id = $9
      RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-    [username, password, tipoFinal, nombre, apellido, correo, telefono, direccion, id]
+    [username, passwordValue, tipoFinal, nombre, apellido, correo, telefono, direccion, id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
   return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });

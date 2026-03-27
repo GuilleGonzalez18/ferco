@@ -189,6 +189,30 @@
   transform: translateX(0);
 }
 
+.side-panel-overlay.only-self {
+  position: static;
+  inset: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-panel-overlay.only-self .side-panel {
+  position: static;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+  box-shadow: 0 6px 18px rgba(20, 30, 45, 0.08);
+  border: 1px solid #e4ebf4;
+  border-radius: 12px;
+  transform: none;
+  margin: 0.3rem auto 0;
+  padding: 0.95rem;
+}
+
+.side-panel-overlay.only-self .side-panel-header {
+  margin-bottom: 0.8rem;
+}
+
 .side-panel-header {
   display: flex;
   align-items: center;
