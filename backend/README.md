@@ -25,7 +25,21 @@ Requiere `psql` disponible en PATH.
 npm run db:import
 ```
 
-## 4) Ejecutar migración incremental
+## 4) Crear schema desde cero (para nuevos colaboradores)
+
+Esto crea todas las tablas/índices/relaciones necesarias de forma idempotente:
+
+```bash
+npm run db:schema
+```
+
+Atajo recomendado (schema + migración):
+
+```bash
+npm run db:setup
+```
+
+## 5) Ejecutar migración incremental
 
 Agrega columnas de ventas para soportar cliente/entrega/total/descuentos:
 
@@ -33,7 +47,7 @@ Agrega columnas de ventas para soportar cliente/entrega/total/descuentos:
 npm run db:migrate
 ```
 
-## 5) Levantar API
+## 6) Levantar API
 
 ```bash
 npm run dev
