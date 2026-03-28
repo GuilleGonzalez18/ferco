@@ -38,6 +38,16 @@ function normalizeTipo(tipo) {
   return 'vendedor';
 }
 
+function calcGrowthPercent(currentValue, previousValue) {
+  const current = Number(currentValue || 0);
+  const previous = Number(previousValue || 0);
+  if (previous === 0) {
+    if (current === 0) return 0;
+    return 100;
+  }
+  return ((current - previous) / previous) * 100;
+}
+
 ventasRouter.get('/dashboard/resumen', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) {
@@ -174,7 +184,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
 
   const whereMovimientos = `WHERE DATE(m.created_at) BETWEEN COALESCE($1::date, DATE(m.created_at)) AND COALESCE($2::date, DATE(m.created_at))`;
 
-  const [mejorClienteQ, mayorVentaQ, promedioVentaQ, articuloMasVendidoQ] = await Promise.all([
+  const [mejorClienteQ, mayorVentaQ, promedioVentaQ, articuloMasVendidoQ, serieVentasBaseQ] = await Promise.all([
     pool.query(
       `SELECT
          c.id,
@@ -224,8 +234,18 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
        LEFT JOIN public.productos p ON p.id = vd.producto_id
        ${whereVentas}
        GROUP BY p.id, p.nombre
-       ORDER BY COALESCE(SUM(vd.cantidad), 0) DESC, COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) DESC
-       LIMIT 1`,
+        ORDER BY COALESCE(SUM(vd.cantidad), 0) DESC, COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) DESC
+        LIMIT 1`,
+      userParams
+    ),
+    pool.query(
+      `SELECT
+         DATE(v.fecha) AS fecha,
+         COALESCE(SUM(v.total), 0) AS total_ventas
+       FROM public.ventas v
+       ${whereVentas}
+       GROUP BY DATE(v.fecha)
+       ORDER BY DATE(v.fecha) ASC`,
       userParams
     ),
   ]);
@@ -265,6 +285,122 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
         total_facturado: Number(articuloMasVendidoQ.rows[0].total_facturado || 0),
       }
     : null;
+  const ventasSerie = serieVentasBaseQ.rows.map((row) => ({
+    fecha: row.fecha,
+    total: Number(row.total_ventas || 0),
+  }));
+
+  const [ultimaVentaQ, mejorDiaSemanaQ, mejorHorarioQ, periodosQ] = await Promise.all([
+    pool.query(
+      `SELECT MAX(DATE(v.fecha)) AS ultima_fecha
+       FROM public.ventas v
+       WHERE v.cancelada = false
+         AND v.usuario_id = $1`,
+      [Number(authUser.id)]
+    ),
+    pool.query(
+      `SELECT
+         EXTRACT(ISODOW FROM v.fecha)::int AS dia_iso,
+         COUNT(*) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_vendido
+       FROM public.ventas v
+       ${whereVentas}
+       GROUP BY EXTRACT(ISODOW FROM v.fecha)
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
+       LIMIT 1`,
+      userParams
+    ),
+    pool.query(
+      `SELECT
+         EXTRACT(HOUR FROM v.fecha)::int AS hora,
+         COUNT(*) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_vendido
+       FROM public.ventas v
+       ${whereVentas}
+       GROUP BY EXTRACT(HOUR FROM v.fecha)
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
+       LIMIT 1`,
+      userParams
+    ),
+    pool.query(
+      `SELECT
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= CURRENT_DATE
+             AND v.fecha < CURRENT_DATE + INTERVAL '1 day'
+         ), 0) AS ventas_dia_actual,
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= CURRENT_DATE - INTERVAL '1 day'
+             AND v.fecha < CURRENT_DATE
+         ), 0) AS ventas_dia_anterior,
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= date_trunc('week', CURRENT_DATE)
+             AND v.fecha < date_trunc('week', CURRENT_DATE) + INTERVAL '7 day'
+         ), 0) AS ventas_semana_actual,
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= date_trunc('week', CURRENT_DATE) - INTERVAL '7 day'
+             AND v.fecha < date_trunc('week', CURRENT_DATE)
+         ), 0) AS ventas_semana_anterior,
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= date_trunc('month', CURRENT_DATE)
+             AND v.fecha < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+         ), 0) AS ventas_mes_actual,
+         COALESCE(SUM(v.total) FILTER (
+           WHERE v.fecha >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+             AND v.fecha < date_trunc('month', CURRENT_DATE)
+         ), 0) AS ventas_mes_anterior
+       FROM public.ventas v
+       WHERE v.cancelada = false
+         AND v.usuario_id = $1`,
+      [Number(authUser.id)]
+    ),
+  ]);
+
+  const ultimaFecha = ultimaVentaQ.rows[0]?.ultima_fecha ? new Date(ultimaVentaQ.rows[0].ultima_fecha) : null;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const diasSinVender = ultimaFecha
+    ? Math.max(0, Math.floor((hoy.getTime() - ultimaFecha.getTime()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const diaSemanaLabels = {
+    1: 'Lunes',
+    2: 'Martes',
+    3: 'Miércoles',
+    4: 'Jueves',
+    5: 'Viernes',
+    6: 'Sábado',
+    7: 'Domingo',
+  };
+  const mejorDiaSemanaRow = mejorDiaSemanaQ.rows[0];
+  const mejorDiaSemana = mejorDiaSemanaRow
+    ? {
+        dia: diaSemanaLabels[Number(mejorDiaSemanaRow.dia_iso)] || 'N/A',
+        total_vendido: Number(mejorDiaSemanaRow.total_vendido || 0),
+        cantidad_ventas: Number(mejorDiaSemanaRow.cantidad_ventas || 0),
+      }
+    : null;
+
+  const mejorHorarioRow = mejorHorarioQ.rows[0];
+  const mejorHorario = mejorHorarioRow
+    ? {
+        hora: Number(mejorHorarioRow.hora || 0),
+        rango: `${String(Number(mejorHorarioRow.hora || 0)).padStart(2, '0')}:00 - ${String((Number(mejorHorarioRow.hora || 0) + 1) % 24).padStart(2, '0')}:00`,
+        total_vendido: Number(mejorHorarioRow.total_vendido || 0),
+        cantidad_ventas: Number(mejorHorarioRow.cantidad_ventas || 0),
+      }
+    : null;
+
+  const periodos = periodosQ.rows[0] || {};
+  const ventasPeriodo = {
+    dia: Number(periodos.ventas_dia_actual || 0),
+    semana: Number(periodos.ventas_semana_actual || 0),
+    mes: Number(periodos.ventas_mes_actual || 0),
+  };
+  const crecimientoPeriodo = {
+    dia: calcGrowthPercent(periodos.ventas_dia_actual, periodos.ventas_dia_anterior),
+    semana: calcGrowthPercent(periodos.ventas_semana_actual, periodos.ventas_semana_anterior),
+    mes: calcGrowthPercent(periodos.ventas_mes_actual, periodos.ventas_mes_anterior),
+  };
 
   if (!esPropietario) {
     return res.json({
@@ -275,10 +411,16 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
       mayorVenta,
       promedioVenta,
       articuloMasVendido,
+      ventasSerie,
+      diasSinVender,
+      mejorDiaSemana,
+      mejorHorario,
+      ventasPeriodo,
+      crecimientoPeriodo,
     });
   }
 
-  const [ventasPorUsuarioQ, comprasTotalesQ, serieVentasQ, serieComprasQ, medioPagoMasUsadoQ] = await Promise.all([
+  const [ventasPorUsuarioQ, comprasTotalesQ, serieComprasQ, medioPagoMasUsadoQ] = await Promise.all([
     pool.query(
       `SELECT
          u.id AS usuario_id,
@@ -301,16 +443,6 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
          AND m.tipo = 'entrada'
          AND COALESCE(m.origen, '') <> 'creacion_producto'`,
       [fechaDesde, fechaHasta]
-    ),
-    pool.query(
-      `SELECT
-         DATE(v.fecha) AS fecha,
-         COALESCE(SUM(v.total), 0) AS total_ventas
-       FROM public.ventas v
-       ${whereVentas}
-       GROUP BY DATE(v.fecha)
-       ORDER BY DATE(v.fecha) ASC`,
-      userParams
     ),
     pool.query(
       `SELECT
@@ -349,10 +481,6 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
 
   const comprasTotales = Number(comprasTotalesQ.rows[0]?.compras_totales || 0);
   const ganancia = Number(promedioVenta.ventas_totales || 0) - comprasTotales;
-  const ventasSerie = serieVentasQ.rows.map((row) => ({
-    fecha: row.fecha,
-    total: Number(row.total_ventas || 0),
-  }));
   const comprasSerie = serieComprasQ.rows.map((row) => ({
     fecha: row.fecha,
     total: Number(row.total_compras || 0),
@@ -379,6 +507,18 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
     ventasSerie,
     comprasSerie,
     medioPagoMasUsado,
+    personalStats: {
+      diasSinVender,
+      mejorDiaSemana,
+      mejorHorario,
+      ventasPeriodo,
+      crecimientoPeriodo,
+      ventasSerie,
+      mejorCliente,
+      mayorVenta,
+      promedioVenta,
+      articuloMasVendido,
+    },
   });
 });
 

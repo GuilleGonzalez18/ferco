@@ -200,12 +200,12 @@
   position: static;
   width: 100%;
   max-width: 760px;
-  height: auto;
+  height: 100%;
   box-shadow: 0 6px 18px rgba(20, 30, 45, 0.08);
   border: 1px solid #e4ebf4;
   border-radius: 12px;
   transform: none;
-  margin: 0.3rem auto 0;
+  margin: 0;
   padding: 0.95rem;
 }
 

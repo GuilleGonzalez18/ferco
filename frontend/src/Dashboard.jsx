@@ -42,6 +42,19 @@ function DashboardLanding({ nombreUsuario }) {
   );
 }
 
+function MiUsuarioView({ user }) {
+  return (
+    <div className="mi-usuario-split">
+      <section className="mi-usuario-col mi-usuario-col-stats">
+        <Estadisticas compact />
+      </section>
+      <section className="mi-usuario-col mi-usuario-col-form">
+        <Usuarios currentUser={user} onlySelf />
+      </section>
+    </div>
+  );
+}
+
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
@@ -107,7 +120,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Usuarios currentUser={user} />;
-      case 'mi-usuario':   return <Usuarios currentUser={user} onlySelf />;
+      case 'mi-usuario':   return <MiUsuarioView user={user} />;
       case 'auditoria':    return <Auditoria />;
       case 'compras':
         return esPropietario
