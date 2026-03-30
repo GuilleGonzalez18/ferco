@@ -102,10 +102,11 @@ export const api = {
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),
-  getEstadisticasResumen: (desde, hasta) => {
+  getEstadisticasResumen: (desde, hasta, usuarioId) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);
     if (hasta) q.set('hasta', hasta);
+    if (usuarioId) q.set('usuarioId', String(usuarioId));
     const suffix = q.toString();
     return request(`/ventas/estadisticas/resumen${suffix ? `?${suffix}` : ''}`);
   },

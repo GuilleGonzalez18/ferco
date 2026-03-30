@@ -63,6 +63,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const opcionesMenu = OPCIONES.filter((op) => {
     if (op.key === 'usuarios' || op.key === 'compras') return esPropietario;
     if (op.key === 'mi-usuario') return !esPropietario;
+    if (op.key === 'estadisticas') return esPropietario;
     return true;
   });
 

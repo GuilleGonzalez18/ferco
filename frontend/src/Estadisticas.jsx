@@ -108,10 +108,13 @@ export default function Estadisticas({ compact = false }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [quickRange, setQuickRange] = useState('');
   const [ownerTab, setOwnerTab] = useState('empresa');
+  const [ownerUsuarioId, setOwnerUsuarioId] = useState('');
+  const [ownerSelfUsuarioId, setOwnerSelfUsuarioId] = useState(0);
   const esVendedor = stats?.scope === 'vendedor';
   const esPropietario = stats?.scope === 'propietario';
   const showEmpresa = !esVendedor && (!esPropietario || ownerTab === 'empresa');
@@ -120,12 +123,20 @@ export default function Estadisticas({ compact = false }) {
     ? (esVendedor ? stats : stats?.personalStats)
     : null;
 
-  const loadStats = async (nextDesde = desde, nextHasta = hasta) => {
+  const loadStats = async (nextDesde = desde, nextHasta = hasta, nextUsuarioId = ownerUsuarioId) => {
     setLoading(true);
     setError('');
     try {
-      const data = await api.getEstadisticasResumen(nextDesde, nextHasta);
+      const data = await api.getEstadisticasResumen(nextDesde, nextHasta, nextUsuarioId);
       setStats(data);
+      if (
+        data?.scope === 'propietario' &&
+        !nextUsuarioId &&
+        !ownerSelfUsuarioId &&
+        Number.isInteger(Number(data?.personalStats?.usuarioId))
+      ) {
+        setOwnerSelfUsuarioId(Number(data.personalStats.usuarioId));
+      }
     } catch (err) {
       setError(err.message || 'No se pudieron cargar las estadísticas.');
     } finally {
@@ -138,8 +149,36 @@ export default function Estadisticas({ compact = false }) {
   }, []);
 
   useEffect(() => {
+    const loadUsuarios = async () => {
+      try {
+        const data = await api.getUsuarios();
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch {
+        setUsuarios([]);
+      }
+    };
+    loadUsuarios();
+  }, []);
+
+  useEffect(() => {
     if (!esPropietario) setOwnerTab('empresa');
   }, [esPropietario]);
+
+  const usuariosFiltro = useMemo(() => {
+    const rows = Array.isArray(usuarios) ? usuarios : [];
+    return rows
+      .filter((u) => Number(u.id) !== Number(ownerSelfUsuarioId || 0))
+      .map((u) => ({
+        id: Number(u.id),
+        label: [u.nombre, u.apellido].filter(Boolean).join(' ').trim() || u.username || u.correo || `Usuario ${u.id}`,
+      }));
+  }, [ownerSelfUsuarioId, usuarios]);
+
+  const usuarioFiltroNombre = useMemo(() => {
+    const currentId = Number(stats?.personalStats?.usuarioId || ownerUsuarioId || 0);
+    if (!currentId) return '';
+    return usuariosFiltro.find((u) => u.id === currentId)?.label || '';
+  }, [ownerUsuarioId, stats?.personalStats?.usuarioId, usuariosFiltro]);
 
   const topUsuario = useMemo(() => {
     const rows = stats?.ventasPorUsuario || [];
@@ -217,8 +256,26 @@ export default function Estadisticas({ compact = false }) {
             </button>
           </div>
         )}
-        <div className="stats-filters">
-          <div className="stats-quick-ranges">
+          <div className="stats-filters">
+            {esPropietario && (
+              <select
+                className="stats-user-select"
+                value={ownerUsuarioId}
+                onChange={(e) => {
+                  const nextUserId = e.target.value;
+                  setOwnerUsuarioId(nextUserId);
+                  setOwnerTab('personal');
+                  loadStats(desde, hasta, nextUserId);
+                }}
+                disabled={loading}
+              >
+                <option value="">Mi usuario</option>
+                {usuariosFiltro.map((u) => (
+                  <option key={u.id} value={u.id}>{u.label}</option>
+                ))}
+              </select>
+            )}
+            <div className="stats-quick-ranges">
             {[
               { key: 'today', label: 'Hoy', get: getTodayRange },
               { key: 'month', label: 'Este mes', get: getThisMonthRange },
@@ -235,7 +292,7 @@ export default function Estadisticas({ compact = false }) {
                   setQuickRange(preset.key);
                   setDesde(nextRange.desde);
                   setHasta(nextRange.hasta);
-                  loadStats(nextRange.desde, nextRange.hasta);
+                  loadStats(nextRange.desde, nextRange.hasta, ownerUsuarioId);
                 }}
                 disabled={loading}
               >
@@ -259,7 +316,7 @@ export default function Estadisticas({ compact = false }) {
               setHasta(e.target.value);
             }}
           />
-          <button type="button" className="stats-refresh-btn" onClick={() => loadStats(desde, hasta)} disabled={loading}>
+          <button type="button" className="stats-refresh-btn" onClick={() => loadStats(desde, hasta, ownerUsuarioId)} disabled={loading}>
             {loading ? 'Actualizando...' : 'Filtrar'}
           </button>
           <button
@@ -269,7 +326,7 @@ export default function Estadisticas({ compact = false }) {
               setQuickRange('');
               setDesde('');
               setHasta('');
-              loadStats('', '');
+              loadStats('', '', ownerUsuarioId);
             }}
             disabled={loading}
           >
@@ -278,6 +335,9 @@ export default function Estadisticas({ compact = false }) {
         </div>
       </div>
       <p className="stats-range-pill">{rangeLabel(stats?.desde || desde, stats?.hasta || hasta)}</p>
+      {showPersonal && esPropietario && usuarioFiltroNombre && (
+        <p className="stats-range-pill">Estadísticas personales de: {usuarioFiltroNombre}</p>
+      )}
 
       {loading && <div className="stats-msg">Cargando estadísticas...</div>}
       {!loading && error && <div className="stats-msg error">{error}</div>}

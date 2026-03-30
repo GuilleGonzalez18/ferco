@@ -154,12 +154,13 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
 });
 
 ventasRouter.get('/estadisticas/resumen', async (req, res) => {
-  const { desde, hasta } = req.query;
+  const { desde, hasta, usuarioId } = req.query;
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) {
     return res.status(401).json({ error: 'No autorizado' });
   }
   const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  const targetUsuarioId = esPropietario && usuarioId ? Number(usuarioId) : Number(authUser.id);
 
   if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(String(desde))) {
     return res.status(400).json({ error: 'Formato de fecha "desde" inválido. Usa YYYY-MM-DD' });
@@ -170,10 +171,27 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   if (desde && hasta && String(desde) > String(hasta)) {
     return res.status(400).json({ error: 'La fecha "desde" no puede ser mayor que "hasta"' });
   }
+  if (!Number.isInteger(targetUsuarioId) || targetUsuarioId <= 0) {
+    return res.status(400).json({ error: 'usuarioId inválido' });
+  }
+
+  if (esPropietario && usuarioId) {
+    const vendedorExisteQ = await pool.query(
+      `SELECT id
+       FROM public.usuarios
+       WHERE id = $1
+       LIMIT 1`,
+      [targetUsuarioId]
+    );
+    if (!vendedorExisteQ.rowCount) {
+      return res.status(404).json({ error: 'Usuario no encontrado para el filtro' });
+    }
+  }
 
   const fechaDesde = desde || null;
   const fechaHasta = hasta || null;
   const userParams = [fechaDesde, fechaHasta];
+  const personalParams = [fechaDesde, fechaHasta, targetUsuarioId];
   const userClauseVentas = esPropietario ? '' : 'AND v.usuario_id = $3';
   if (!esPropietario) {
     userParams.push(Number(authUser.id));
@@ -181,6 +199,9 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   const whereVentas = `WHERE v.cancelada = false
     AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))
     ${userClauseVentas}`;
+  const wherePersonalVentas = `WHERE v.cancelada = false
+    AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))
+    AND v.usuario_id = $3`;
 
   const whereMovimientos = `WHERE DATE(m.created_at) BETWEEN COALESCE($1::date, DATE(m.created_at)) AND COALESCE($2::date, DATE(m.created_at))`;
 
@@ -295,32 +316,32 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
       `SELECT MAX(DATE(v.fecha)) AS ultima_fecha
        FROM public.ventas v
        WHERE v.cancelada = false
-         AND v.usuario_id = $1`,
-      [Number(authUser.id)]
+          AND v.usuario_id = $1`,
+      [targetUsuarioId]
     ),
     pool.query(
       `SELECT
          EXTRACT(ISODOW FROM v.fecha)::int AS dia_iso,
          COUNT(*) AS cantidad_ventas,
          COALESCE(SUM(v.total), 0) AS total_vendido
-       FROM public.ventas v
-       ${whereVentas}
-       GROUP BY EXTRACT(ISODOW FROM v.fecha)
-       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
-       LIMIT 1`,
-      userParams
+        FROM public.ventas v
+        ${wherePersonalVentas}
+        GROUP BY EXTRACT(ISODOW FROM v.fecha)
+        ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
+        LIMIT 1`,
+      personalParams
     ),
     pool.query(
       `SELECT
          EXTRACT(HOUR FROM v.fecha)::int AS hora,
          COUNT(*) AS cantidad_ventas,
          COALESCE(SUM(v.total), 0) AS total_vendido
-       FROM public.ventas v
-       ${whereVentas}
-       GROUP BY EXTRACT(HOUR FROM v.fecha)
-       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
-       LIMIT 1`,
-      userParams
+        FROM public.ventas v
+        ${wherePersonalVentas}
+        GROUP BY EXTRACT(HOUR FROM v.fecha)
+        ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(*) DESC
+        LIMIT 1`,
+      personalParams
     ),
     pool.query(
       `SELECT
@@ -350,8 +371,8 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
          ), 0) AS ventas_mes_anterior
        FROM public.ventas v
        WHERE v.cancelada = false
-         AND v.usuario_id = $1`,
-      [Number(authUser.id)]
+          AND v.usuario_id = $1`,
+      [targetUsuarioId]
     ),
   ]);
 
@@ -493,6 +514,109 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
       }
     : null;
 
+  const [personalMejorClienteQ, personalMayorVentaQ, personalPromedioVentaQ, personalArticuloMasVendidoQ, personalSerieVentasQ] = await Promise.all([
+    pool.query(
+      `SELECT
+         c.id,
+         c.nombre,
+         COUNT(v.id) AS cantidad_ventas,
+         COALESCE(SUM(v.total), 0) AS total_comprado
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       ${wherePersonalVentas}
+       GROUP BY c.id, c.nombre
+       ORDER BY COALESCE(SUM(v.total), 0) DESC, COUNT(v.id) DESC
+       LIMIT 1`,
+      personalParams
+    ),
+    pool.query(
+      `SELECT
+         v.id,
+         v.total,
+         v.fecha,
+         c.nombre AS cliente_nombre,
+         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo) AS usuario_nombre
+       FROM public.ventas v
+       LEFT JOIN public.clientes c ON c.id = v.cliente_id
+       LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+       ${wherePersonalVentas}
+       ORDER BY v.total DESC, v.fecha DESC
+       LIMIT 1`,
+      personalParams
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*) AS cantidad_ventas,
+         COALESCE(AVG(v.total), 0) AS promedio_venta,
+         COALESCE(SUM(v.total), 0) AS ventas_totales
+       FROM public.ventas v
+       ${wherePersonalVentas}`,
+      personalParams
+    ),
+    pool.query(
+      `SELECT
+         p.id,
+         p.nombre,
+         COALESCE(SUM(vd.cantidad), 0) AS total_unidades,
+         COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) AS total_facturado
+       FROM public.venta_detalle vd
+       INNER JOIN public.ventas v ON v.id = vd.venta_id
+       LEFT JOIN public.productos p ON p.id = vd.producto_id
+       ${wherePersonalVentas}
+       GROUP BY p.id, p.nombre
+       ORDER BY COALESCE(SUM(vd.cantidad), 0) DESC, COALESCE(SUM(vd.cantidad * vd.precio_unitario), 0) DESC
+       LIMIT 1`,
+      personalParams
+    ),
+    pool.query(
+      `SELECT
+         DATE(v.fecha) AS fecha,
+         COALESCE(SUM(v.total), 0) AS total_ventas
+       FROM public.ventas v
+       ${wherePersonalVentas}
+       GROUP BY DATE(v.fecha)
+       ORDER BY DATE(v.fecha) ASC`,
+      personalParams
+    ),
+  ]);
+
+  const personalMejorCliente = personalMejorClienteQ.rows[0]
+    ? {
+        id: personalMejorClienteQ.rows[0].id,
+        nombre: personalMejorClienteQ.rows[0].nombre || 'Consumidor final',
+        cantidad_ventas: Number(personalMejorClienteQ.rows[0].cantidad_ventas || 0),
+        total_comprado: Number(personalMejorClienteQ.rows[0].total_comprado || 0),
+      }
+    : null;
+  const personalMayorVenta = personalMayorVentaQ.rows[0]
+    ? {
+        id: personalMayorVentaQ.rows[0].id,
+        total: Number(personalMayorVentaQ.rows[0].total || 0),
+        fecha: personalMayorVentaQ.rows[0].fecha,
+        cliente_nombre: personalMayorVentaQ.rows[0].cliente_nombre || 'Consumidor final',
+        usuario_nombre: personalMayorVentaQ.rows[0].usuario_nombre || 'Sin usuario',
+      }
+    : null;
+  const personalPromedioVenta = personalPromedioVentaQ.rows[0]
+    ? {
+        cantidad_ventas: Number(personalPromedioVentaQ.rows[0].cantidad_ventas || 0),
+        promedio: Number(personalPromedioVentaQ.rows[0].promedio_venta || 0),
+        ventas_totales: Number(personalPromedioVentaQ.rows[0].ventas_totales || 0),
+      }
+    : { cantidad_ventas: 0, promedio: 0, ventas_totales: 0 };
+  const personalArticuloMasVendido = personalArticuloMasVendidoQ.rows[0]
+    ? {
+        id: personalArticuloMasVendidoQ.rows[0].id,
+        nombre: personalArticuloMasVendidoQ.rows[0].nombre || 'Producto sin nombre',
+        unidades: Number(personalArticuloMasVendidoQ.rows[0].total_unidades || 0),
+        total_facturado: Number(personalArticuloMasVendidoQ.rows[0].total_facturado || 0),
+      }
+    : null;
+  const personalVentasSerie = personalSerieVentasQ.rows.map((row) => ({
+    fecha: row.fecha,
+    total: Number(row.total_ventas || 0),
+  }));
+
   return res.json({
     scope: 'propietario',
     desde: fechaDesde,
@@ -508,16 +632,17 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
     comprasSerie,
     medioPagoMasUsado,
     personalStats: {
+      usuarioId: targetUsuarioId,
       diasSinVender,
       mejorDiaSemana,
       mejorHorario,
       ventasPeriodo,
       crecimientoPeriodo,
-      ventasSerie,
-      mejorCliente,
-      mayorVenta,
-      promedioVenta,
-      articuloMasVendido,
+      ventasSerie: personalVentasSerie,
+      mejorCliente: personalMejorCliente,
+      mayorVenta: personalMayorVenta,
+      promedioVenta: personalPromedioVenta,
+      articuloMasVendido: personalArticuloMasVendido,
     },
   });
 });
