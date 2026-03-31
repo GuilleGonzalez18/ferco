@@ -190,79 +190,82 @@ export default function Clientes() {
 
   return (
     <div className="clientes-main">
-      <div className="clientes-toolbar">
-        <input
-          type="text"
-          className="buscar-cliente"
-          placeholder="Buscar por nombre o RUT/C.I."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-        <button
-          type="button"
-          className="icon-btn"
-          title="Agregar cliente"
-          onClick={abrirAlta}
-        >
-          <img src="/add.svg" alt="" aria-hidden="true" />
-          <span>CLIENTE</span>
-        </button>
-        <button type="button" className="icon-btn" title="Imprimir PDF" onClick={exportarPDF}>
-          <img src="/print.svg" alt="" aria-hidden="true" />
-        </button>
-      </div>
+      <div className="clientes-right full-width">
+        <div className="clientes-toolbar">
+          <h3>Lista de clientes</h3>
+          <input
+            type="text"
+            className="buscar-cliente"
+            placeholder="Buscar por nombre, RUT/C.I..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+          <button
+            type="button"
+            className="agregar-btn toolbar-add"
+            title="Agregar cliente"
+            onClick={abrirAlta}
+          >
+            <img src="/add.svg" alt="" aria-hidden="true" />
+            <span>CLIENTE</span>
+          </button>
+          <button type="button" className="exportar-pdf" title="Imprimir PDF" onClick={exportarPDF}>
+            <img src="/print.svg" alt="" aria-hidden="true" />
+          </button>
+        </div>
 
-      <ul className="lista-clientes">
-        <li className="header">
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('rut')}>Rut/C.I. {sortBy === 'rut' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>Dirección {sortBy === 'direccion' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>Teléfono {sortBy === 'telefono' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>Mail {sortBy === 'correo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-        </li>
-        {clientesOrdenados.length === 0 && <li className="vacio">No hay clientes</li>}
-        {clientesOrdenados.map((c) => {
-          const expanded = clienteExpandidoId === c.id;
-          return (
-            <Fragment key={c.id}>
-              <li
-                className={`cliente-row ${expanded ? 'expanded' : ''}`}
-                onClick={() => setClienteExpandidoId(expanded ? null : c.id)}
-              >
-                <span>{c.nombre}</span>
-                <span>{c.rut}</span>
-                <span>{c.direccion || '-'}</span>
-                <span>{c.telefono || '-'}</span>
-                <span>{c.correo || '-'}</span>
-              </li>
-              <li className={`cliente-actions-row ${expanded ? 'expanded' : ''}`}>
-                <div className="acciones-cliente-panel">
-                  <button
-                    type="button"
-                    className="edit-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      editarCliente(c);
-                    }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      eliminarCliente(c.id);
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </li>
-            </Fragment>
-          );
-        })}
-      </ul>
+        <ul className="lista-clientes">
+          <li className="header">
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('rut')}>Rut/C.I. {sortBy === 'rut' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>Dirección {sortBy === 'direccion' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>Teléfono {sortBy === 'telefono' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>Mail {sortBy === 'correo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+          </li>
+          {clientesOrdenados.length === 0 && <li className="vacio">No hay clientes</li>}
+          {clientesOrdenados.map((c) => {
+            const expanded = clienteExpandidoId === c.id;
+            return (
+              <Fragment key={c.id}>
+                <li
+                  className={`cliente-row ${expanded ? 'expanded' : ''}`}
+                  onClick={() => setClienteExpandidoId(expanded ? null : c.id)}
+                >
+                  <span className="campo" data-label="Nombre">{c.nombre}</span>
+                  <span className="campo" data-label="Rut/C.I.">{c.rut}</span>
+                  <span className="campo" data-label="Dirección">{c.direccion || '-'}</span>
+                  <span className="campo" data-label="Teléfono">{c.telefono || '-'}</span>
+                  <span className="campo" data-label="Mail">{c.correo || '-'}</span>
+                </li>
+                <li className={`cliente-actions-row ${expanded ? 'expanded' : ''}`}>
+                  <div className="acciones-cliente-panel">
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editarCliente(c);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        eliminarCliente(c.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </li>
+              </Fragment>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
         <div className="side-panel-backdrop" onClick={cerrarPanel} />

@@ -68,6 +68,13 @@ export const api = {
     request(`/usuarios/${id}`, { method: 'DELETE' }),
 
   getProductos: () => request('/productos'),
+  getEmpaques: () => request('/empaques'),
+  createEmpaque: (payload) =>
+    request('/empaques', { method: 'POST', body: JSON.stringify(payload) }),
+  updateEmpaque: (id, payload) =>
+    request(`/empaques/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteEmpaque: (id) =>
+    request(`/empaques/${id}`, { method: 'DELETE' }),
   createProducto: (payload) =>
     request('/productos', { method: 'POST', body: JSON.stringify(payload) }),
   updateProducto: (id, payload) =>

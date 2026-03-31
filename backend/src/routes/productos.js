@@ -13,10 +13,14 @@ function actorName(authUser) {
   return full || authUser?.username || authUser?.correo || null;
 }
 
+function isPropietario(authUser) {
+  return String(authUser?.tipo || '').toLowerCase() === 'propietario';
+}
+
 productosRouter.get('/', async (_req, res) => {
   const result = await query(
     `SELECT id, nombre, ROUND(COALESCE(costo, 0))::int AS costo, ROUND(COALESCE(precio, 0))::int AS precio,
-            stock, unidad, imagen, ean, cantidad_empaque, empaque, ROUND(COALESCE(precio_empaque, 0))::int AS precio_empaque
+            stock, unidad, imagen, ean, cantidad_empaque, empaque, empaque_id, ROUND(COALESCE(precio_empaque, 0))::int AS precio_empaque
      FROM public.productos
      ORDER BY id DESC`
   );
@@ -34,19 +38,23 @@ productosRouter.post('/', async (req, res) => {
     ean,
     cantidad_empaque = null,
     empaque = null,
+    empaque_id = null,
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+  if (!isPropietario(authUser)) {
+    return res.status(403).json({ error: 'Solo propietario puede crear productos' });
+  }
   const costoInt = toMoneyInt(costo);
   const precioInt = toMoneyInt(precio);
   const precioEmpaqueInt = toMoneyInt(precio_empaque);
 
   const result = await query(
     `INSERT INTO public.productos
-      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, empaque_id, precio_empaque)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
      RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, empaque_id, precioEmpaqueInt]
   );
   await query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -94,6 +102,7 @@ productosRouter.put('/:id', async (req, res) => {
     ean,
     cantidad_empaque = null,
     empaque = null,
+    empaque_id = null,
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
@@ -115,10 +124,11 @@ productosRouter.put('/:id', async (req, res) => {
          ean = $7,
          cantidad_empaque = $8,
          empaque = $9,
-         precio_empaque = $10
-     WHERE id = $11
+         empaque_id = $10,
+         precio_empaque = $11
+     WHERE id = $12
      RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt, id]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, empaque_id, precioEmpaqueInt, id]
   );
   const actualizado = result.rows[0];
   const stockAnterior = Number(prev.stock || 0);
@@ -163,6 +173,9 @@ productosRouter.put('/:id', async (req, res) => {
 productosRouter.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
+  if (!isPropietario(authUser)) {
+    return res.status(403).json({ error: 'Solo propietario puede eliminar productos' });
+  }
   const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1`, [id]);
   const result = await query(`DELETE FROM public.productos WHERE id = $1`, [id]);
   if (!result.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });

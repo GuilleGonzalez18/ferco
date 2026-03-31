@@ -423,6 +423,33 @@
   cursor: pointer;
 }
 
+.lista-empaques {
+  list-style: none;
+  padding: 0;
+  margin: 0.7rem 0 0;
+  border-top: 1px solid #e3ebf5;
+}
+
+.lista-empaques li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #e7edf7;
+}
+
+.lista-empaques li span {
+  color: #375f8c;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.lista-empaques li div {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
 @media (max-width: 850px) {
   .agregar-btn {
     padding: 0.55rem 0.7rem;

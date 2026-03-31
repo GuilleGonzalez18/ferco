@@ -1,11 +1,9 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './api';
 import { fromApiProducto, toApiProducto } from './productMapper';
-
-const tiposEmpaque = ['Caja', 'Bolsa', 'Botella', 'Lata', 'Pack', 'Otro'];
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -29,8 +27,12 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const [empaques, setEmpaques] = useState([]);
+  const [mostrarEmpaqueForm, setMostrarEmpaqueForm] = useState(false);
+  const [editandoEmpaqueId, setEditandoEmpaqueId] = useState(null);
+  const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
   const [nuevo, setNuevo] = useState({
-    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
+    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
 
   const isHttpUrl = (value) => {
@@ -49,6 +51,18 @@ export default function Productos({ user, productos = [], setProductos }) {
     if (/^www\./i.test(trimmed)) return `https://${trimmed}`;
     return trimmed;
   };
+
+  useEffect(() => {
+    const loadEmpaques = async () => {
+      try {
+        const rows = await api.getEmpaques();
+        setEmpaques(rows || []);
+      } catch {
+        setEmpaques([]);
+      }
+    };
+    loadEmpaques();
+  }, []);
 
   const handleChange = e => {
     const { name, value, files } = e.target;
@@ -101,7 +115,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         const created = await api.createProducto(toApiProducto(nuevo));
         setProductos([fromApiProducto(created), ...productos]);
       }
-      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
       setMostrarForm(false);
       setImagenUrlError('');
     } catch (error) {
@@ -252,14 +266,14 @@ export default function Productos({ user, productos = [], setProductos }) {
   const abrirAlta = () => {
     setMostrarForm(true);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
     setImagenUrlError('');
   };
 
   const cerrarPanel = () => {
     setMostrarForm(false);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
     setImagenUrlError('');
   };
 
@@ -267,6 +281,54 @@ export default function Productos({ user, productos = [], setProductos }) {
     () => typeof nuevo.imagenPreview === 'string' && !!nuevo.imagenPreview.trim() && isHttpUrl(nuevo.imagenPreview),
     [nuevo.imagenPreview]
   );
+
+  const handleCrearEmpaque = async (e) => {
+    e.preventDefault();
+    const nombre = String(nuevoEmpaqueNombre || '').trim();
+    if (!nombre) return;
+    try {
+      if (editandoEmpaqueId) {
+        const actualizado = await api.updateEmpaque(editandoEmpaqueId, { nombre });
+        setEmpaques((prev) => prev.map((x) => (x.id === editandoEmpaqueId ? actualizado : x)).sort((a, b) => String(a.nombre).localeCompare(String(b.nombre))));
+        setNuevo((n) => (
+          String(n.empaqueId || '') === String(editandoEmpaqueId)
+            ? { ...n, tipoEmpaque: actualizado.nombre }
+            : n
+        ));
+      } else {
+        const creado = await api.createEmpaque({ nombre });
+        setEmpaques((prev) => [...prev, creado].sort((a, b) => String(a.nombre).localeCompare(String(b.nombre))));
+        setNuevo((n) => ({ ...n, empaqueId: String(creado.id), tipoEmpaque: creado.nombre }));
+      }
+      setNuevoEmpaqueNombre('');
+      setEditandoEmpaqueId(null);
+      setMostrarEmpaqueForm(false);
+    } catch (error) {
+      window.alert(error.message || 'No se pudo crear el empaque');
+    }
+  };
+
+  const handleEditarEmpaque = (empaque) => {
+    setEditandoEmpaqueId(empaque.id);
+    setNuevoEmpaqueNombre(empaque.nombre || '');
+    setMostrarEmpaqueForm(true);
+  };
+
+  const handleEliminarEmpaque = async (empaque) => {
+    const ok = window.confirm(`¿Eliminar empaque "${empaque.nombre}"?`);
+    if (!ok) return;
+    try {
+      await api.deleteEmpaque(empaque.id);
+      setEmpaques((prev) => prev.filter((x) => x.id !== empaque.id));
+      setNuevo((n) => (
+        String(n.empaqueId || '') === String(empaque.id)
+          ? { ...n, empaqueId: '', tipoEmpaque: '' }
+          : n
+      ));
+    } catch (error) {
+      window.alert(error.message || 'No se pudo eliminar el empaque');
+    }
+  };
 
   return (
     <div className="productos-main">
@@ -280,10 +342,22 @@ export default function Productos({ user, productos = [], setProductos }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          <button className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
-            <img src="/add.svg" alt="" aria-hidden="true" />
-            <span>PRODUCTO</span>
-          </button>
+          {esPropietario && (
+            <button className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
+              <img src="/add.svg" alt="" aria-hidden="true" />
+              <span>PRODUCTO</span>
+            </button>
+          )}
+          {esPropietario && (
+            <button
+              className="agregar-btn toolbar-add"
+              title="Agregar empaque"
+              onClick={() => setMostrarEmpaqueForm(true)}
+            >
+              <img src="/add.svg" alt="" aria-hidden="true" />
+              <span>EMPAQUE</span>
+            </button>
+          )}
           <button className="exportar-pdf" title="Exportar a PDF" onClick={exportarPDF}>
             <img src="/print.svg" alt="" aria-hidden="true" />
           </button>
@@ -363,6 +437,41 @@ export default function Productos({ user, productos = [], setProductos }) {
         </ul>
       </div>
 
+      <div className={`side-panel-overlay ${mostrarEmpaqueForm ? 'open' : ''}`} aria-hidden={!mostrarEmpaqueForm}>
+        <div className="side-panel-backdrop" onClick={() => setMostrarEmpaqueForm(false)} />
+        <aside className="side-panel">
+          <div className="side-panel-header">
+            <h3>{editandoEmpaqueId ? 'Editar empaque' : 'Nuevo empaque'}</h3>
+            <button type="button" className="side-panel-close" onClick={() => setMostrarEmpaqueForm(false)}>✕</button>
+          </div>
+          <form className="form-producto" onSubmit={handleCrearEmpaque}>
+            <label className="field-label">Nombre del empaque
+              <input
+                value={nuevoEmpaqueNombre}
+                onChange={(e) => setNuevoEmpaqueNombre(e.target.value)}
+                placeholder="Ej: Bandeja, Saco, Fardo..."
+                required
+              />
+            </label>
+            <div className="form-actions">
+              <button type="submit">Guardar</button>
+              <button type="button" onClick={() => setMostrarEmpaqueForm(false)}>Cancelar</button>
+            </div>
+          </form>
+          <ul className="lista-empaques">
+            {empaques.map((e) => (
+              <li key={e.id}>
+                <span>{e.nombre}</span>
+                <div>
+                  <button type="button" className="edit-btn" onClick={() => handleEditarEmpaque(e)}>Editar</button>
+                  <button type="button" className="delete-btn" onClick={() => handleEliminarEmpaque(e)}>Eliminar</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
+
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
         <div className="side-panel-backdrop" onClick={cerrarPanel} />
         <aside className="side-panel">
@@ -381,9 +490,22 @@ export default function Productos({ user, productos = [], setProductos }) {
               <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
             </label>
             <label className="field-label">Tipo de empaque
-              <select name="tipoEmpaque" value={nuevo.tipoEmpaque} onChange={handleChange} required>
+              <select
+                name="empaqueId"
+                value={nuevo.empaqueId || ''}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const selected = empaques.find((x) => String(x.id) === String(selectedId));
+                  setNuevo((n) => ({
+                    ...n,
+                    empaqueId: selectedId,
+                    tipoEmpaque: selected?.nombre || '',
+                  }));
+                }}
+                required
+              >
                 <option value="">Tipo empaque</option>
-                {tiposEmpaque.map(t => <option key={t} value={t}>{t}</option>)}
+                {empaques.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
             </label>
             <label className="field-label">Cantidad por empaque

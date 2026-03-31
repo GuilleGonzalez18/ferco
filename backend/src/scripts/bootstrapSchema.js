@@ -36,6 +36,17 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_clientes_nombre ON public.clientes (nombre);
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.empaques (
+    id serial PRIMARY KEY,
+    nombre varchar(80) NOT NULL UNIQUE,
+    activo boolean NOT NULL DEFAULT true,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_empaques_nombre ON public.empaques (nombre);
+  `,
+  `
   CREATE TABLE IF NOT EXISTS public.productos (
     id serial PRIMARY KEY,
     nombre varchar(180) NOT NULL,
@@ -47,11 +58,28 @@ const statements = [
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
     empaque varchar(80) NULL,
+    empaque_id integer NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_productos_nombre ON public.productos (nombre);
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'productos'
+        AND constraint_name = 'productos_empaque_id_fkey'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_empaque_id_fkey
+      FOREIGN KEY (empaque_id) REFERENCES public.empaques(id);
+    END IF;
+  END $$;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.ventas (

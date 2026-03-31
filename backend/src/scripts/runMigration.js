@@ -78,6 +78,51 @@ const statements = [
   );
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.empaques (
+    id serial PRIMARY KEY,
+    nombre varchar(80) NOT NULL UNIQUE,
+    activo boolean NOT NULL DEFAULT true,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_empaques_nombre ON public.empaques (nombre);
+  `,
+  `
+  ALTER TABLE public.productos
+  ADD COLUMN IF NOT EXISTS empaque_id integer;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE constraint_name = 'productos_empaque_id_fkey'
+        AND table_schema = 'public'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_empaque_id_fkey
+      FOREIGN KEY (empaque_id) REFERENCES public.empaques(id);
+    END IF;
+  END$$;
+  `,
+  `
+  INSERT INTO public.empaques (nombre)
+  SELECT DISTINCT TRIM(p.empaque)
+  FROM public.productos p
+  WHERE NULLIF(TRIM(COALESCE(p.empaque, '')), '') IS NOT NULL
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
+  `
+  UPDATE public.productos p
+  SET empaque_id = e.id
+  FROM public.empaques e
+  WHERE p.empaque_id IS NULL
+    AND NULLIF(TRIM(COALESCE(p.empaque, '')), '') IS NOT NULL
+    AND TRIM(p.empaque) = e.nombre;
+  `,
+  `
   UPDATE public.productos
   SET
     costo = ROUND(COALESCE(costo, 0)),

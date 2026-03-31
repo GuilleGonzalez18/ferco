@@ -20,6 +20,7 @@ export function fromApiProducto(row) {
     imagenPreview: row.imagen || '',
     ean: row.ean || '',
     tipoEmpaque: row.empaque || '',
+    empaqueId: row.empaque_id ? String(row.empaque_id) : '',
     cantidadEmpaque: String(row.cantidad_empaque ?? ''),
     costo: String(row.costo ?? ''),
     venta: String(row.precio ?? ''),
@@ -39,6 +40,7 @@ export function toApiProducto(producto) {
     ean: producto.ean || '',
     cantidad_empaque: producto.cantidadEmpaque ? Number(producto.cantidadEmpaque) : null,
     empaque: producto.tipoEmpaque || null,
+    empaque_id: producto.empaqueId ? Number(producto.empaqueId) : null,
     precio_empaque: Math.round(Number(producto.precioEmpaque || 0)),
   };
 }
