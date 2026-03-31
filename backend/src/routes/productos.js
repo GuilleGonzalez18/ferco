@@ -4,6 +4,10 @@ import { getAuthUserFromRequest } from '../auth.js';
 
 export const productosRouter = Router();
 
+function toMoneyInt(value) {
+  return Math.round(Number(value || 0));
+}
+
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
@@ -11,7 +15,8 @@ function actorName(authUser) {
 
 productosRouter.get('/', async (_req, res) => {
   const result = await query(
-    `SELECT id, nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque
+    `SELECT id, nombre, ROUND(COALESCE(costo, 0))::int AS costo, ROUND(COALESCE(precio, 0))::int AS precio,
+            stock, unidad, imagen, ean, cantidad_empaque, empaque, ROUND(COALESCE(precio_empaque, 0))::int AS precio_empaque
      FROM public.productos
      ORDER BY id DESC`
   );
@@ -32,13 +37,16 @@ productosRouter.post('/', async (req, res) => {
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+  const costoInt = toMoneyInt(costo);
+  const precioInt = toMoneyInt(precio);
+  const precioEmpaqueInt = toMoneyInt(precio_empaque);
 
   const result = await query(
     `INSERT INTO public.productos
       (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      RETURNING *`,
-    [nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt]
   );
   await query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -89,6 +97,9 @@ productosRouter.put('/:id', async (req, res) => {
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+  const costoInt = toMoneyInt(costo);
+  const precioInt = toMoneyInt(precio);
+  const precioEmpaqueInt = toMoneyInt(precio_empaque);
   const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1`, [id]);
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
@@ -107,7 +118,7 @@ productosRouter.put('/:id', async (req, res) => {
          precio_empaque = $10
      WHERE id = $11
      RETURNING *`,
-    [nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque, id]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt, id]
   );
   const actualizado = result.rows[0];
   const stockAnterior = Number(prev.stock || 0);

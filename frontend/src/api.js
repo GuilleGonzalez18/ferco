@@ -84,16 +84,23 @@ export const api = {
     request(`/clientes/${id}`, { method: 'DELETE' }),
   getVentas: (fecha) =>
     request(fecha ? `/ventas?fecha=${encodeURIComponent(fecha)}` : '/ventas'),
+  getEntregasResumen: (periodo, fechaBase) => {
+    const q = new URLSearchParams();
+    if (periodo) q.set('periodo', periodo);
+    if (fechaBase) q.set('fechaBase', fechaBase);
+    const suffix = q.toString();
+    return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
+  },
   getVentaById: (id) => request(`/ventas/${id}`),
   updateVentaEntregado: (id, entregado) =>
     request(`/ventas/${id}/entregado`, {
       method: 'PUT',
       body: JSON.stringify({ entregado }),
     }),
-  updateVentaEstadoEntrega: (id, estado_entrega) =>
-    request(`/ventas/${id}/estado-entrega`, {
-      method: 'PUT',
-      body: JSON.stringify({ estado_entrega }),
+  enviarFacturaEmail: (id, pdfBase64, fileName) =>
+    request(`/ventas/${id}/enviar-email`, {
+      method: 'POST',
+      body: JSON.stringify({ pdfBase64, fileName }),
     }),
   cancelarVenta: (id) =>
     request(`/ventas/${id}/cancelar`, {
@@ -102,10 +109,11 @@ export const api = {
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),
-  getEstadisticasResumen: (desde, hasta) => {
+  getEstadisticasResumen: (desde, hasta, usuarioId) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);
     if (hasta) q.set('hasta', hasta);
+    if (usuarioId) q.set('usuarioId', String(usuarioId));
     const suffix = q.toString();
     return request(`/ventas/estadisticas/resumen${suffix ? `?${suffix}` : ''}`);
   },

@@ -1,0 +1,6 @@
+-- Uso sugerido:
+-- 1) Exporta datos: npm run db:export (usa DUMP_FILE en backend/.env)
+-- 2) En otro equipo, aplica schema+migraciones: npm run db:setup
+-- 3) Importa datos: npm run db:import (con DUMP_FILE apuntando al .sql exportado)
+--
+-- Este archivo es solo referencia. El dump real lo genera pg_dump.

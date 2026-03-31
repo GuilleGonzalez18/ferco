@@ -9,6 +9,7 @@
     "db:setup": "npm run db:schema && npm run db:migrate",
     "db:schema": "node src/scripts/bootstrapSchema.js",
     "db:migrate": "node src/scripts/runMigration.js",
+    "db:export": "node src/scripts/exportDump.js",
     "db:import": "node src/scripts/importDump.js",
     "db:seed:test": "node src/scripts/seedClientesVentasTest.js"
   },
@@ -17,6 +18,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.15",
     "pg": "^8.16.3"
   }
 }

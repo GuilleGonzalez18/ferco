@@ -42,6 +42,19 @@ function DashboardLanding({ nombreUsuario }) {
   );
 }
 
+function MiUsuarioView({ user }) {
+  return (
+    <div className="mi-usuario-split">
+      <section className="mi-usuario-col mi-usuario-col-stats">
+        <Estadisticas compact />
+      </section>
+      <section className="mi-usuario-col mi-usuario-col-form">
+        <Usuarios currentUser={user} onlySelf />
+      </section>
+    </div>
+  );
+}
+
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
@@ -50,6 +63,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const opcionesMenu = OPCIONES.filter((op) => {
     if (op.key === 'usuarios' || op.key === 'compras') return esPropietario;
     if (op.key === 'mi-usuario') return !esPropietario;
+    if (op.key === 'estadisticas') return esPropietario;
     return true;
   });
 
@@ -104,10 +118,10 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     switch (pantalla) {
       case 'nueva-venta':  return <Ventas user={user} productos={productos} setProductos={setProductos} />;
       case 'ventas':       return <VentasHistorial />;
-      case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
+      case 'productos':    return <Productos user={user} productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Usuarios currentUser={user} />;
-      case 'mi-usuario':   return <Usuarios currentUser={user} onlySelf />;
+      case 'mi-usuario':   return <MiUsuarioView user={user} />;
       case 'auditoria':    return <Auditoria />;
       case 'compras':
         return esPropietario

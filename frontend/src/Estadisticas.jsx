@@ -12,6 +12,12 @@ function qty(value) {
   return n.toLocaleString('es-UY');
 }
 
+function pct(value) {
+  const n = Math.round(Number(value || 0));
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${n}%`;
+}
+
 function dateText(value) {
   if (!value) return '-';
   const d = new Date(value);
@@ -98,21 +104,39 @@ function MiniBars({ items, valueKey = 'value' }) {
   );
 }
 
-export default function Estadisticas() {
+export default function Estadisticas({ compact = false }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [quickRange, setQuickRange] = useState('');
+  const [ownerTab, setOwnerTab] = useState('empresa');
+  const [ownerUsuarioId, setOwnerUsuarioId] = useState('');
+  const [ownerSelfUsuarioId, setOwnerSelfUsuarioId] = useState(0);
   const esVendedor = stats?.scope === 'vendedor';
+  const esPropietario = stats?.scope === 'propietario';
+  const showEmpresa = !esVendedor && (!esPropietario || ownerTab === 'empresa');
+  const showPersonal = esVendedor || (esPropietario && ownerTab === 'personal');
+  const personalStats = showPersonal
+    ? (esVendedor ? stats : stats?.personalStats)
+    : null;
 
-  const loadStats = async (nextDesde = desde, nextHasta = hasta) => {
+  const loadStats = async (nextDesde = desde, nextHasta = hasta, nextUsuarioId = ownerUsuarioId) => {
     setLoading(true);
     setError('');
     try {
-      const data = await api.getEstadisticasResumen(nextDesde, nextHasta);
+      const data = await api.getEstadisticasResumen(nextDesde, nextHasta, nextUsuarioId);
       setStats(data);
+      if (
+        data?.scope === 'propietario' &&
+        !nextUsuarioId &&
+        !ownerSelfUsuarioId &&
+        Number.isInteger(Number(data?.personalStats?.usuarioId))
+      ) {
+        setOwnerSelfUsuarioId(Number(data.personalStats.usuarioId));
+      }
     } catch (err) {
       setError(err.message || 'No se pudieron cargar las estadísticas.');
     } finally {
@@ -123,6 +147,38 @@ export default function Estadisticas() {
   useEffect(() => {
     loadStats();
   }, []);
+
+  useEffect(() => {
+    const loadUsuarios = async () => {
+      try {
+        const data = await api.getUsuarios();
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch {
+        setUsuarios([]);
+      }
+    };
+    loadUsuarios();
+  }, []);
+
+  useEffect(() => {
+    if (!esPropietario) setOwnerTab('empresa');
+  }, [esPropietario]);
+
+  const usuariosFiltro = useMemo(() => {
+    const rows = Array.isArray(usuarios) ? usuarios : [];
+    return rows
+      .filter((u) => Number(u.id) !== Number(ownerSelfUsuarioId || 0))
+      .map((u) => ({
+        id: Number(u.id),
+        label: [u.nombre, u.apellido].filter(Boolean).join(' ').trim() || u.username || u.correo || `Usuario ${u.id}`,
+      }));
+  }, [ownerSelfUsuarioId, usuarios]);
+
+  const usuarioFiltroNombre = useMemo(() => {
+    const currentId = Number(stats?.personalStats?.usuarioId || ownerUsuarioId || 0);
+    if (!currentId) return '';
+    return usuariosFiltro.find((u) => u.id === currentId)?.label || '';
+  }, [ownerUsuarioId, stats?.personalStats?.usuarioId, usuariosFiltro]);
 
   const topUsuario = useMemo(() => {
     const rows = stats?.ventasPorUsuario || [];
@@ -151,17 +207,75 @@ export default function Estadisticas() {
     }));
   }, [stats]);
 
+  const ventasUltimos7DiasChart = useMemo(() => {
+    const rows = ((esVendedor ? stats?.ventasSerie : stats?.personalStats?.ventasSerie) || []).map((r) => ({
+      fecha: String(r.fecha).slice(0, 10),
+      total: Number(r.total || 0),
+    }));
+    const map = new Map(rows.map((r) => [r.fecha, r.total]));
+    const baseDate = new Date();
+    baseDate.setHours(0, 0, 0, 0);
+    const items = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() - i);
+      const key = toIsoDate(d);
+      items.push({
+        key,
+        label: key.slice(5),
+        value: Math.round(map.get(key) || 0),
+      });
+    }
+    return items;
+  }, [stats]);
+
   const maxVentasComprasChart = useMemo(
     () => Math.max(...ventasComprasChart.flatMap((r) => [r.ventas, r.compras]), 1),
     [ventasComprasChart]
   );
 
   return (
-    <div className="stats-main">
+    <div className={`stats-main ${compact ? 'compact' : ''}`}>
       <div className="stats-toolbar">
         <h3>Estadísticas comerciales</h3>
-        <div className="stats-filters">
-          <div className="stats-quick-ranges">
+        {esPropietario && (
+          <div className="stats-tabs">
+            <button
+              type="button"
+              className={`stats-tab-btn ${ownerTab === 'empresa' ? 'active' : ''}`}
+              onClick={() => setOwnerTab('empresa')}
+            >
+              Empresa
+            </button>
+            <button
+              type="button"
+              className={`stats-tab-btn ${ownerTab === 'personal' ? 'active' : ''}`}
+              onClick={() => setOwnerTab('personal')}
+            >
+              Personal
+            </button>
+          </div>
+        )}
+          <div className="stats-filters">
+            {esPropietario && (
+              <select
+                className="stats-user-select"
+                value={ownerUsuarioId}
+                onChange={(e) => {
+                  const nextUserId = e.target.value;
+                  setOwnerUsuarioId(nextUserId);
+                  setOwnerTab('personal');
+                  loadStats(desde, hasta, nextUserId);
+                }}
+                disabled={loading}
+              >
+                <option value="">Mi usuario</option>
+                {usuariosFiltro.map((u) => (
+                  <option key={u.id} value={u.id}>{u.label}</option>
+                ))}
+              </select>
+            )}
+            <div className="stats-quick-ranges">
             {[
               { key: 'today', label: 'Hoy', get: getTodayRange },
               { key: 'month', label: 'Este mes', get: getThisMonthRange },
@@ -178,7 +292,7 @@ export default function Estadisticas() {
                   setQuickRange(preset.key);
                   setDesde(nextRange.desde);
                   setHasta(nextRange.hasta);
-                  loadStats(nextRange.desde, nextRange.hasta);
+                  loadStats(nextRange.desde, nextRange.hasta, ownerUsuarioId);
                 }}
                 disabled={loading}
               >
@@ -202,7 +316,7 @@ export default function Estadisticas() {
               setHasta(e.target.value);
             }}
           />
-          <button type="button" className="stats-refresh-btn" onClick={() => loadStats(desde, hasta)} disabled={loading}>
+          <button type="button" className="stats-refresh-btn" onClick={() => loadStats(desde, hasta, ownerUsuarioId)} disabled={loading}>
             {loading ? 'Actualizando...' : 'Filtrar'}
           </button>
           <button
@@ -212,7 +326,7 @@ export default function Estadisticas() {
               setQuickRange('');
               setDesde('');
               setHasta('');
-              loadStats('', '');
+              loadStats('', '', ownerUsuarioId);
             }}
             disabled={loading}
           >
@@ -221,6 +335,9 @@ export default function Estadisticas() {
         </div>
       </div>
       <p className="stats-range-pill">{rangeLabel(stats?.desde || desde, stats?.hasta || hasta)}</p>
+      {showPersonal && esPropietario && usuarioFiltroNombre && (
+        <p className="stats-range-pill">Estadísticas personales de: {usuarioFiltroNombre}</p>
+      )}
 
       {loading && <div className="stats-msg">Cargando estadísticas...</div>}
       {!loading && error && <div className="stats-msg error">{error}</div>}
@@ -230,30 +347,30 @@ export default function Estadisticas() {
           <section className="stats-grid">
             <article className="stats-card">
               <span className="stats-kicker">Mejor cliente</span>
-              <h4>{stats?.mejorCliente?.nombre || '-'}</h4>
-              <p>Total comprado: <strong>{money(stats?.mejorCliente?.total_comprado || 0)}</strong></p>
-              <p>Ventas: <strong>{qty(stats?.mejorCliente?.cantidad_ventas || 0)}</strong></p>
+              <h4>{(showPersonal ? personalStats?.mejorCliente?.nombre : stats?.mejorCliente?.nombre) || '-'}</h4>
+              <p>Total comprado: <strong>{money(showPersonal ? personalStats?.mejorCliente?.total_comprado || 0 : stats?.mejorCliente?.total_comprado || 0)}</strong></p>
+              <p>Ventas: <strong>{qty(showPersonal ? personalStats?.mejorCliente?.cantidad_ventas || 0 : stats?.mejorCliente?.cantidad_ventas || 0)}</strong></p>
             </article>
 
             <article className="stats-card">
               <span className="stats-kicker">Mayor venta</span>
-              <h4>{money(stats?.mayorVenta?.total || 0)}</h4>
-              <p>Cliente: <strong>{stats?.mayorVenta?.cliente_nombre || '-'}</strong></p>
-              <p>Fecha: <strong>{dateText(stats?.mayorVenta?.fecha)}</strong></p>
+              <h4>{money(showPersonal ? personalStats?.mayorVenta?.total || 0 : stats?.mayorVenta?.total || 0)}</h4>
+              <p>Cliente: <strong>{(showPersonal ? personalStats?.mayorVenta?.cliente_nombre : stats?.mayorVenta?.cliente_nombre) || '-'}</strong></p>
+              <p>Fecha: <strong>{dateText(showPersonal ? personalStats?.mayorVenta?.fecha : stats?.mayorVenta?.fecha)}</strong></p>
             </article>
 
             <article className="stats-card">
               <span className="stats-kicker">Promedio de venta</span>
-              <h4>{money(stats?.promedioVenta?.promedio || 0)}</h4>
-              <p>Sobre <strong>{qty(stats?.promedioVenta?.cantidad_ventas || 0)}</strong> ventas</p>
+              <h4>{money(showPersonal ? personalStats?.promedioVenta?.promedio || 0 : stats?.promedioVenta?.promedio || 0)}</h4>
+              <p>Sobre <strong>{qty(showPersonal ? personalStats?.promedioVenta?.cantidad_ventas || 0 : stats?.promedioVenta?.cantidad_ventas || 0)}</strong> ventas</p>
             </article>
 
             <article className="stats-card">
               <span className="stats-kicker">Ventas totales</span>
-              <h4 className="stats-big-number">{money(stats?.promedioVenta?.ventas_totales || 0)}</h4>
+              <h4 className="stats-big-number">{money(showPersonal ? personalStats?.promedioVenta?.ventas_totales || 0 : stats?.promedioVenta?.ventas_totales || 0)}</h4>
             </article>
 
-            {!esVendedor && (
+            {showEmpresa && (
               <>
                 <article className="stats-card">
                   <span className="stats-kicker">Compras totales</span>
@@ -269,12 +386,50 @@ export default function Estadisticas() {
 
             <article className="stats-card">
               <span className="stats-kicker">Artículo más vendido</span>
-              <h4>{stats?.articuloMasVendido?.nombre || '-'}</h4>
-              <p>Unidades: <strong>{qty(stats?.articuloMasVendido?.unidades || 0)}</strong></p>
-              <p>Total facturado: <strong>{money(stats?.articuloMasVendido?.total_facturado || 0)}</strong></p>
+              <h4>{(showPersonal ? personalStats?.articuloMasVendido?.nombre : stats?.articuloMasVendido?.nombre) || '-'}</h4>
+              <p>Unidades: <strong>{qty(showPersonal ? personalStats?.articuloMasVendido?.unidades || 0 : stats?.articuloMasVendido?.unidades || 0)}</strong></p>
+              <p>Total facturado: <strong>{money(showPersonal ? personalStats?.articuloMasVendido?.total_facturado || 0 : stats?.articuloMasVendido?.total_facturado || 0)}</strong></p>
             </article>
 
-            {!esVendedor && (
+            {showPersonal && (
+              <>
+                <article className="stats-card">
+                  <span className="stats-kicker">Días sin vender</span>
+                  <h4>{personalStats?.diasSinVender == null ? '-' : qty(personalStats?.diasSinVender)}</h4>
+                  <p>Desde tu última venta registrada</p>
+                </article>
+
+                <article className="stats-card">
+                  <span className="stats-kicker">Mejor día de la semana</span>
+                  <h4>{personalStats?.mejorDiaSemana?.dia || '-'}</h4>
+                  <p>Total vendido: <strong>{money(personalStats?.mejorDiaSemana?.total_vendido || 0)}</strong></p>
+                  <p>Ventas: <strong>{qty(personalStats?.mejorDiaSemana?.cantidad_ventas || 0)}</strong></p>
+                </article>
+
+                <article className="stats-card">
+                  <span className="stats-kicker">Horario donde más vendes</span>
+                  <h4>{personalStats?.mejorHorario?.rango || '-'}</h4>
+                  <p>Total vendido: <strong>{money(personalStats?.mejorHorario?.total_vendido || 0)}</strong></p>
+                  <p>Ventas: <strong>{qty(personalStats?.mejorHorario?.cantidad_ventas || 0)}</strong></p>
+                </article>
+
+                <article className="stats-card">
+                  <span className="stats-kicker">Ventas por período</span>
+                  <p>Día: <strong>{money(personalStats?.ventasPeriodo?.dia || 0)}</strong></p>
+                  <p>Semana: <strong>{money(personalStats?.ventasPeriodo?.semana || 0)}</strong></p>
+                  <p>Mes: <strong>{money(personalStats?.ventasPeriodo?.mes || 0)}</strong></p>
+                </article>
+
+                <article className="stats-card">
+                  <span className="stats-kicker">Crecimiento vs período anterior</span>
+                  <p>Día: <strong>{pct(personalStats?.crecimientoPeriodo?.dia || 0)}</strong></p>
+                  <p>Semana: <strong>{pct(personalStats?.crecimientoPeriodo?.semana || 0)}</strong></p>
+                  <p>Mes: <strong>{pct(personalStats?.crecimientoPeriodo?.mes || 0)}</strong></p>
+                </article>
+              </>
+            )}
+
+            {showEmpresa && (
               <>
                 <article className="stats-card">
                   <span className="stats-kicker">Ventas por usuario (top)</span>
@@ -293,7 +448,7 @@ export default function Estadisticas() {
             )}
           </section>
 
-          {!esVendedor && (
+          {showEmpresa && (
             <>
               <section className="stats-charts-grid">
                 <article className="stats-table-card chart-card">
@@ -359,6 +514,21 @@ export default function Estadisticas() {
                 </ul>
               </section>
             </>
+          )}
+
+          {showPersonal && (
+            <section className="stats-charts-grid stats-charts-grid-single">
+              <article className="stats-table-card chart-card">
+                <div className="stats-table-head">
+                  <h4>Ventas de los últimos 7 días</h4>
+                </div>
+                {ventasUltimos7DiasChart.length ? (
+                  <MiniBars items={ventasUltimos7DiasChart} valueKey="value" />
+                ) : (
+                  <div className="stats-msg">Sin datos para mostrar.</div>
+                )}
+              </article>
+            </section>
           )}
         </>
       )}

@@ -77,6 +77,17 @@ const statements = [
     created_at timestamp without time zone NOT NULL DEFAULT now()
   );
   `,
+  `
+  UPDATE public.productos
+  SET
+    costo = ROUND(COALESCE(costo, 0)),
+    precio = ROUND(COALESCE(precio, 0)),
+    precio_empaque = ROUND(COALESCE(precio_empaque, 0))
+  WHERE
+    costo <> ROUND(COALESCE(costo, 0))
+    OR precio <> ROUND(COALESCE(precio, 0))
+    OR precio_empaque <> ROUND(COALESCE(precio_empaque, 0));
+  `,
 ];
 
 try {

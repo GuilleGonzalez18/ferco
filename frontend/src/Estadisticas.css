@@ -3,6 +3,130 @@
   animation: statsPanelIn 340ms ease both;
 }
 
+.stats-main.compact {
+  padding: 0.62rem 0.7rem 0.72rem;
+}
+
+.stats-main.compact .stats-toolbar {
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.stats-main.compact .stats-toolbar h3 {
+  font-size: 0.9rem;
+}
+
+.stats-main.compact .stats-refresh-btn {
+  padding: 0.32rem 0.58rem;
+  font-size: 0.74rem;
+}
+
+.stats-main.compact .stats-filters {
+  gap: 0.32rem;
+}
+
+.stats-main.compact .quick-range-btn {
+  padding: 0.24rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.stats-main.compact .stats-filters input[type='date'] {
+  padding: 0.28rem 0.42rem;
+  font-size: 0.72rem;
+}
+
+.stats-main.compact .stats-range-pill {
+  margin-bottom: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.68rem;
+}
+
+.stats-main.compact .stats-grid {
+  gap: 0.45rem;
+}
+
+.stats-main.compact .stats-card {
+  padding: 0.58rem;
+}
+
+.stats-main.compact .stats-kicker {
+  font-size: 0.66rem;
+  margin-bottom: 0.28rem;
+}
+
+.stats-main.compact .stats-card h4 {
+  margin-bottom: 0.22rem;
+  font-size: 0.9rem;
+}
+
+.stats-main.compact .stats-big-number {
+  font-size: 1.35rem !important;
+}
+
+.stats-main.compact .stats-card p {
+  margin: 0.1rem 0;
+  font-size: 0.74rem;
+}
+
+.stats-main.compact .stats-table-card {
+  margin-top: 0.48rem;
+  padding: 0.5rem;
+}
+
+.stats-main.compact .stats-table-head h4 {
+  margin-bottom: 0.28rem;
+  font-size: 0.82rem;
+}
+
+.stats-main.compact .mini-bars {
+  height: 128px;
+  grid-template-columns: repeat(7, minmax(34px, 46px));
+  gap: 0.24rem;
+}
+
+.stats-main.compact .mini-bar-col {
+  min-width: 34px;
+  gap: 0.2rem;
+}
+
+.stats-main.compact .mini-bar-track {
+  height: 96px;
+}
+
+.stats-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stats-tab-btn {
+  border: 1px solid #c7d7ea;
+  border-radius: 999px;
+  background: #fff;
+  color: #375f8c;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.stats-tab-btn:hover {
+  border-color: #98b2d4;
+  background: #f1f6fd;
+}
+
+.stats-tab-btn.active {
+  background: #375f8c;
+  border-color: #375f8c;
+  color: #fff;
+}
+
+.stats-main.compact .stats-tab-btn {
+  padding: 0.22rem 0.48rem;
+  font-size: 0.68rem;
+}
+
 .stats-toolbar {
   display: flex;
   align-items: center;
@@ -81,6 +205,22 @@
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   font-size: 0.8rem;
+}
+
+.stats-user-select {
+  border: 1px solid #d3dbe8;
+  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #2a4464;
+  min-width: 190px;
+}
+
+.stats-main.compact .stats-user-select {
+  padding: 0.28rem 0.42rem;
+  font-size: 0.72rem;
+  min-width: 150px;
 }
 
 .stats-msg {
@@ -207,6 +347,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
+}
+
+.stats-charts-grid-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .stats-table-head h4 {

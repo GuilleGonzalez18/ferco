@@ -81,7 +81,7 @@ async function main() {
     '/images/Ferco - Logotipo Final Negativo.jpg.jpeg',
   ];
   const mediosPago = ['efectivo', 'debito', 'credito', 'transferencia'];
-  const estadosEntrega = ['pendiente', 'en_camino', 'entregado'];
+  const estadosEntrega = ['pendiente', 'entregado'];
 
   const canceladaDisponible = await columnExists('ventas', 'cancelada');
 

@@ -61,6 +61,23 @@ function formatPagosResumen(pagos = []) {
   return labels.join(' + ');
 }
 
+function normalizeWhatsappPhone(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  let digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('598')) return digits;
+  if (digits.startsWith('0')) return `598${digits.slice(1)}`;
+  if (digits.length <= 9) return `598${digits}`;
+  return digits;
+}
+
+function isAndroidDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return /android/i.test(String(navigator.userAgent || ''));
+}
+
 export default function VentasHistorial() {
   const [fecha, setFecha] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
@@ -75,9 +92,11 @@ export default function VentasHistorial() {
   const [expandedVentaId, setExpandedVentaId] = useState(null);
   const [detalleByVentaId, setDetalleByVentaId] = useState({});
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
+  const [exportPeriodo, setExportPeriodo] = useState('dia');
+  const [exportingEntregas, setExportingEntregas] = useState(false);
 
   const normalizarEstadoEntrega = (venta) => {
-    if (venta?.estado_entrega) return String(venta.estado_entrega);
+    if (String(venta?.estado_entrega || '').toLowerCase() === 'entregado') return 'entregado';
     return venta?.entregado ? 'entregado' : 'pendiente';
   };
 
@@ -165,71 +184,76 @@ export default function VentasHistorial() {
       img.src = src;
     });
 
+  const buildVentaPdf = async (venta) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let cursorY = 12;
+
+    try {
+      const logo = await loadImage('/images/encabezadofacturacion.png');
+      const logoWidth = 120;
+      const logoHeight = 24;
+      const x = (pageWidth - logoWidth) / 2;
+      doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
+      cursorY += logoHeight + 6;
+    } catch {
+      cursorY += 2;
+    }
+
+    doc.setFontSize(14);
+    doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
+    cursorY += 6;
+
+    doc.setFontSize(10);
+    doc.text(`Venta: #${venta.id}`, 14, cursorY);
+    doc.text(`Fecha: ${formatDateTime(venta.fecha)}`, 120, cursorY);
+    cursorY += 5;
+    doc.text(`Cliente: ${venta.cliente_nombre || 'Consumidor final'}`, 14, cursorY);
+    cursorY += 5;
+    doc.text(`Vendedor: ${venta.usuario_nombre || '-'}`, 14, cursorY);
+    cursorY += 5;
+    doc.text(`Entrega: ${formatDateOnly(venta.fecha_entrega)}`, 14, cursorY);
+    cursorY += 6;
+    doc.text(`Medio de pago: ${formatMedioPago(venta.medio_pago)}`, 14, cursorY);
+    cursorY += 6;
+
+    autoTable(doc, {
+      startY: cursorY,
+      head: [['Producto', 'Cant.', 'P. Unit.', 'Subtotal']],
+      body: (venta.detalle || []).map((item) => [
+        item.producto_nombre || `Producto #${item.producto_id}`,
+        item.cantidad,
+        formatCurrency(item.precio_unitario),
+        formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0)),
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [55, 95, 140] },
+    });
+
+    const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
+    doc.setFontSize(10);
+    doc.text(`Subtotal: ${formatCurrency(venta.subtotal)}`, 14, finalY + 8);
+    doc.text(
+      `Descuento total: -${formatCurrency(venta.descuento_total_valor)}`,
+      14,
+      finalY + 14
+    );
+    doc.setFontSize(12);
+    doc.text(`TOTAL: ${formatCurrency(venta.total)}`, 14, finalY + 22);
+
+    if (venta.observacion) {
+      doc.setFontSize(9);
+      doc.text(`Observación: ${venta.observacion}`, 14, finalY + 30);
+    }
+
+    return doc;
+  };
+
   const imprimirVenta = async (ventaId) => {
     setPrintingId(ventaId);
     try {
       const venta = await api.getVentaById(ventaId);
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let cursorY = 12;
-
-      try {
-        const logo = await loadImage('/images/encabezadofacturacion.png');
-        const logoWidth = 120;
-        const logoHeight = 24;
-        const x = (pageWidth - logoWidth) / 2;
-        doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-        cursorY += logoHeight + 6;
-      } catch {
-        cursorY += 2;
-      }
-
-      doc.setFontSize(14);
-      doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
-      cursorY += 6;
-
-      doc.setFontSize(10);
-      doc.text(`Venta: #${venta.id}`, 14, cursorY);
-      doc.text(`Fecha: ${formatDateTime(venta.fecha)}`, 120, cursorY);
-      cursorY += 5;
-      doc.text(`Cliente: ${venta.cliente_nombre || 'Consumidor final'}`, 14, cursorY);
-      cursorY += 5;
-      doc.text(`Vendedor: ${venta.usuario_nombre || '-'}`, 14, cursorY);
-      cursorY += 5;
-      doc.text(`Entrega: ${formatDateOnly(venta.fecha_entrega)}`, 14, cursorY);
-      cursorY += 6;
-      doc.text(`Medio de pago: ${formatMedioPago(venta.medio_pago)}`, 14, cursorY);
-      cursorY += 6;
-
-      autoTable(doc, {
-        startY: cursorY,
-        head: [['Producto', 'Cant.', 'P. Unit.', 'Subtotal']],
-        body: (venta.detalle || []).map((item) => [
-          item.producto_nombre || `Producto #${item.producto_id}`,
-          item.cantidad,
-          formatCurrency(item.precio_unitario),
-          formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0)),
-        ]),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [55, 95, 140] },
-      });
-
-      const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
-      doc.setFontSize(10);
-      doc.text(`Subtotal: ${formatCurrency(venta.subtotal)}`, 14, finalY + 8);
-      doc.text(
-        `Descuento total: -${formatCurrency(venta.descuento_total_valor)}`,
-        14,
-        finalY + 14
-      );
-      doc.setFontSize(12);
-      doc.text(`TOTAL: ${formatCurrency(venta.total)}`, 14, finalY + 22);
-
-      if (venta.observacion) {
-        doc.setFontSize(9);
-        doc.text(`Observación: ${venta.observacion}`, 14, finalY + 30);
-      }
-
+      const doc = await buildVentaPdf(venta);
       doc.save(`ticket-venta-${venta.id}.pdf`);
     } catch (err) {
       window.alert(err.message || 'No se pudo generar el ticket.');
@@ -238,10 +262,68 @@ export default function VentasHistorial() {
     }
   };
 
+  const reenviarFactura = async (ventaId) => {
+    setPrintingId(ventaId);
+    try {
+      const venta = await api.getVentaById(ventaId);
+      const telefono = normalizeWhatsappPhone(venta.cliente_telefono);
+      if (!telefono) {
+        window.alert('Este cliente no tiene teléfono válido para WhatsApp.');
+        return;
+      }
+
+      const doc = await buildVentaPdf(venta);
+      const fileName = `ticket-venta-${venta.id}.pdf`;
+      const message = `Hola ${venta.cliente_nombre || 'cliente'}, te compartimos tu factura de la venta #${venta.id}. Total: ${formatCurrency(venta.total)}.`;
+      const waUrl = `https://wa.me/${telefono}?text=${encodeURIComponent(message)}`;
+
+      if (isAndroidDevice() && typeof File === 'function' && typeof navigator !== 'undefined' && navigator.share && typeof navigator.canShare === 'function') {
+        const pdfBlob = doc.output('blob');
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ title: `Factura ${venta.id}`, text: message, files: [file] });
+            return;
+          } catch {
+            // fallback below
+          }
+        }
+      }
+
+      doc.save(fileName);
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      window.alert('Abrimos WhatsApp directo al cliente y descargamos la factura. Adjunta el archivo desde Descargas y envía.');
+    } catch (err) {
+      window.alert(err.message || 'No se pudo reenviar la factura.');
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
+  const enviarFacturaEmail = async (ventaId) => {
+    setPrintingId(ventaId);
+    try {
+      const venta = await api.getVentaById(ventaId);
+      const email = String(venta?.cliente_correo || '').trim();
+      if (!email) {
+        window.alert('Este cliente no tiene email registrado.');
+        return;
+      }
+      const doc = await buildVentaPdf(venta);
+      const fileName = `ticket-venta-${venta.id}.pdf`;
+      const pdfBase64 = doc.output('datauristring').split(',')[1] || '';
+      await api.enviarFacturaEmail(venta.id, pdfBase64, fileName);
+      window.alert(`Factura enviada por email a ${email}.`);
+    } catch (err) {
+      window.alert(err.message || 'No se pudo enviar la factura por email.');
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
   const getEntregaEstadoClass = (venta) => {
     const estado = normalizarEstadoEntrega(venta);
     if (estado === 'entregado') return 'is-entregado';
-    if (estado === 'en_camino') return 'is-camino';
     const entregaIso = toISODateOnly(venta.fecha_entrega);
     if (!entregaIso) return '';
     const todayIso = todayISO();
@@ -258,24 +340,6 @@ export default function VentasHistorial() {
         prev.map((v) => (
           v.id === ventaId
             ? { ...v, entregado: nextValue, estado_entrega: nextValue ? 'entregado' : 'pendiente' }
-            : v
-        ))
-      );
-    } catch (err) {
-      window.alert(err.message || 'No se pudo actualizar el estado de entrega.');
-    } finally {
-      setUpdatingEntregaId(null);
-    }
-  };
-
-  const updateEstadoEntrega = async (ventaId, estado) => {
-    setUpdatingEntregaId(ventaId);
-    try {
-      const updated = await api.updateVentaEstadoEntrega(ventaId, estado);
-      setVentas((prev) =>
-        prev.map((v) => (
-          v.id === ventaId
-            ? { ...v, estado_entrega: updated.estado_entrega, entregado: Boolean(updated.entregado) }
             : v
         ))
       );
@@ -323,6 +387,71 @@ export default function VentasHistorial() {
     }
   };
 
+  const exportarEntregasPDF = async () => {
+    setExportingEntregas(true);
+    try {
+      const resumen = await api.getEntregasResumen(exportPeriodo, fecha);
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let cursorY = 12;
+      const periodoLabel = exportPeriodo === 'dia' ? 'Día' : exportPeriodo === 'semana' ? 'Semana' : 'Mes';
+      const periodoSlug = exportPeriodo === 'dia' ? 'dia' : exportPeriodo === 'semana' ? 'semana' : 'mes';
+
+      try {
+        const logo = await loadImage('/images/encabezadofacturacion.png');
+        const logoWidth = 120;
+        const logoHeight = 24;
+        const x = (pageWidth - logoWidth) / 2;
+        doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
+        cursorY += logoHeight + 6;
+      } catch {
+        cursorY += 2;
+      }
+
+      doc.setFontSize(14);
+      doc.text('Planilla de entregas', pageWidth / 2, cursorY, { align: 'center' });
+      cursorY += 6;
+      doc.setFontSize(10);
+      doc.text(`Período: ${periodoLabel} (${resumen.desde} al ${resumen.hasta})`, 14, cursorY);
+      cursorY += 5;
+      doc.text(`Ventas pendientes: ${Number(resumen.totalVentas || 0).toLocaleString('es-UY')}`, 14, cursorY);
+      doc.text(`Monto total: ${formatCurrency(resumen.totalMonto || 0)}`, 120, cursorY);
+      cursorY += 7;
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['# Venta', 'Fecha entrega', 'Cliente / contacto', 'Dirección', 'Vendedor', 'Total', 'Productos']],
+        body: (resumen.ventas || []).map((v) => [
+          v.id,
+          formatDateOnly(v.fecha_entrega),
+          `${v.cliente_nombre || 'Consumidor final'}\nTel: ${v.cliente_telefono || '-'}`,
+          v.cliente_direccion || '-',
+          v.usuario_nombre || '-',
+          formatCurrency(v.total || 0),
+          (v.productos ? String(v.productos).split('\n').map((line) => `• ${line}`).join('\n') : '-'),
+        ]),
+        styles: { fontSize: 8, valign: 'top', cellPadding: 2 },
+        headStyles: { fillColor: [55, 95, 140] },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 52 },
+          3: { cellWidth: 65 },
+          4: { cellWidth: 42 },
+          5: { cellWidth: 24, halign: 'right' },
+          6: { cellWidth: 'auto' },
+        },
+      });
+
+      const suffix = `${resumen.desde || 'desde'}_${resumen.hasta || 'hasta'}`;
+      doc.save(`entregas-${periodoSlug}-${suffix}.pdf`);
+    } catch (err) {
+      window.alert(err.message || 'No se pudo exportar el PDF de entregas.');
+    } finally {
+      setExportingEntregas(false);
+    }
+  };
+
   return (
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
@@ -339,11 +468,28 @@ export default function VentasHistorial() {
           <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
             <option value="todos">Todos</option>
             <option value="pendiente">Pendientes</option>
-            <option value="en_camino">En camino</option>
             <option value="entregado">Entregadas</option>
             <option value="canceladas">Canceladas</option>
           </select>
         </label>
+        <div className="ventas-export-group">
+          <label className="ventas-fecha-filter">
+            <span>PDF entregas</span>
+            <select value={exportPeriodo} onChange={(e) => setExportPeriodo(e.target.value)} disabled={exportingEntregas}>
+              <option value="dia">Para hoy</option>
+              <option value="semana">Para esta semana</option>
+              <option value="mes">Para este mes</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="ventas-export-btn"
+            onClick={exportarEntregasPDF}
+            disabled={exportingEntregas}
+          >
+            {exportingEntregas ? 'Generando PDF...' : 'Imprimir entregas'}
+          </button>
+        </div>
       </div>
 
       <div className="ventas-resumen">
@@ -364,9 +510,8 @@ export default function VentasHistorial() {
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('vendedor')}>Vendedor {sortBy === 'vendedor' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('total')}>Total {sortBy === 'total' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <span>Pago</span>
-            <span>Estado entrega</span>
-            <span>Entregado</span>
-            <span>Acciones</span>
+            <span className="estado-col-head">Estado</span>
+            <span className="entregado-col-head">Entregado</span>
           </li>
           {ventasFiltradas.length === 0 && <li className="vacio">No hay ventas para los filtros seleccionados.</li>}
           {ventasOrdenadas.map((v) => {
@@ -398,51 +543,69 @@ export default function VentasHistorial() {
                   <span>{v.usuario_nombre || '-'}</span>
                   <span>{formatCurrency(v.total)}</span>
                   <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>
-                  <label className="estado-entrega-field">
-                    <select
-                      value={estadoEntrega}
-                      disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
-                      onChange={(e) => updateEstadoEntrega(v.id, e.target.value)}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_camino">En camino</option>
-                      <option value="entregado">Entregado</option>
-                    </select>
-                  </label>
-                  <label className="entregado-check">
+                  <span className={`estado-entrega-text estado-col ${estadoEntrega === 'entregado' ? 'is-entregado' : 'is-pendiente'}`}>
+                    {estadoEntrega === 'entregado' ? 'Entregado' : 'Pendiente'}
+                  </span>
+                  <label className="entregado-check entregado-col">
                     <input
                       type="checkbox"
-                      checked={Boolean(v.entregado)}
+                      checked={estadoEntrega === 'entregado'}
                       disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
                       onChange={(e) => toggleEntregado(v.id, e.target.checked)}
                     />
-                    <span>{v.entregado ? 'Sí' : 'No'}</span>
+                    <span className={`entregado-pill ${estadoEntrega === 'entregado' ? 'is-on' : 'is-off'}`}>
+                      {estadoEntrega === 'entregado' ? 'Sí' : 'No'}
+                    </span>
                   </label>
-                  <div className="acciones-cell">
-                    <button
-                      type="button"
-                      className="reprint-btn"
-                      onClick={() => imprimirVenta(v.id)}
-                      disabled={printingId === v.id}
-                      title="Reimprimir ticket"
-                      aria-label="Reimprimir ticket"
-                    >
-                      <img src="/print.svg" alt="" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-btn"
-                      onClick={() => cancelarVenta(v.id)}
-                      disabled={cancelandoVentaId === v.id || Boolean(v.cancelada)}
-                      title="Cancelar venta"
-                      aria-label="Cancelar venta"
-                    >
-                      {v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}
-                    </button>
-                  </div>
                 </li>
                 {expanded && (
                   <div className="venta-detalle-panel">
+                    <div className="venta-detalle-actions">
+                      <button
+                        type="button"
+                        className="cancel-btn"
+                        onClick={() => cancelarVenta(v.id)}
+                        disabled={cancelandoVentaId === v.id || Boolean(v.cancelada)}
+                        title="Cancelar venta"
+                        aria-label="Cancelar venta"
+                      >
+                        <span>{v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}</span>
+                        <small>Cancelar</small>
+                      </button>
+                      <button
+                        type="button"
+                        className="reprint-btn"
+                        onClick={() => reenviarFactura(v.id)}
+                        disabled={printingId === v.id}
+                        title="Reenviar factura"
+                        aria-label="Reenviar factura"
+                      >
+                        <img src="/send.svg" alt="" aria-hidden="true" />
+                        <small>Reenviar</small>
+                      </button>
+                      <button
+                        type="button"
+                        className="reprint-btn"
+                        onClick={() => enviarFacturaEmail(v.id)}
+                        disabled={printingId === v.id}
+                        title="Enviar factura por email"
+                        aria-label="Enviar factura por email"
+                      >
+                        <span aria-hidden="true">✉</span>
+                        <small>Email</small>
+                      </button>
+                      <button
+                        type="button"
+                        className="reprint-btn"
+                        onClick={() => imprimirVenta(v.id)}
+                        disabled={printingId === v.id}
+                        title="Reimprimir ticket"
+                        aria-label="Reimprimir ticket"
+                      >
+                        <img src="/print.svg" alt="" aria-hidden="true" />
+                        <small>Imprimir</small>
+                      </button>
+                    </div>
                     {loadingDetalleId === v.id ? (
                       <p>Cargando detalle...</p>
                     ) : detalleVenta.length === 0 ? (
