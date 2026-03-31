@@ -20,7 +20,7 @@ function formatMoney(value) {
   return `$${n.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
 }
 
-export default function Productos({ productos = [], setProductos }) {
+export default function Productos({ user, productos = [], setProductos }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -28,6 +28,7 @@ export default function Productos({ productos = [], setProductos }) {
   const [imagenUrlError, setImagenUrlError] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
+  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const [nuevo, setNuevo] = useState({
     nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
@@ -143,18 +144,24 @@ export default function Productos({ productos = [], setProductos }) {
       autoTable(doc, {
         startY: 35,
         head: [[
-          'Nombre', 'Stock', 'Costo', 'Venta', 'Empaque'
+          'Nombre',
+          'Stock',
+          ...(esPropietario ? ['Costo'] : []),
+          'Venta',
+          'Empaque',
+          ...(esPropietario ? ['Ganancia x U'] : []),
         ]],
-        body: productos.map(p => [
+        body: sortedProductos.map(p => [
           p.nombre,
           p.stock,
-          formatMoney(p.costo),
+          ...(esPropietario ? [formatMoney(p.costo)] : []),
           formatMoney(p.venta),
-          `${p.tipoEmpaque} x ${p.cantidadEmpaque}`
+          `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
+          ...(esPropietario ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
         ]),
         didParseCell: function (data) {
           if (data.section !== 'body') return;
-          const producto = productos[data.row.index];
+          const producto = sortedProductos[data.row.index];
           const state = stockState(producto?.stock);
           if (state === 'stock-zero') {
             data.cell.styles.fillColor = [246, 196, 196];
@@ -208,9 +215,10 @@ export default function Productos({ productos = [], setProductos }) {
         case 'empaque':
           return asText(a.tipoEmpaque).localeCompare(asText(b.tipoEmpaque)) * dir;
         case 'ganancia': {
-          const ag = calcularGanancia(a.costo, a.venta);
-          const bg = calcularGanancia(b.costo, b.venta);
-          return ((ag ?? -Infinity) - (bg ?? -Infinity)) * dir;
+          if (!esPropietario) return 0;
+          const ag = calcularGananciaUnidad(a.costo, a.venta);
+          const bg = calcularGananciaUnidad(b.costo, b.venta);
+          return (ag - bg) * dir;
         }
         case 'nombre':
         default:
@@ -219,7 +227,7 @@ export default function Productos({ productos = [], setProductos }) {
     });
 
     return list;
-  }, [productosFiltrados, sortBy, sortDir]);
+  }, [productosFiltrados, sortBy, sortDir, esPropietario]);
 
   const toggleSort = (column) => {
     if (sortBy === column) {
@@ -230,16 +238,16 @@ export default function Productos({ productos = [], setProductos }) {
     setSortDir('asc');
   };
 
-  const calcularGanancia = (costo, venta) => {
+  function calcularGananciaUnidad(costo, venta) {
     const costoNum = Number(costo);
     const ventaNum = Number(venta);
 
-    if (!Number.isFinite(costoNum) || !Number.isFinite(ventaNum) || costoNum <= 0) {
-      return null;
+    if (!Number.isFinite(costoNum) || !Number.isFinite(ventaNum)) {
+      return 0;
     }
 
-    return ((ventaNum - costoNum) / costoNum) * 100;
-  };
+    return ventaNum - costoNum;
+  }
 
   const abrirAlta = () => {
     setMostrarForm(true);
@@ -286,10 +294,14 @@ export default function Productos({ productos = [], setProductos }) {
             <span>Imagen</span>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('stock')}>Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>Costo {sortBy === 'costo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            {esPropietario && (
+              <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>Costo {sortBy === 'costo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            )}
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('venta')}>Venta {sortBy === 'venta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             <button type="button" className="sort-header-btn" onClick={() => toggleSort('empaque')}>Empaque {sortBy === 'empaque' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>Ganancia % {sortBy === 'ganancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            {esPropietario && (
+              <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>Ganancia x U {sortBy === 'ganancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            )}
           </li>
           {sortedProductos.length === 0 && <li className="vacio">No hay productos</li>}
           {sortedProductos.map(p => {
@@ -309,16 +321,17 @@ export default function Productos({ productos = [], setProductos }) {
                   </span>
                   <span className="campo" data-label="Nombre">{p.nombre}</span>
                   <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
-                  <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>
+                  {esPropietario && <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>}
                   <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>
                   <span className="campo" data-label="Empaque">{p.tipoEmpaque} x {p.cantidadEmpaque}</span>
-                  <span className="campo" data-label="Ganancia">
-                    {(() => {
-                      const ganancia = calcularGanancia(p.costo, p.venta);
-                      if (ganancia === null) return '-';
-                      return `${ganancia.toFixed(0)}%`;
-                    })()}
-                  </span>
+                  {esPropietario && (
+                    <span className="campo" data-label="Ganancia x U">
+                      {(() => {
+                        const ganancia = calcularGananciaUnidad(p.costo, p.venta);
+                        return formatMoney(ganancia);
+                      })()}
+                    </span>
+                  )}
                 </li>
                 <li className={`producto-actions-row ${expanded ? 'expanded' : ''}`}>
                   <div className="acciones-producto-panel">

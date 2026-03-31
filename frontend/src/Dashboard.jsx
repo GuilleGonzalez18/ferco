@@ -118,7 +118,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     switch (pantalla) {
       case 'nueva-venta':  return <Ventas user={user} productos={productos} setProductos={setProductos} />;
       case 'ventas':       return <VentasHistorial />;
-      case 'productos':    return <Productos productos={productos} setProductos={setProductos} />;
+      case 'productos':    return <Productos user={user} productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
       case 'usuarios':     return <Usuarios currentUser={user} />;
       case 'mi-usuario':   return <MiUsuarioView user={user} />;
