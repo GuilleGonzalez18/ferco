@@ -791,7 +791,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                                 onClick={() => addToCartFromPicker(p)}
                                 disabled={!puedeAgregar}
                               >
-                                Agregar ({unidadesAgregar}u)
+                                Agregar
                               </button>
                             </div>
                           </>

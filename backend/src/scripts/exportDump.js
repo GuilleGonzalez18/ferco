@@ -11,7 +11,7 @@ const user = process.env.PGUSER || process.env.DB_USER || 'postgres';
 const password = process.env.PGPASSWORD || process.env.DB_PASSWORD || '';
 const pgDumpBin = process.env.PG_DUMP_BIN || 'pg_dump';
 
-// Export schema + data with DROP/CREATE and INSERT so it can be restored in another device.
+// Export full public schema + data with DROP/CREATE and INSERT so all relations travel too.
 const args = [
   '-h', host,
   '-p', String(port),
@@ -25,12 +25,6 @@ const args = [
   '--inserts',
   '--column-inserts',
   '-n', 'public',
-  '-t', 'public.productos',
-  '-t', 'public.clientes',
-  '-t', 'public.usuarios',
-  '-t', 'public.ventas',
-  '-t', 'public.venta_detalle',
-  '-t', 'public.pagos',
 ];
 
 const proc = spawn(pgDumpBin, args, {
