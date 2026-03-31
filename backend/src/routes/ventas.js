@@ -48,6 +48,44 @@ function calcGrowthPercent(currentValue, previousValue) {
   return ((current - previous) / previous) * 100;
 }
 
+function toIsoDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function getDateRangeByPeriod(baseDateInput, period) {
+  const safeBase = baseDateInput ? new Date(`${baseDateInput}T00:00:00`) : new Date();
+  if (Number.isNaN(safeBase.getTime())) return null;
+  safeBase.setHours(0, 0, 0, 0);
+
+  if (period === 'dia') {
+    const iso = toIsoDate(safeBase);
+    return { desde: iso, hasta: iso };
+  }
+
+  if (period === 'semana') {
+    const weekStart = new Date(safeBase);
+    const day = weekStart.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    weekStart.setDate(weekStart.getDate() + diffToMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return { desde: toIsoDate(weekStart), hasta: toIsoDate(weekEnd) };
+  }
+
+  if (period === 'mes') {
+    const monthStart = new Date(safeBase.getFullYear(), safeBase.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(safeBase.getFullYear(), safeBase.getMonth() + 1, 0);
+    monthEnd.setHours(0, 0, 0, 0);
+    return { desde: toIsoDate(monthStart), hasta: toIsoDate(monthEnd) };
+  }
+
+  return null;
+}
+
 ventasRouter.get('/dashboard/resumen', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) {
@@ -644,6 +682,92 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
       promedioVenta: personalPromedioVenta,
       articuloMasVendido: personalArticuloMasVendido,
     },
+  });
+});
+
+ventasRouter.get('/entregas/resumen', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const periodo = String(req.query.periodo || 'dia').toLowerCase();
+  const fechaBase = req.query.fechaBase ? String(req.query.fechaBase) : null;
+  if (!['dia', 'semana', 'mes'].includes(periodo)) {
+    return res.status(400).json({ error: 'Periodo inválido. Usa: dia, semana o mes.' });
+  }
+  if (fechaBase && !/^\d{4}-\d{2}-\d{2}$/.test(fechaBase)) {
+    return res.status(400).json({ error: 'Formato de fechaBase inválido. Usa YYYY-MM-DD' });
+  }
+
+  const range = getDateRangeByPeriod(fechaBase, periodo);
+  if (!range?.desde || !range?.hasta) {
+    return res.status(400).json({ error: 'No se pudo calcular el rango de fechas solicitado' });
+  }
+
+  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  const params = [range.desde, range.hasta];
+  const userFilter = esPropietario ? '' : 'AND v.usuario_id = $3';
+  if (!esPropietario) params.push(Number(authUser.id));
+
+  const ventasQ = await pool.query(
+    `SELECT
+       v.id,
+       v.fecha,
+       v.fecha_entrega,
+       v.total,
+       v.estado_entrega,
+       v.entregado,
+       v.observacion,
+       c.nombre AS cliente_nombre,
+       c.telefono AS cliente_telefono,
+       c.direccion AS cliente_direccion,
+        COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo) AS usuario_nombre,
+       COALESCE(det.productos, '') AS productos
+     FROM public.ventas v
+     LEFT JOIN public.clientes c ON c.id = v.cliente_id
+     LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+     LEFT JOIN (
+        SELECT
+          vd.venta_id,
+          STRING_AGG(
+            CONCAT(COALESCE(p.nombre, 'Producto'), ' x', COALESCE(vd.cantidad, 0)::text),
+            E'\n' ORDER BY vd.id
+          ) AS productos
+       FROM public.venta_detalle vd
+       LEFT JOIN public.productos p ON p.id = vd.producto_id
+       GROUP BY vd.venta_id
+     ) det ON det.venta_id = v.id
+     WHERE v.cancelada = false
+       AND COALESCE(v.estado_entrega, CASE WHEN v.entregado THEN 'entregado' ELSE 'pendiente' END) <> 'entregado'
+       AND v.fecha_entrega IS NOT NULL
+       AND DATE(v.fecha_entrega) BETWEEN $1::date AND $2::date
+       ${userFilter}
+     ORDER BY v.fecha_entrega ASC, v.id ASC`,
+    params
+  );
+
+  const ventas = ventasQ.rows.map((row) => ({
+    id: Number(row.id),
+    fecha: row.fecha,
+    fecha_entrega: row.fecha_entrega,
+    total: Number(row.total || 0),
+    estado_entrega: row.estado_entrega || (row.entregado ? 'entregado' : 'pendiente'),
+    entregado: Boolean(row.entregado),
+    observacion: row.observacion || '',
+    cliente_nombre: row.cliente_nombre || 'Consumidor final',
+    cliente_telefono: row.cliente_telefono || '',
+    cliente_direccion: row.cliente_direccion || '',
+    usuario_nombre: row.usuario_nombre || '-',
+    productos: row.productos || '-',
+  }));
+
+  const totalMonto = ventas.reduce((acc, v) => acc + Number(v.total || 0), 0);
+  return res.json({
+    periodo,
+    desde: range.desde,
+    hasta: range.hasta,
+    totalVentas: ventas.length,
+    totalMonto,
+    ventas,
   });
 });
 

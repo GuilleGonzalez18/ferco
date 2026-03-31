@@ -84,6 +84,13 @@ export const api = {
     request(`/clientes/${id}`, { method: 'DELETE' }),
   getVentas: (fecha) =>
     request(fecha ? `/ventas?fecha=${encodeURIComponent(fecha)}` : '/ventas'),
+  getEntregasResumen: (periodo, fechaBase) => {
+    const q = new URLSearchParams();
+    if (periodo) q.set('periodo', periodo);
+    if (fechaBase) q.set('fechaBase', fechaBase);
+    const suffix = q.toString();
+    return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
+  },
   getVentaById: (id) => request(`/ventas/${id}`),
   updateVentaEntregado: (id, entregado) =>
     request(`/ventas/${id}/entregado`, {
