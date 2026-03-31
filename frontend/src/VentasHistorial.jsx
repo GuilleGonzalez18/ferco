@@ -75,6 +75,8 @@ export default function VentasHistorial() {
   const [expandedVentaId, setExpandedVentaId] = useState(null);
   const [detalleByVentaId, setDetalleByVentaId] = useState({});
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
+  const [exportPeriodo, setExportPeriodo] = useState('dia');
+  const [exportingEntregas, setExportingEntregas] = useState(false);
 
   const normalizarEstadoEntrega = (venta) => {
     if (venta?.estado_entrega) return String(venta.estado_entrega);
@@ -323,6 +325,71 @@ export default function VentasHistorial() {
     }
   };
 
+  const exportarEntregasPDF = async () => {
+    setExportingEntregas(true);
+    try {
+      const resumen = await api.getEntregasResumen(exportPeriodo, fecha);
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let cursorY = 12;
+      const periodoLabel = exportPeriodo === 'dia' ? 'Día' : exportPeriodo === 'semana' ? 'Semana' : 'Mes';
+      const periodoSlug = exportPeriodo === 'dia' ? 'dia' : exportPeriodo === 'semana' ? 'semana' : 'mes';
+
+      try {
+        const logo = await loadImage('/images/encabezadofacturacion.png');
+        const logoWidth = 120;
+        const logoHeight = 24;
+        const x = (pageWidth - logoWidth) / 2;
+        doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
+        cursorY += logoHeight + 6;
+      } catch {
+        cursorY += 2;
+      }
+
+      doc.setFontSize(14);
+      doc.text('Planilla de entregas', pageWidth / 2, cursorY, { align: 'center' });
+      cursorY += 6;
+      doc.setFontSize(10);
+      doc.text(`Período: ${periodoLabel} (${resumen.desde} al ${resumen.hasta})`, 14, cursorY);
+      cursorY += 5;
+      doc.text(`Ventas pendientes: ${Number(resumen.totalVentas || 0).toLocaleString('es-UY')}`, 14, cursorY);
+      doc.text(`Monto total: ${formatCurrency(resumen.totalMonto || 0)}`, 120, cursorY);
+      cursorY += 7;
+
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['# Venta', 'Fecha entrega', 'Cliente / contacto', 'Dirección', 'Vendedor', 'Total', 'Productos']],
+        body: (resumen.ventas || []).map((v) => [
+          v.id,
+          formatDateOnly(v.fecha_entrega),
+          `${v.cliente_nombre || 'Consumidor final'}\nTel: ${v.cliente_telefono || '-'}`,
+          v.cliente_direccion || '-',
+          v.usuario_nombre || '-',
+          formatCurrency(v.total || 0),
+          v.productos || '-',
+        ]),
+        styles: { fontSize: 8, valign: 'top', cellPadding: 2 },
+        headStyles: { fillColor: [55, 95, 140] },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 52 },
+          3: { cellWidth: 65 },
+          4: { cellWidth: 42 },
+          5: { cellWidth: 24, halign: 'right' },
+          6: { cellWidth: 'auto' },
+        },
+      });
+
+      const suffix = `${resumen.desde || 'desde'}_${resumen.hasta || 'hasta'}`;
+      doc.save(`entregas-${periodoSlug}-${suffix}.pdf`);
+    } catch (err) {
+      window.alert(err.message || 'No se pudo exportar el PDF de entregas.');
+    } finally {
+      setExportingEntregas(false);
+    }
+  };
+
   return (
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
@@ -344,6 +411,24 @@ export default function VentasHistorial() {
             <option value="canceladas">Canceladas</option>
           </select>
         </label>
+        <div className="ventas-export-group">
+          <label className="ventas-fecha-filter">
+            <span>PDF entregas</span>
+            <select value={exportPeriodo} onChange={(e) => setExportPeriodo(e.target.value)} disabled={exportingEntregas}>
+              <option value="dia">Para hoy</option>
+              <option value="semana">Para esta semana</option>
+              <option value="mes">Para este mes</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="ventas-export-btn"
+            onClick={exportarEntregasPDF}
+            disabled={exportingEntregas}
+          >
+            {exportingEntregas ? 'Generando PDF...' : 'Imprimir entregas'}
+          </button>
+        </div>
       </div>
 
       <div className="ventas-resumen">

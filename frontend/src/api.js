@@ -84,6 +84,13 @@ export const api = {
     request(`/clientes/${id}`, { method: 'DELETE' }),
   getVentas: (fecha) =>
     request(fecha ? `/ventas?fecha=${encodeURIComponent(fecha)}` : '/ventas'),
+  getEntregasResumen: (periodo, fechaBase) => {
+    const q = new URLSearchParams();
+    if (periodo) q.set('periodo', periodo);
+    if (fechaBase) q.set('fechaBase', fechaBase);
+    const suffix = q.toString();
+    return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
+  },
   getVentaById: (id) => request(`/ventas/${id}`),
   updateVentaEntregado: (id, entregado) =>
     request(`/ventas/${id}/entregado`, {
@@ -102,10 +109,11 @@ export const api = {
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),
-  getEstadisticasResumen: (desde, hasta) => {
+  getEstadisticasResumen: (desde, hasta, usuarioId) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);
     if (hasta) q.set('hasta', hasta);
+    if (usuarioId) q.set('usuarioId', String(usuarioId));
     const suffix = q.toString();
     return request(`/ventas/estadisticas/resumen${suffix ? `?${suffix}` : ''}`);
   },
