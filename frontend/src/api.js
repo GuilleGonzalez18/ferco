@@ -97,10 +97,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ entregado }),
     }),
-  updateVentaEstadoEntrega: (id, estado_entrega) =>
-    request(`/ventas/${id}/estado-entrega`, {
-      method: 'PUT',
-      body: JSON.stringify({ estado_entrega }),
+  enviarFacturaEmail: (id, pdfBase64, fileName) =>
+    request(`/ventas/${id}/enviar-email`, {
+      method: 'POST',
+      body: JSON.stringify({ pdfBase64, fileName }),
     }),
   cancelarVenta: (id) =>
     request(`/ventas/${id}/cancelar`, {

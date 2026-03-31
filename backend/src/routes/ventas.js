@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
+import nodemailer from 'nodemailer';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -8,7 +9,7 @@ function toNumber(value) {
 }
 
 export const ventasRouter = Router();
-const ESTADOS_ENTREGA = new Set(['pendiente', 'en_camino', 'entregado']);
+const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado']);
 const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
 
 function actorName(authUser) {
@@ -46,6 +47,11 @@ function calcGrowthPercent(currentValue, previousValue) {
     return 100;
   }
   return ((current - previous) / previous) * 100;
+}
+
+function isValidEmail(value) {
+  const v = String(value || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
 function toIsoDate(value) {
@@ -725,14 +731,32 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
      FROM public.ventas v
      LEFT JOIN public.clientes c ON c.id = v.cliente_id
      LEFT JOIN public.usuarios u ON u.id = v.usuario_id
-     LEFT JOIN (
-        SELECT
-          vd.venta_id,
-          STRING_AGG(
-            CONCAT(COALESCE(p.nombre, 'Producto'), ' x', COALESCE(vd.cantidad, 0)::text),
-            E'\n' ORDER BY vd.id
-          ) AS productos
-       FROM public.venta_detalle vd
+      LEFT JOIN (
+         SELECT
+           vd.venta_id,
+           STRING_AGG(
+             CONCAT(
+               COALESCE(p.nombre, 'Producto'),
+               ' x',
+               COALESCE(vd.cantidad, 0)::text,
+               ' (',
+               COALESCE(
+                 CASE
+                   WHEN COALESCE(p.cantidad_empaque, 0) > 1 THEN
+                     CASE
+                       WHEN MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque) = 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(p.empaque), ''), 'empaque'))
+                       WHEN (COALESCE(vd.cantidad, 0) / p.cantidad_empaque) > 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(p.empaque), ''), 'empaque'), ' + ', MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque)::text, ' unidades')
+                       ELSE CONCAT(MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque)::text, ' unidades')
+                     END
+                   ELSE CONCAT(COALESCE(vd.cantidad, 0)::text, ' unidades')
+                 END,
+                 CONCAT(COALESCE(vd.cantidad, 0)::text, ' unidades')
+               ),
+               ')'
+             ),
+             E'\n' ORDER BY vd.id
+           ) AS productos
+        FROM public.venta_detalle vd
        LEFT JOIN public.productos p ON p.id = vd.producto_id
        GROUP BY vd.venta_id
      ) det ON det.venta_id = v.id
@@ -781,7 +805,7 @@ ventasRouter.get('/', async (req, res) => {
    const result = await pool.query(
       `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
               v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
-              c.nombre AS cliente_nombre,
+              c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
               u.nombre AS usuario_nombre
        FROM public.ventas v
        LEFT JOIN public.clientes c ON c.id = v.cliente_id
@@ -824,7 +848,7 @@ ventasRouter.get('/:id', async (req, res) => {
   const ventaResult = await pool.query(
       `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
               v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
-              c.nombre AS cliente_nombre,
+              c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
               u.nombre AS usuario_nombre
        FROM public.ventas v
        LEFT JOIN public.clientes c ON c.id = v.cliente_id
@@ -934,9 +958,8 @@ ventasRouter.post('/', async (req, res) => {
       descuentoGlobal = Math.max(0, Math.min(subtotal, descuentoValor));
     }
     const total = Math.max(0, subtotal - descuentoGlobal);
-    const estadoNormalizado = ESTADOS_ENTREGA.has(String(estado_entrega))
-      ? String(estado_entrega)
-      : (Boolean(entregado) ? 'entregado' : 'pendiente');
+    const estadoSolicitado = String(estado_entrega || '').trim().toLowerCase();
+    const estadoNormalizado = estadoSolicitado === 'entregado' ? 'entregado' : 'pendiente';
     const entregadoFinal = estadoNormalizado === 'entregado' ? true : Boolean(entregado);
 
     const totalPagos = pagosNormalizados.reduce((acc, p) => acc + toNumber(p.monto), 0);
@@ -1090,48 +1113,100 @@ ventasRouter.put('/:id/entregado', async (req, res) => {
 });
 
 ventasRouter.put('/:id/estado-entrega', async (req, res) => {
+  return res.status(405).json({
+    error: 'El estado de entrega se actualiza únicamente con el campo entregado',
+  });
+});
+
+ventasRouter.post('/:id/enviar-email', async (req, res) => {
   const ventaId = Number(req.params.id);
-  const { estado_entrega } = req.body || {};
-  const estado = String(estado_entrega || '').trim();
+  const { pdfBase64, fileName } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
 
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
   }
-  if (!ESTADOS_ENTREGA.has(estado)) {
-    return res.status(400).json({ error: 'Estado de entrega inválido' });
+
+  const smtpHost = process.env.SMTP_HOST || '';
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpUser = process.env.SMTP_USER || '';
+  const smtpPass = process.env.SMTP_PASS || '';
+  const mailFrom = process.env.SMTP_FROM || smtpUser;
+  if (!smtpHost || !smtpUser || !smtpPass || !mailFrom) {
+    return res.status(500).json({ error: 'SMTP no configurado. Define SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_FROM' });
   }
 
-  const result = await pool.query(
-    `UPDATE public.ventas
-     SET estado_entrega = $1::varchar(20),
-          entregado = CASE WHEN $1::varchar(20) = 'entregado' THEN true ELSE false END
-     WHERE id = $2 AND cancelada = false
-     RETURNING id, estado_entrega, entregado`,
-    [estado, ventaId]
+  if (typeof pdfBase64 !== 'string' || !pdfBase64.trim()) {
+    return res.status(400).json({ error: 'PDF requerido para enviar por email' });
+  }
+  const pdfContentBase64 = pdfBase64.includes(',')
+    ? pdfBase64.split(',').pop()
+    : pdfBase64;
+  if (!pdfContentBase64) {
+    return res.status(400).json({ error: 'PDF inválido para enviar por email' });
+  }
+
+  const ventaQ = await pool.query(
+    `SELECT
+       v.id,
+       v.total,
+       v.fecha,
+       c.nombre AS cliente_nombre,
+       c.correo AS cliente_correo
+     FROM public.ventas v
+     LEFT JOIN public.clientes c ON c.id = v.cliente_id
+     WHERE v.id = $1
+     LIMIT 1`,
+    [ventaId]
   );
-
-  if (!result.rowCount) {
-    const exists = await pool.query(`SELECT id, cancelada FROM public.ventas WHERE id = $1`, [ventaId]);
-    if (!exists.rowCount) {
-      return res.status(404).json({ error: 'Venta no encontrada' });
-    }
-    return res.status(400).json({ error: 'No se puede actualizar una venta cancelada' });
+  if (!ventaQ.rowCount) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
+
+  const venta = ventaQ.rows[0];
+  const to = String(venta.cliente_correo || '').trim();
+  if (!isValidEmail(to)) {
+    return res.status(400).json({ error: 'El cliente no tiene un correo válido' });
+  }
+
+  const safeFileName = String(fileName || `ticket-venta-${ventaId}.pdf`).replace(/[^\w.\-]/g, '_');
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const fechaText = venta.fecha ? new Date(venta.fecha).toLocaleString('es-UY') : '-';
+  await transporter.sendMail({
+    from: mailFrom,
+    to,
+    subject: `Factura de venta #${ventaId}`,
+    text: `Hola ${venta.cliente_nombre || 'cliente'},\n\nTe compartimos la factura de tu compra #${ventaId}.\nFecha: ${fechaText}\nTotal: $${Math.round(Number(venta.total || 0)).toLocaleString('es-UY')}\n\nSaludos.`,
+    attachments: [
+      {
+        filename: safeFileName,
+        content: pdfContentBase64,
+        encoding: 'base64',
+        contentType: 'application/pdf',
+      },
+    ],
+  });
+
   await pool.query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
      VALUES ($1,$2,$3,$4,$5,$6)`,
     [
       'venta',
       ventaId,
-      'actualizar_estado_entrega',
-      `Estado de entrega cambiado a ${result.rows[0].estado_entrega}`,
+      'enviar_factura_email',
+      `Factura enviada por email a ${to}`,
       authUser?.id || null,
       actorName(authUser),
     ]
   );
 
-  return res.json(result.rows[0]);
+  return res.json({ ok: true, to });
 });
 
 ventasRouter.put('/:id/cancelar', async (req, res) => {

@@ -4,8 +4,8 @@
 }
 
 .agregar-btn {
-  background: #fff;
-  color: var(--menu-active);
+  background: var(--menu-active);
+  color: #fff;
   font-weight: 700;
   border: none;
   border-radius: 8px;
@@ -30,16 +30,13 @@
 .agregar-btn img {
   width: 22px;
   height: 22px;
-  filter: none;
+  filter: brightness(0) invert(1);
 }
 
 .agregar-btn span {
-  color: #375f8c;
+  color: #ffffff;
 }
-.agregar-btn:hover {
-  background: #f0f4fa;
-  color: #375f8c;
-}
+
 
 .form-producto {
   background: #fff;

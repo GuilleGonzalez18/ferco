@@ -41,6 +41,14 @@ export default function Productos({ productos = [], setProductos }) {
     }
   };
 
+  const normalizeImageUrl = (value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^www\./i.test(trimmed)) return `https://${trimmed}`;
+    return trimmed;
+  };
+
   const handleChange = e => {
     const { name, value, files } = e.target;
     if (files && files[0]) {
@@ -53,7 +61,7 @@ export default function Productos({ productos = [], setProductos }) {
       return;
     }
     if (name === 'imagenUrl') {
-      const trimmed = value.trim();
+      const trimmed = normalizeImageUrl(value);
       if (!trimmed) {
         setImagenUrlError('');
         setNuevo(n => ({ ...n, imagen: null, imagenPreview: '' }));
@@ -383,7 +391,7 @@ export default function Productos({ productos = [], setProductos }) {
                 value={nuevo.imagenPreview || ''}
                 onChange={handleChange}
                 placeholder="URL de imagen (https://...)"
-                type="url"
+                type="text"
               />
             </label>
             {imagenUrlError && <p className="input-error">{imagenUrlError}</p>}
