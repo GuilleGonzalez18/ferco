@@ -9,6 +9,7 @@
     "db:setup": "npm run db:schema && npm run db:migrate",
     "db:schema": "node src/scripts/bootstrapSchema.js",
     "db:migrate": "node src/scripts/runMigration.js",
+    "db:export": "node src/scripts/exportDump.js",
     "db:import": "node src/scripts/importDump.js",
     "db:seed:test": "node src/scripts/seedClientesVentasTest.js"
   },
