@@ -98,6 +98,27 @@
   gap: 0.35rem;
 }
 
+.auditoria-card-filtros {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.auditoria-card-filtros select,
+.auditoria-card-filtros input {
+  border: 1px solid #d3dbe8;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+}
+
+.auditoria-card-filtros input {
+  min-width: 250px;
+}
+
 .auditoria-list {
   list-style: none;
   margin: 0;
@@ -152,6 +173,28 @@
 .tag.out {
   background: #ffd8d8;
   color: #9f1d1d;
+}
+
+.auditoria-pager {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  color: #4f6178;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.auditoria-range {
+  margin-right: auto;
+  color: #5b6d84;
+  font-weight: 700;
+}
+
+.auditoria-pager .audit-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 @media (max-width: 980px) {
