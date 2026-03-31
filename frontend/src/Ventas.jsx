@@ -31,6 +31,26 @@ function getEmpaqueUnits(producto) {
   return n > 0 ? n : 1;
 }
 
+function splitByEmpaque(unidades, unidadesPorEmpaque) {
+  const totalUnidades = Math.max(0, Math.floor(toNumber(unidades)));
+  const packSize = Math.max(1, Math.floor(toNumber(unidadesPorEmpaque)));
+  if (packSize <= 1) return { packs: 0, unidadesSueltas: totalUnidades };
+  return {
+    packs: Math.floor(totalUnidades / packSize),
+    unidadesSueltas: totalUnidades % packSize,
+  };
+}
+
+function formatEmpaqueSplit(item) {
+  const packSize = Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)));
+  if (packSize <= 1) return `${Math.floor(toNumber(item.unidadesSolicitadas))} unidades`;
+  const { packs, unidadesSueltas } = splitByEmpaque(item.unidadesSolicitadas, packSize);
+  const packLabel = item.tipoEmpaque || 'empaque';
+  if (packs > 0 && unidadesSueltas > 0) return `${packs} ${packLabel} + ${unidadesSueltas} unidades`;
+  if (packs > 0) return `${packs} ${packLabel}`;
+  return `${unidadesSueltas} unidades`;
+}
+
 function todayISODate() {
   const now = new Date();
   const tzOffset = now.getTimezoneOffset() * 60000;
@@ -45,12 +65,30 @@ function formatMedioPago(value) {
   return 'Efectivo';
 }
 
+function normalizeWhatsappPhone(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  let digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('598')) return digits;
+  if (digits.startsWith('0')) return `598${digits.slice(1)}`;
+  if (digits.length <= 9) return `598${digits}`;
+  return digits;
+}
+
+function isAndroidDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return /android/i.test(String(navigator.userAgent || ''));
+}
+
 export default function Ventas({ user, productos = [], setProductos }) {
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [vistaProductos, setVistaProductos] = useState('grid');
   const [selectorClienteAbierto, setSelectorClienteAbierto] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState('');
+  const [productPicker, setProductPicker] = useState({});
 
   const [carrito, setCarrito] = useState([]);
   const [descuentoItemModal, setDescuentoItemModal] = useState({
@@ -103,7 +141,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const loadClientes = async () => {
       try {
         const rows = await api.getClientes();
-        setClientes(rows.map((c) => ({ id: c.id, nombre: c.nombre })));
+        setClientes(rows.map((c) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono || '' })));
       } catch (error) {
         console.error('Error cargando clientes', error);
       }
@@ -139,25 +177,63 @@ export default function Ventas({ user, productos = [], setProductos }) {
     return Math.max(0, stockBase - reservado);
   };
 
-  const addToCart = (producto, modo = 'unidad') => {
+  const getPickerForProduct = (producto) => {
+    const saved = productPicker[producto.id];
+    return {
+      modo: saved?.modo === 'empaque' ? 'empaque' : 'unidad',
+      cantidad: Math.max(1, Math.floor(toNumber(saved?.cantidad || 1))),
+    };
+  };
+
+  const setPickerModo = (productoId, modo) => {
+    setProductPicker((prev) => {
+      const current = prev[productoId] || { modo: 'unidad', cantidad: 1 };
+      return {
+        ...prev,
+        [productoId]: { ...current, modo: modo === 'empaque' ? 'empaque' : 'unidad' },
+      };
+    });
+  };
+
+  const setPickerCantidad = (productoId, cantidad) => {
+    const next = Math.max(1, Math.floor(toNumber(cantidad || 1)));
+    setProductPicker((prev) => {
+      const current = prev[productoId] || { modo: 'unidad', cantidad: 1 };
+      return {
+        ...prev,
+        [productoId]: { ...current, cantidad: next },
+      };
+    });
+  };
+
+  const addToCartFromPicker = (producto) => {
+    const picker = getPickerForProduct(producto);
     const unidadesPorEmpaque = getEmpaqueUnits(producto);
-    const unidadesAgregar = modo === 'empaque' ? unidadesPorEmpaque : 1;
-
+    const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
+    const unidadesAgregar = picker.cantidad * multiplicador;
     const stockDisponible = getStockDisponible(producto.id);
-    const itemExistente = carrito.find((i) => i.productoId === producto.id);
-    const unidadesYaEnCarrito = toNumber(itemExistente?.unidadesSolicitadas || 0);
+    const precioUnidad = roundMoney(producto.venta);
+    const precioEmpaque = roundMoney(producto.precioEmpaque);
+    const tipoEmpaque = String(producto.tipoEmpaque || 'empaque').trim() || 'empaque';
 
-    if (unidadesYaEnCarrito + unidadesAgregar > stockDisponible + unidadesYaEnCarrito) {
+    if (unidadesAgregar > stockDisponible) {
       window.alert(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible} unidad(es).`);
       return;
     }
 
-    const precioUnitario = roundMoney(producto.venta);
+    const itemExistente = carrito.find((i) => i.productoId === producto.id);
     if (itemExistente) {
       setCarrito((prev) =>
         prev.map((item) =>
-          item.productoId === producto.id
-            ? { ...item, unidadesSolicitadas: toNumber(item.unidadesSolicitadas) + unidadesAgregar }
+          item.id === itemExistente.id
+            ? {
+              ...item,
+              unidadesSolicitadas: toNumber(item.unidadesSolicitadas) + unidadesAgregar,
+              precioUnidad,
+              precioEmpaque,
+              unidadesPorEmpaque,
+              tipoEmpaque,
+            }
             : item
         )
       );
@@ -171,7 +247,10 @@ export default function Ventas({ user, productos = [], setProductos }) {
         productoId: producto.id,
         nombre: producto.nombre,
         unidadesSolicitadas: unidadesAgregar,
-        precioUnitario,
+        precioUnidad,
+        precioEmpaque,
+        unidadesPorEmpaque,
+        tipoEmpaque,
         descuentoTipo: 'ninguno',
         descuentoValor: '',
       },
@@ -256,7 +335,17 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const carritoCalculado = useMemo(() => {
     return carrito.map((item) => {
-      const base = roundMoney(toNumber(item.unidadesSolicitadas) * toNumber(item.precioUnitario));
+      const unidades = Math.max(0, Math.floor(toNumber(item.unidadesSolicitadas)));
+      const packSize = Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)));
+      const precioUnidad = roundMoney(item.precioUnidad);
+      const precioEmpaque = roundMoney(item.precioEmpaque);
+      const puedeEmpaque = packSize > 1 && precioEmpaque > 0;
+      const split = puedeEmpaque
+        ? splitByEmpaque(unidades, packSize)
+        : { packs: 0, unidadesSueltas: unidades };
+      const base = puedeEmpaque
+        ? roundMoney(split.packs * precioEmpaque + split.unidadesSueltas * precioUnidad)
+        : roundMoney(unidades * precioUnidad);
       const valor = toNumber(item.descuentoValor);
       let descuento = 0;
 
@@ -271,31 +360,42 @@ export default function Ventas({ user, productos = [], setProductos }) {
       const descuentoAplicado = roundMoney(descuento);
       return {
         ...item,
+        subtotalBase: base,
+        packsCalculados: split.packs,
+        unidadesSueltasCalculadas: split.unidadesSueltas,
+        precioUnitarioCalculado: unidades > 0 ? (base / unidades) : 0,
         descuentoAplicado,
-        subtotalFinal: Math.max(0, base - descuentoAplicado),
       };
     });
   }, [carrito]);
 
-  const subtotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalFinal), 0),
+  const descuentoItemsTotal = useMemo(
+    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0),
     [carritoCalculado]
   );
+
+  const subtotal = useMemo(
+    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0),
+    [carritoCalculado]
+  );
+
+  const baseParaDescuentoGlobal = Math.max(0, subtotal - descuentoItemsTotal);
 
   const descuentoGlobal = useMemo(() => {
     const v = toNumber(descuentoTotalValor);
     if (descuentoTotalTipo === 'porcentaje') {
       const pct = Math.max(0, Math.min(100, v));
-      return roundMoney((subtotal * pct) / 100);
+      return roundMoney((baseParaDescuentoGlobal * pct) / 100);
     }
     if (descuentoTotalTipo === 'fijo') {
       const fijo = roundMoney(v);
-      return Math.max(0, Math.min(subtotal, fijo));
+      return Math.max(0, Math.min(baseParaDescuentoGlobal, fijo));
     }
     return 0;
-  }, [descuentoTotalTipo, descuentoTotalValor, subtotal]);
+  }, [descuentoTotalTipo, descuentoTotalValor, baseParaDescuentoGlobal]);
 
-  const total = Math.max(0, subtotal - descuentoGlobal);
+  const descuentoTotalAplicado = Math.max(0, descuentoItemsTotal + descuentoGlobal);
+  const total = Math.max(0, subtotal - descuentoTotalAplicado);
   const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
   const pagosActivos = useMemo(
     () => pagos.filter((p) => p.activo),
@@ -334,6 +434,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
     setCarrito([]);
     setSelectorClienteAbierto(false);
     setBusquedaCliente('');
+    setProductPicker({});
     setDescuentoTotalTipo('ninguno');
     setDescuentoTotalValor('');
     setClienteId('');
@@ -355,8 +456,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
       img.src = src;
     });
 
-  const imprimirTicket = async () => {
-    if (!ventaFinalizada) return;
+  const buildTicketPdf = async () => {
+    if (!ventaFinalizada) return null;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let cursorY = 12;
@@ -396,13 +497,14 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
     autoTable(doc, {
       startY: cursorY,
-      head: [['Producto', 'Cant.', 'P. Unit.', 'Desc.', 'Subtotal']],
+      head: [['Producto', 'Cant.', 'Presentación', 'P. Unit.', 'Desc.', 'Subtotal']],
       body: ventaFinalizada.items.map((item) => [
         item.nombre,
         item.unidadesSolicitadas,
-        money(item.precioUnitario),
+        formatEmpaqueSplit(item),
+        money(item.precioUnitarioCalculado),
         money(item.descuentoAplicado),
-        money(item.subtotalFinal),
+        money(item.subtotalBase),
       ]),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [55, 95, 140] },
@@ -420,8 +522,70 @@ export default function Ventas({ user, productos = [], setProductos }) {
       doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, finalY + 30);
     }
 
-    doc.save(`ticket-venta-${ventaFinalizada.id || Date.now()}.pdf`);
+    const fileName = `ticket-venta-${ventaFinalizada.id || Date.now()}.pdf`;
+    return { doc, fileName };
+  };
+
+  const imprimirTicket = async () => {
+    const data = await buildTicketPdf();
+    if (!data) return;
+    data.doc.save(data.fileName);
     setTicketImpreso(true);
+  };
+
+  const enviarTicketWhatsApp = async () => {
+    if (!ventaFinalizada) return;
+    const telefonoNormalizado = normalizeWhatsappPhone(ventaFinalizada.clienteTelefono);
+    if (!telefonoNormalizado) {
+      window.alert('El cliente no tiene teléfono válido para WhatsApp.');
+      return;
+    }
+
+    const data = await buildTicketPdf();
+    if (!data) return;
+
+    const message = `Hola ${ventaFinalizada.clienteNombre}, te enviamos tu ticket de compra #${ventaFinalizada.id || ''}. Total: ${money(ventaFinalizada.total)}.`;
+    const waUrl = `https://wa.me/${telefonoNormalizado}?text=${encodeURIComponent(message)}`;
+    const pdfBlob = data.doc.output('blob');
+
+    if (isAndroidDevice() && typeof File === 'function' && typeof navigator !== 'undefined' && navigator.share && typeof navigator.canShare === 'function') {
+      const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: `Ticket ${ventaFinalizada.id || ''}`,
+            text: message,
+            files: [file],
+          });
+          setTicketImpreso(true);
+          return;
+        } catch {
+          // fallback below
+        }
+      }
+    }
+
+    data.doc.save(data.fileName);
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    window.alert('Abrimos WhatsApp directo al cliente y descargamos el PDF. Adjunta el archivo desde Descargas y envía.');
+    setTicketImpreso(true);
+  };
+
+  const enviarTicketEmail = async () => {
+    if (!ventaFinalizada?.id) {
+      window.alert('La venta debe estar registrada para enviarla por email.');
+      return;
+    }
+    const data = await buildTicketPdf();
+    if (!data) return;
+    try {
+      const pdfBase64 = data.doc.output('datauristring').split(',')[1] || '';
+      await api.enviarFacturaEmail(ventaFinalizada.id, pdfBase64, data.fileName);
+      window.alert('Factura enviada por email al cliente.');
+      setTicketImpreso(true);
+    } catch (error) {
+      window.alert(error.message || 'No se pudo enviar la factura por email.');
+    }
   };
 
   const iniciarNuevaVenta = () => {
@@ -476,14 +640,14 @@ export default function Ventas({ user, productos = [], setProductos }) {
         medio_pago: pagosConMonto[0]?.medio_pago || 'efectivo',
         pagos: pagosConMonto.map((p) => ({ medio_pago: p.medio_pago, monto: p.montoNumber })),
         observacion,
-        descuento_total_tipo: descuentoTotalTipo,
-        descuento_total_valor: descuentoTotalTipo === 'fijo' ? roundMoney(descuentoTotalValor) : toNumber(descuentoTotalValor),
-        detalle: carritoCalculado.map((item) => ({
-          producto_id: item.productoId,
-          cantidad: item.unidadesSolicitadas,
-          precio_unitario: roundMoney(item.precioUnitario),
-        })),
-      });
+         descuento_total_tipo: 'fijo',
+         descuento_total_valor: roundMoney(descuentoTotalAplicado),
+         detalle: carritoCalculado.map((item) => ({
+           producto_id: item.productoId,
+           cantidad: item.unidadesSolicitadas,
+           precio_unitario: toNumber(item.precioUnitarioCalculado),
+         })),
+       });
 
       setProductos(
         productos.map((p) => {
@@ -499,6 +663,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
         id: ventaCreada?.id ?? null,
         fecha: new Date().toISOString(),
         clienteNombre: cliente?.nombre || 'Cliente',
+        clienteTelefono: cliente?.telefono || '',
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
         fechaEntrega,
         pagos: (ventaCreada?.pagos || pagosConMonto).map((p) => ({
@@ -508,7 +673,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
         observacion,
         items: carritoCalculado,
         subtotal,
-        descuentoGlobal,
+        descuentoGlobal: descuentoTotalAplicado,
         total,
       });
       setSelectorClienteAbierto(false);
@@ -577,23 +742,61 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       </div>
                     </div>
                     <div className="card-footer">
-                      <small>Stock disponible: {getStockDisponible(p.id)}</small>
-                      <div className="card-actions">
-                        <button
-                          type="button"
-                          onClick={() => addToCart(p, 'unidad')}
-                          disabled={getStockDisponible(p.id) < 1}
-                        >
-                          + Unidad
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => addToCart(p, 'empaque')}
-                          disabled={getStockDisponible(p.id) < getEmpaqueUnits(p)}
-                        >
-                          + {p.tipoEmpaque || 'Empaque'} ({getEmpaqueUnits(p)} u.)
-                        </button>
-                      </div>
+                      {(() => {
+                        const picker = getPickerForProduct(p);
+                        const unidadesPorEmpaque = getEmpaqueUnits(p);
+                        const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
+                        const unidadesAgregar = picker.cantidad * multiplicador;
+                        const stockDisponible = getStockDisponible(p.id);
+                        const puedeAgregar = stockDisponible >= unidadesAgregar;
+                        const precioEmpaque = roundMoney(p.precioEmpaque);
+                        return (
+                          <>
+                            <small>Stock disponible: {stockDisponible}</small>
+                            <div className="producto-pricing">
+                              <small>Unidad: {money(p.venta)}</small>
+                              <small>{p.tipoEmpaque || 'Empaque'}: {precioEmpaque > 0 ? money(precioEmpaque) : '-'}</small>
+                            </div>
+                            <div className="producto-picker">
+                              <div className="picker-mode">
+                                <button
+                                  type="button"
+                                  className={`picker-mode-btn ${picker.modo === 'unidad' ? 'active' : ''}`}
+                                  onClick={() => setPickerModo(p.id, 'unidad')}
+                                >
+                                  Unidad
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`picker-mode-btn ${picker.modo === 'empaque' ? 'active' : ''}`}
+                                  onClick={() => setPickerModo(p.id, 'empaque')}
+                                >
+                                  {p.tipoEmpaque || 'Empaque'} ({unidadesPorEmpaque}u)
+                                </button>
+                              </div>
+                              <div className="picker-qty">
+                                <button type="button" className="picker-step" onClick={() => setPickerCantidad(p.id, picker.cantidad - 1)}>-</button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={picker.cantidad}
+                                  onChange={(e) => setPickerCantidad(p.id, e.target.value)}
+                                />
+                                <button type="button" className="picker-step" onClick={() => setPickerCantidad(p.id, picker.cantidad + 1)}>+</button>
+                              </div>
+                              <button
+                                type="button"
+                                className="picker-add-btn"
+                                onClick={() => addToCartFromPicker(p)}
+                                disabled={!puedeAgregar}
+                              >
+                                Agregar
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </article>
                 ))}
@@ -688,12 +891,14 @@ export default function Ventas({ user, productos = [], setProductos }) {
                   {carritoCalculado.map((item) => (
                     <li key={item.id}>
                       <span><b>{item.nombre}</b> x {item.unidadesSolicitadas}</span>
-                      <strong>{money(item.subtotalFinal)}</strong>
+                      <strong>{money(item.subtotalBase)}</strong>
+                      <small>{formatEmpaqueSplit(item)}</small>
                     </li>
                   ))}
                 </ul>
                 <div className="ticket-totales">
                   <p>Subtotal <strong>{money(subtotal)}</strong></p>
+                  <p>Descuento ítems <strong>-{money(descuentoItemsTotal)}</strong></p>
                   <p>Descuento total <strong>-{money(descuentoGlobal)}</strong></p>
                   <p className="ticket-total-final">Total <strong>{money(total)}</strong></p>
                 </div>
@@ -778,7 +983,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
                    </div>
                 </div>
                 <div className="carrito-right">
-                  <span>{money(item.subtotalFinal)}</span>
+                  <span>{money(item.subtotalBase)}</span>
+                  <small>{formatEmpaqueSplit(item)}</small>
+                  {item.descuentoAplicado > 0 && (
+                    <small className="linea-descuento">- {money(item.descuentoAplicado)}</small>
+                  )}
                   <button type="button" onClick={() => removeItem(item.id)}>✕</button>
                 </div>
               </div>
@@ -786,10 +995,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
           </div>
 
            <div className="carrito-footer">
-             <div className="carrito-totales">
-               <h4>Subtotal</h4>
-               <p>{money(subtotal)}</p>
-               <div className="descuento-global">
+              <div className="carrito-totales">
+                <h4>Subtotal</h4>
+                <p>{money(subtotal)}</p>
+                <p className="resumen-descuento">Descuento ítems: -{money(descuentoItemsTotal)}</p>
+                <div className="descuento-global">
                  {descuentoTotalTipo === 'ninguno' ? (
                    <button
                      type="button"
@@ -816,8 +1026,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
                    </>
                  )}
                </div>
-               <p className="total-final">Total: <strong>{money(total)}</strong></p>
-             </div>
+                <p className="total-final">Total: <strong>{money(total)}</strong></p>
+              </div>
              <div className="ventas-footer">
                {paso === 1 ? (
                  <button type="button" onClick={goNext}>Siguiente</button>
@@ -977,6 +1187,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 Cliente: <strong>{ventaFinalizada.clienteNombre}</strong>
               </p>
               <p className="venta-final-cliente">
+                Teléfono: <strong>{ventaFinalizada.clienteTelefono || '-'}</strong>
+              </p>
+              <p className="venta-final-cliente">
                 Pagos: <strong>{(ventaFinalizada.pagos || []).length}</strong>
               </p>
               <ul className="venta-final-pagos">
@@ -991,7 +1204,13 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 {ventaFinalizada.items.map((item) => (
                   <li key={item.id}>
                     <span>{item.nombre} x {item.unidadesSolicitadas}</span>
-                    <strong>{money(item.subtotalFinal)}</strong>
+                    <div className="venta-final-item-valores">
+                      <strong>{money(item.subtotalBase)}</strong>
+                      <small>{formatEmpaqueSplit(item)}</small>
+                      {item.descuentoAplicado > 0 && (
+                        <small className="linea-descuento">- {money(item.descuentoAplicado)}</small>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -1004,9 +1223,19 @@ export default function Ventas({ user, productos = [], setProductos }) {
           )}
           <div className="venta-final-actions">
             <button type="button" className="secundario" onClick={iniciarNuevaVenta}>
+              <img src="/newsale.svg" alt="" aria-hidden="true" />
               Nueva venta
             </button>
+            <button type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
+              <img src="/whatsapp.svg" alt="" aria-hidden="true" />
+              Enviar por WhatsApp
+            </button>
+            <button type="button" className="email" onClick={enviarTicketEmail}>
+              <img src="/mail.svg" alt="" aria-hidden="true" />
+              Enviar por email
+            </button>
             <button type="button" onClick={imprimirTicket}>
+              <img src="/print.svg" alt="" aria-hidden="true" />
               Imprimir ticket
             </button>
           </div>

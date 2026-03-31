@@ -180,7 +180,8 @@
 
 .descuento-aplicado {
   font-size: 0.78rem;
-  color: #5f6f84;
+  color: #4a5e79;
+  font-weight: 600;
 }
 
 .carrito-right {
@@ -188,10 +189,16 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 0.3rem;
-  font-size: 0.82rem;
-  color: #1d3f62;
+  font-size: 0.85rem;
+  color: #123557;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+.linea-descuento {
+  font-size: 0.72rem;
+  color: #8a5a00;
+  font-weight: 700;
 }
 
 .carrito-right button {
@@ -227,7 +234,15 @@
 
 .carrito-totales p {
   margin: 0.25rem 0;
-  font-size: 0.83rem;
+  font-size: 0.86rem;
+  color: #264a70;
+  font-weight: 700;
+}
+
+.carrito-totales .resumen-descuento {
+  color: #8a5a00;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .descuento-global {
@@ -545,10 +560,97 @@
   font-size: 0.74rem;
 }
 
-.card-actions {
-  margin-top: 0.35rem;
+.ventas-footer button,
+.picker-add-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 0.42rem 0.56rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #375f8c;
+  color: #fff;
+}
+
+.picker-add-btn:disabled {
+  background: #b8c3d3;
+  cursor: not-allowed;
+}
+
+.producto-pricing {
+  margin-top: 0.3rem;
   display: flex;
-  gap: 0.3rem;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.producto-picker {
+  margin-top: 0.38rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.picker-mode {
+  display: inline-flex;
+  gap: 0.28rem;
+}
+
+.picker-mode-btn {
+  border: 1px solid #d3dbe8;
+  border-radius: 999px;
+  background: #fff;
+  color: #375f8c;
+  padding: 0.24rem 0.46rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.picker-mode-btn.active {
+  background: #375f8c;
+  color: #fff;
+  border-color: #375f8c;
+}
+
+.picker-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.picker-step {
+  border: 1px solid #cfd9e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #375f8c;
+  width: 26px;
+  height: 26px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.picker-qty input {
+  width: 54px;
+  border: 1px solid #d3dbe8;
+  border-radius: 6px;
+  padding: 0.24rem 0.34rem;
+  text-align: center;
+  font-size: 0.78rem;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.picker-qty input::-webkit-outer-spin-button,
+.picker-qty input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.picker-add-btn {
+  width: 100%;
 }
 
 .card-actions button,
@@ -821,8 +923,9 @@
   margin: 0.2rem 0;
   display: flex;
   justify-content: space-between;
-  font-size: 0.82rem;
-  color: #425771;
+  font-size: 0.86rem;
+  color: #234567;
+  font-weight: 700;
 }
 
 .ticket-total-final {
@@ -1015,8 +1118,25 @@
   justify-content: space-between;
   gap: 0.6rem;
   padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
-  color: #3f5269;
+  font-size: 0.84rem;
+  color: #2f4966;
+}
+
+.venta-final-item-valores {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.08rem;
+}
+
+.venta-final-item-valores strong {
+  color: #123557;
+}
+
+.venta-final-item-valores small {
+  color: #8a5a00;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .venta-final-items li + li {
@@ -1053,8 +1173,9 @@
   margin: 0.2rem 0;
   display: flex;
   justify-content: space-between;
-  font-size: 0.84rem;
-  color: #425771;
+  font-size: 0.86rem;
+  color: #234567;
+  font-weight: 700;
 }
 
 .venta-final-total {
@@ -1078,10 +1199,27 @@
   cursor: pointer;
   color: #fff;
   background: #375f8c;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.venta-final-actions button img {
+  width: 14px;
+  height: 14px;
+  filter: brightness(0) invert(1);
 }
 
 .venta-final-actions .secundario {
   background: #8090a4;
+}
+
+.venta-final-actions .whatsapp {
+  background: #128c7e;
+}
+
+.venta-final-actions .email {
+  background: #1f7a4d;
 }
 
 @media (max-width: 1100px) {

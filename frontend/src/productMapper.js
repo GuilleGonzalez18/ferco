@@ -1,3 +1,15 @@
+function isSupportedImageUrl(value) {
+  const v = String(value || '').trim();
+  if (!v) return false;
+  if (v.startsWith('/')) return true;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function fromApiProducto(row) {
   return {
     id: row.id,
@@ -16,13 +28,14 @@ export function fromApiProducto(row) {
 }
 
 export function toApiProducto(producto) {
+  const imagen = isSupportedImageUrl(producto.imagenPreview) ? String(producto.imagenPreview).trim() : null;
   return {
     nombre: producto.nombre,
     costo: Math.round(Number(producto.costo || 0)),
     precio: Math.round(Number(producto.venta || 0)),
     stock: Number(producto.stock || 0),
     unidad: producto.categoria || null,
-    imagen: producto.imagenPreview || null,
+    imagen,
     ean: producto.ean || '',
     cantidad_empaque: producto.cantidadEmpaque ? Number(producto.cantidadEmpaque) : null,
     empaque: producto.tipoEmpaque || null,
