@@ -77,11 +77,6 @@ function normalizeWhatsappPhone(value) {
   return digits;
 }
 
-function isAndroidDevice() {
-  if (typeof navigator === 'undefined') return false;
-  return /android/i.test(String(navigator.userAgent || ''));
-}
-
 export default function Ventas({ user, productos = [], setProductos }) {
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -548,9 +543,10 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const waUrl = `https://wa.me/${telefonoNormalizado}?text=${encodeURIComponent(message)}`;
     const pdfBlob = data.doc.output('blob');
 
-    if (isAndroidDevice() && typeof File === 'function' && typeof navigator !== 'undefined' && navigator.share && typeof navigator.canShare === 'function') {
+    if (typeof File === 'function' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
-      if (navigator.canShare({ files: [file] })) {
+      const canShareFiles = typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] });
+      if (canShareFiles) {
         try {
           await navigator.share({
             title: `Ticket ${ventaFinalizada.id || ''}`,
