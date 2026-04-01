@@ -73,11 +73,6 @@ function normalizeWhatsappPhone(value) {
   return digits;
 }
 
-function isAndroidDevice() {
-  if (typeof navigator === 'undefined') return false;
-  return /android/i.test(String(navigator.userAgent || ''));
-}
-
 export default function VentasHistorial() {
   const [fecha, setFecha] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
@@ -277,10 +272,11 @@ export default function VentasHistorial() {
       const message = `Hola ${venta.cliente_nombre || 'cliente'}, te compartimos tu factura de la venta #${venta.id}. Total: ${formatCurrency(venta.total)}.`;
       const waUrl = `https://wa.me/${telefono}?text=${encodeURIComponent(message)}`;
 
-      if (isAndroidDevice() && typeof File === 'function' && typeof navigator !== 'undefined' && navigator.share && typeof navigator.canShare === 'function') {
+      if (typeof File === 'function' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
         const pdfBlob = doc.output('blob');
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-        if (navigator.canShare({ files: [file] })) {
+        const canShareFiles = typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] });
+        if (canShareFiles) {
           try {
             await navigator.share({ title: `Factura ${venta.id}`, text: message, files: [file] });
             return;
