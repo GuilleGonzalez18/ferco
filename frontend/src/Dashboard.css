@@ -139,7 +139,19 @@
   opacity: 0.95;
 }
 
+.nav-icon-svg {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  color: #fff;
+  opacity: 0.95;
+}
+
 .dashboard-nav button.active .nav-icon-img {
+  opacity: 1;
+}
+
+.dashboard-nav button.active .nav-icon-svg {
   opacity: 1;
 }
 

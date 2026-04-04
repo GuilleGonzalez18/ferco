@@ -63,6 +63,34 @@
   border-radius: 7px;
   padding: 0.45rem 0.55rem;
   font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+}
+
+.cliente-form select {
+  border: 1px solid #d3dbe8;
+  border-radius: 7px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+  -webkit-text-fill-color: #1f2933;
+}
+
+.cliente-form select option {
+  color: #1f2933;
+  background: #fff;
+}
+
+.time-selects {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.time-selects span {
+  color: #375f8c;
+  font-weight: 700;
 }
 
 .field-label {
@@ -103,7 +131,7 @@
 
 .lista-clientes li {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1.4fr 1fr 1.2fr;
+  grid-template-columns: 1.2fr 1fr 1.4fr 1fr 1.2fr 0.8fr 0.8fr;
   gap: 0.5rem;
   align-items: center;
   background: #fff;

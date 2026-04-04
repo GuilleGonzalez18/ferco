@@ -3,8 +3,27 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './api';
 import './Clientes.css';
+import { appAlert, appConfirm } from './appDialog';
 
 export default function Clientes() {
+  const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const MINUTOS = ['00', '15', '30', '45'];
+
+  const splitHora = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw.includes(':')) return { h: '', m: '' };
+    const [h, m] = raw.split(':');
+    const hh = /^\d{1,2}$/.test(h) ? String(Number(h)).padStart(2, '0') : '';
+    const mm = /^\d{1,2}$/.test(m) ? String(Number(m)).padStart(2, '0') : '';
+    return { h: hh, m: mm };
+  };
+
+  const normalizeHoraForSave = (value) => {
+    const { h, m } = splitHora(value);
+    if (!h || !m) return null;
+    return `${h}:${m}`;
+  };
+
   const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
@@ -18,6 +37,8 @@ export default function Clientes() {
     direccion: '',
     telefono: '',
     correo: '',
+    horario_apertura: '',
+    horario_cierre: '',
   });
 
   useEffect(() => {
@@ -55,6 +76,10 @@ export default function Clientes() {
           return asText(a.telefono).localeCompare(asText(b.telefono)) * dir;
         case 'correo':
           return asText(a.correo).localeCompare(asText(b.correo)) * dir;
+        case 'horario_apertura':
+          return asText(a.horario_apertura).localeCompare(asText(b.horario_apertura)) * dir;
+        case 'horario_cierre':
+          return asText(a.horario_cierre).localeCompare(asText(b.horario_cierre)) * dir;
         case 'nombre':
         default:
           return asText(a.nombre).localeCompare(asText(b.nombre)) * dir;
@@ -78,6 +103,17 @@ export default function Clientes() {
     setNuevo((prev) => ({ ...prev, [name]: value }));
   };
 
+  const setHorarioPart = (field, part, value) => {
+    setNuevo((prev) => {
+      const current = splitHora(prev[field]);
+      const next = part === 'h' ? { ...current, h: value } : { ...current, m: value };
+      return {
+        ...prev,
+        [field]: `${next.h}:${next.m}`,
+      };
+    });
+  };
+
   const guardarCliente = async (e) => {
     e.preventDefault();
     try {
@@ -87,6 +123,8 @@ export default function Clientes() {
         direccion: nuevo.direccion || null,
         telefono: nuevo.telefono || null,
         correo: nuevo.correo || null,
+        horario_apertura: normalizeHoraForSave(nuevo.horario_apertura),
+        horario_cierre: normalizeHoraForSave(nuevo.horario_cierre),
       };
 
       if (editandoId) {
@@ -97,11 +135,11 @@ export default function Clientes() {
         setClientes((prev) => [creado, ...prev]);
       }
 
-      setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '' });
+      setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
       setMostrarForm(false);
       setEditandoId(null);
     } catch (error) {
-      window.alert(`No se pudo guardar el cliente: ${error.message}`);
+      await appAlert(`No se pudo guardar el cliente: ${error.message}`);
     }
   };
 
@@ -114,12 +152,19 @@ export default function Clientes() {
       direccion: cliente.direccion || '',
       telefono: cliente.telefono || '',
       correo: cliente.correo || '',
+      horario_apertura: cliente.horario_apertura || '',
+      horario_cierre: cliente.horario_cierre || '',
     });
     setMostrarForm(true);
   };
 
   const eliminarCliente = async (id) => {
-    if (!window.confirm('¿Seguro que deseas eliminar este cliente?')) return;
+    const ok = await appConfirm('¿Seguro que deseas eliminar este cliente?', {
+      title: 'Eliminar cliente',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
     try {
       await api.deleteCliente(id);
       setClientes((prev) => prev.filter((c) => c.id !== id));
@@ -127,10 +172,10 @@ export default function Clientes() {
       if (editandoId === id) {
         setEditandoId(null);
         setMostrarForm(false);
-        setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '' });
+        setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
       }
     } catch (error) {
-      window.alert(`No se pudo eliminar: ${error.message}`);
+      await appAlert(`No se pudo eliminar: ${error.message}`);
     }
   };
 
@@ -155,13 +200,15 @@ export default function Clientes() {
 
       autoTable(doc, {
         startY,
-        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail']],
+        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Apertura', 'Cierre']],
         body: filtrados.map((c) => [
           c.nombre || '',
           c.rut || '',
           c.direccion || '',
           c.telefono || '',
           c.correo || '',
+          c.horario_apertura || '',
+          c.horario_cierre || '',
         ]),
         styles: { fontSize: 9 },
         headStyles: { fillColor: [55, 95, 140] },
@@ -178,15 +225,18 @@ export default function Clientes() {
 
   const abrirAlta = () => {
     setEditandoId(null);
-    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '' });
+    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
     setMostrarForm(true);
   };
 
   const cerrarPanel = () => {
     setMostrarForm(false);
     setEditandoId(null);
-    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '' });
+    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
   };
+
+  const aperturaPartes = splitHora(nuevo.horario_apertura);
+  const cierrePartes = splitHora(nuevo.horario_cierre);
 
   return (
     <div className="clientes-main">
@@ -219,6 +269,8 @@ export default function Clientes() {
           <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>Dirección {sortBy === 'direccion' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
           <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>Teléfono {sortBy === 'telefono' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
           <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>Mail {sortBy === 'correo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+          <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_apertura')}>Apertura {sortBy === 'horario_apertura' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+          <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_cierre')}>Cierre {sortBy === 'horario_cierre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
         </li>
         {clientesOrdenados.length === 0 && <li className="vacio">No hay clientes</li>}
         {clientesOrdenados.map((c) => {
@@ -234,6 +286,8 @@ export default function Clientes() {
                 <span>{c.direccion || '-'}</span>
                 <span>{c.telefono || '-'}</span>
                 <span>{c.correo || '-'}</span>
+                <span>{c.horario_apertura || '-'}</span>
+                <span>{c.horario_cierre || '-'}</span>
               </li>
               <li className={`cliente-actions-row ${expanded ? 'expanded' : ''}`}>
                 <div className="acciones-cliente-panel">
@@ -286,6 +340,44 @@ export default function Clientes() {
             </label>
             <label className="field-label">Mail
               <input name="correo" value={nuevo.correo} onChange={handleChange} placeholder="Mail" type="email" />
+            </label>
+            <label className="field-label">Horario apertura
+              <div className="time-selects">
+                <select
+                  value={aperturaPartes.h}
+                  onChange={(e) => setHorarioPart('horario_apertura', 'h', e.target.value)}
+                >
+                  <option value="">Hora</option>
+                  {HORAS.map((h) => <option key={`ap-h-${h}`} value={h}>{h}</option>)}
+                </select>
+                <span>:</span>
+                <select
+                  value={aperturaPartes.m}
+                  onChange={(e) => setHorarioPart('horario_apertura', 'm', e.target.value)}
+                >
+                  <option value="">Min</option>
+                  {MINUTOS.map((m) => <option key={`ap-m-${m}`} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </label>
+            <label className="field-label">Horario cierre
+              <div className="time-selects">
+                <select
+                  value={cierrePartes.h}
+                  onChange={(e) => setHorarioPart('horario_cierre', 'h', e.target.value)}
+                >
+                  <option value="">Hora</option>
+                  {HORAS.map((h) => <option key={`ci-h-${h}`} value={h}>{h}</option>)}
+                </select>
+                <span>:</span>
+                <select
+                  value={cierrePartes.m}
+                  onChange={(e) => setHorarioPart('horario_cierre', 'm', e.target.value)}
+                >
+                  <option value="">Min</option>
+                  {MINUTOS.map((m) => <option key={`ci-m-${m}`} value={m}>{m}</option>)}
+                </select>
+              </div>
             </label>
             <div className="cliente-form-actions">
               <button type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</button>
