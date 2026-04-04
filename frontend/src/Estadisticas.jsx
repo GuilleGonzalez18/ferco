@@ -38,14 +38,6 @@ function rangeLabel(desde, hasta) {
   return 'Mostrando todo el período disponible';
 }
 
-function formatMedioPago(value) {
-  const v = String(value || 'efectivo').toLowerCase();
-  if (v === 'credito') return 'Crédito';
-  if (v === 'debito') return 'Débito';
-  if (v === 'transferencia') return 'Transferencia';
-  return 'Efectivo';
-}
-
 function toIsoDate(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -194,19 +186,6 @@ export default function Estadisticas({ compact = false }) {
     }));
   }, [stats]);
 
-  const ventasComprasChart = useMemo(() => {
-    const ventasMap = new Map((stats?.ventasSerie || []).map((r) => [String(r.fecha).slice(0, 10), Number(r.total || 0)]));
-    const comprasMap = new Map((stats?.comprasSerie || []).map((r) => [String(r.fecha).slice(0, 10), Number(r.total || 0)]));
-    const allFechas = [...new Set([...ventasMap.keys(), ...comprasMap.keys()])].sort();
-    const last = allFechas.slice(-7);
-    return last.map((f) => ({
-      key: f,
-      label: f.slice(5),
-      ventas: ventasMap.get(f) || 0,
-      compras: comprasMap.get(f) || 0,
-    }));
-  }, [stats]);
-
   const ventasUltimos7DiasChart = useMemo(() => {
     const rows = ((esVendedor ? stats?.ventasSerie : stats?.personalStats?.ventasSerie) || []).map((r) => ({
       fecha: String(r.fecha).slice(0, 10),
@@ -228,11 +207,6 @@ export default function Estadisticas({ compact = false }) {
     }
     return items;
   }, [stats]);
-
-  const maxVentasComprasChart = useMemo(
-    () => Math.max(...ventasComprasChart.flatMap((r) => [r.ventas, r.compras]), 1),
-    [ventasComprasChart]
-  );
 
   return (
     <div className={`stats-main ${compact ? 'compact' : ''}`}>
@@ -373,8 +347,8 @@ export default function Estadisticas({ compact = false }) {
             {showEmpresa && (
               <>
                 <article className="stats-card">
-                  <span className="stats-kicker">Compras totales</span>
-                  <h4 className="stats-big-number">{money(stats?.comprasTotales || 0)}</h4>
+                  <span className="stats-kicker">Cantidad ventas empresa</span>
+                  <h4 className="stats-big-number">{qty(stats?.promedioVenta?.cantidad_ventas || 0)}</h4>
                 </article>
 
                 <article className={`stats-card ${(stats?.ganancia || 0) >= 0 ? 'gain-positive' : 'gain-negative'}`}>
@@ -437,13 +411,6 @@ export default function Estadisticas({ compact = false }) {
                   <p>Total vendido: <strong>{money(topUsuario?.total_vendido || 0)}</strong></p>
                   <p>Cantidad de ventas: <strong>{qty(topUsuario?.cantidad_ventas || 0)}</strong></p>
                 </article>
-
-                <article className="stats-card">
-                  <span className="stats-kicker">Medio de pago más usado</span>
-                  <h4>{formatMedioPago(stats?.medioPagoMasUsado?.medio_pago)}</h4>
-                  <p>Usos: <strong>{qty(stats?.medioPagoMasUsado?.cantidad || 0)}</strong></p>
-                  <p>Monto: <strong>{money(stats?.medioPagoMasUsado?.total || 0)}</strong></p>
-                </article>
               </>
             )}
           </section>
@@ -462,33 +429,6 @@ export default function Estadisticas({ compact = false }) {
                   )}
                 </article>
 
-                <article className="stats-table-card chart-card">
-                  <div className="stats-table-head">
-                    <h4>Mini gráfico: ventas vs compras (por fecha)</h4>
-                  </div>
-                  <div className="mini-legend">
-                    <span><i className="dot ventas" />Ventas</span>
-                    <span><i className="dot compras" />Compras</span>
-                  </div>
-                  <div className="mini-double-bars">
-                    {ventasComprasChart.length === 0 && <div className="stats-msg">Sin datos para mostrar.</div>}
-                    {ventasComprasChart.map((row) => {
-                      const hVentas = row.ventas <= 0 ? '0%' : `${Math.max(8, (row.ventas / maxVentasComprasChart) * 100)}%`;
-                      const hCompras = row.compras <= 0 ? '0%' : `${Math.max(8, (row.compras / maxVentasComprasChart) * 100)}%`;
-                      return (
-                        <div key={row.key} className="mini-double-col" title={`${row.label} | Ventas ${Math.round(row.ventas).toLocaleString('es-UY')} - Compras ${Math.round(row.compras).toLocaleString('es-UY')}`}>
-                          <div className="mini-double-track">
-                            <div className="mini-double-pair">
-                              <span className="mini-double-bar ventas" style={{ height: hVentas }} />
-                              <span className="mini-double-bar compras" style={{ height: hCompras }} />
-                            </div>
-                          </div>
-                          <span className="mini-bar-label">{row.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </article>
               </section>
 
               <section className="stats-table-card">

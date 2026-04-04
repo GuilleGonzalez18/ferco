@@ -28,6 +28,8 @@ const statements = [
     direccion text NULL,
     telefono varchar(50) NULL,
     correo varchar(180) NULL,
+    horario_apertura varchar(5) NULL,
+    horario_cierre varchar(5) NULL,
     departamento_id integer NULL,
     barrio_id integer NULL
   );

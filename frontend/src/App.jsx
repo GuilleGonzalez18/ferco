@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Login from './Login';
 import Dashboard from './Dashboard';
+import AppDialogHost from './AppDialogHost';
 import './App.css';
 import { api } from './api';
 import { fromApiProducto } from './productMapper';
@@ -65,6 +66,7 @@ function App() {
 
   return (
     <>
+      <AppDialogHost />
       {productosError ? (
         <div style={{ margin: '0.7rem 1rem', padding: '0.55rem 0.7rem', border: '1px solid #f4c7c3', background: '#fff5f4', color: '#b42318', borderRadius: '8px', fontSize: '0.82rem' }}>
           {productosError}

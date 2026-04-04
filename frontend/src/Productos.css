@@ -199,6 +199,24 @@
   white-space: nowrap;
 }
 
+.nombre-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  white-space: normal;
+}
+
+.nombre-cell strong {
+  color: #1f2933;
+  line-height: 1.1;
+}
+
+.producto-codigo {
+  color: #708094;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
 .producto-row {
   cursor: pointer;
 }

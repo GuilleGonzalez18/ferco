@@ -16,6 +16,11 @@ const statements = [
     ADD COLUMN IF NOT EXISTS total numeric(12,2) DEFAULT 0;
   `,
   `
+  ALTER TABLE public.clientes
+    ADD COLUMN IF NOT EXISTS horario_apertura varchar(5),
+    ADD COLUMN IF NOT EXISTS horario_cierre varchar(5);
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (

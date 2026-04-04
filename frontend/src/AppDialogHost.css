@@ -1,0 +1,55 @@
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+}
+
+.app-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.36);
+}
+
+.app-dialog-card {
+  position: relative;
+  width: min(420px, calc(100vw - 1.4rem));
+  margin: 18vh auto 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 24, 36, 0.24);
+  padding: 0.95rem;
+}
+
+.app-dialog-card h4 {
+  margin: 0 0 0.35rem;
+  color: #375f8c;
+  font-size: 1rem;
+}
+
+.app-dialog-card p {
+  margin: 0 0 0.8rem;
+  color: #4f5f73;
+  font-size: 0.84rem;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.app-dialog-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.42rem 0.66rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: #375f8c;
+}
+
+.app-dialog-actions .secundario {
+  background: #8090a4;
+}
+

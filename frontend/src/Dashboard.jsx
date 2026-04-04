@@ -6,8 +6,10 @@ import Clientes from './Clientes';
 import Auditoria from './Auditoria';
 import Usuarios from './Usuarios';
 import Estadisticas from './Estadisticas';
+import ControlStock from './ControlStock';
 import './Dashboard.css';
 import { api } from './api';
+import { CgArrowsExchange } from 'react-icons/cg';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
@@ -17,7 +19,7 @@ const OPCIONES = [
   { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
   { key: 'mi-usuario', label: 'Mi usuario', icon: '/user.svg' },
   { key: 'auditoria', label: 'Auditoría', icon: '/auditory.svg' },
-  { key: 'compras', label: 'Compras', icon: '/buy.svg' },
+  { key: 'control-stock', label: 'Control de stock', icon: 'stock-control' },
   { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
 ];
 
@@ -61,7 +63,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const nombreUsuario = user?.nombre || user?.username || user?.email || 'Usuario';
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
-    if (op.key === 'usuarios' || op.key === 'compras') return esPropietario;
+    if (op.key === 'usuarios' || op.key === 'control-stock') return esPropietario;
     if (op.key === 'mi-usuario') return !esPropietario;
     if (op.key === 'estadisticas') return esPropietario;
     return true;
@@ -78,6 +80,17 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   };
 
   useEffect(() => {
+    const onNavigateEvent = (event) => {
+      const target = event?.detail;
+      if (typeof target !== 'string') return;
+      onNavigate(target);
+      setMenuMovilAbierto(false);
+    };
+    window.addEventListener('ferco:navigate', onNavigateEvent);
+    return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
+  }, [onNavigate]);
+
+  useEffect(() => {
     const loadResumen = async () => {
       try {
         const data = await api.getDashboardResumen();
@@ -86,7 +99,13 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         setResumen(null);
       }
     };
+    const onStatsRefresh = () => {
+      loadResumen();
+    };
+
     loadResumen();
+    window.addEventListener('ferco:stats-refresh', onStatsRefresh);
+    return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
   }, [user?.id, user?.tipo]);
 
   const money = (value) => {
@@ -123,9 +142,9 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       case 'usuarios':     return <Usuarios currentUser={user} />;
       case 'mi-usuario':   return <MiUsuarioView user={user} />;
       case 'auditoria':    return <Auditoria />;
-      case 'compras':
+      case 'control-stock':
         return esPropietario
-          ? <Placeholder titulo="Compras" icon="◌" />
+          ? <ControlStock productos={productos} setProductos={setProductos} />
           : <Placeholder titulo="Acceso restringido" icon="X" />;
       case 'estadisticas': return <Estadisticas />;
       default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;
@@ -167,7 +186,9 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
               className={pantalla === key ? 'active' : ''}
               onClick={() => handleNavigate(key)}
             >
-              <img src={icon} alt="" className="nav-icon-img" aria-hidden="true" />
+              {icon === 'stock-control'
+                ? <CgArrowsExchange className="nav-icon-svg" aria-hidden="true" />
+                : <img src={icon} alt="" className="nav-icon-img" aria-hidden="true" />}
               {label}
             </button>
           ))}

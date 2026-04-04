@@ -152,11 +152,11 @@ usuariosRouter.put('/:id', async (req, res) => {
      SET username = $1,
           password = COALESCE(NULLIF($2, ''), password),
           tipo = $3,
-         nombre = $4,
-         apellido = $5,
-         correo = $6,
-         telefono = $7,
-         direccion = $8
+          nombre = $4,
+          apellido = $5,
+          correo = $6,
+          telefono = $7,
+           direccion = $8
      WHERE id = $9
      RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
     [username, passwordValue, tipoFinal, nombre, apellido, correo, telefono, direccion, id]

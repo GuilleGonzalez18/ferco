@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './api';
 import { fromApiProducto, toApiProducto } from './productMapper';
+import { appAlert, appConfirm } from './appDialog';
 
 const tiposEmpaque = ['Caja', 'Bolsa', 'Botella', 'Lata', 'Pack', 'Otro'];
 
@@ -88,7 +89,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     e.preventDefault();
     if (!setProductos) return;
     if (imagenUrlError) {
-      window.alert('Corrige la URL de imagen antes de guardar.');
+      await appAlert('Corrige la URL de imagen antes de guardar.');
       return;
     }
 
@@ -105,7 +106,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       setMostrarForm(false);
       setImagenUrlError('');
     } catch (error) {
-      window.alert(`Error guardando producto: ${error.message}`);
+      await appAlert(`Error guardando producto: ${error.message}`);
     }
   };
 
@@ -118,14 +119,18 @@ export default function Productos({ user, productos = [], setProductos }) {
   };
 
   const handleEliminar = async id => {
-    if (window.confirm('¿Seguro que deseas eliminar este producto?')) {
-      try {
-        await api.deleteProducto(id);
-        setProductos(productos.filter(p => p.id !== id));
-        setProductoExpandidoId((prev) => (prev === id ? null : prev));
-      } catch (error) {
-        window.alert(`No se pudo eliminar: ${error.message}`);
-      }
+    const ok = await appConfirm('¿Seguro que deseas eliminar este producto?', {
+      title: 'Eliminar producto',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      await api.deleteProducto(id);
+      setProductos(productos.filter(p => p.id !== id));
+      setProductoExpandidoId((prev) => (prev === id ? null : prev));
+    } catch (error) {
+      await appAlert(`No se pudo eliminar: ${error.message}`);
     }
   };
 
@@ -319,7 +324,10 @@ export default function Productos({ user, productos = [], setProductos }) {
                       <span className="sin-imagen">Sin imagen</span>
                     )}
                   </span>
-                  <span className="campo" data-label="Nombre">{p.nombre}</span>
+                  <span className="campo nombre-cell" data-label="Nombre">
+                    <strong>{p.nombre}</strong>
+                    <small className="producto-codigo">Código: {p.ean || '-'}</small>
+                  </span>
                   <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
                   {esPropietario && <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>}
                   <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>

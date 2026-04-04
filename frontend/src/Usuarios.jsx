@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Usuarios.css';
+import { appAlert, appConfirm } from './appDialog';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -141,7 +142,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       setEditandoId(null);
       setMostrarForm(false);
     } catch (err) {
-      window.alert(err.message || (editandoId ? 'No se pudo actualizar el usuario.' : 'No se pudo crear el usuario.'));
+      await appAlert(err.message || (editandoId ? 'No se pudo actualizar el usuario.' : 'No se pudo crear el usuario.'));
     }
   };
 
@@ -162,7 +163,12 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
   };
 
   const eliminarUsuario = async (id) => {
-    if (!window.confirm('¿Seguro que deseas eliminar este usuario?')) return;
+    const ok = await appConfirm('¿Seguro que deseas eliminar este usuario?', {
+      title: 'Eliminar usuario',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
     try {
       await api.deleteUsuario(id);
       setUsuarios((prev) => prev.filter((u) => u.id !== id));
@@ -172,7 +178,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         setMostrarForm(false);
       }
     } catch (err) {
-      window.alert(err.message || 'No se pudo eliminar el usuario.');
+      await appAlert(err.message || 'No se pudo eliminar el usuario.');
     }
   };
 
