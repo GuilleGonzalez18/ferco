@@ -33,17 +33,6 @@ function Placeholder({ titulo, icon }) {
   );
 }
 
-function DashboardLanding({ nombreUsuario }) {
-  return (
-    <div className="dashboard-landing">
-      <div className="landing-card">
-        <h2>Bienvenido, {nombreUsuario}</h2>
-        <p>Selecciona una opción del menú izquierdo para comenzar.</p>
-      </div>
-    </div>
-  );
-}
-
 function MiUsuarioView({ user }) {
   return (
     <div className="mi-usuario-split">
@@ -60,7 +49,6 @@ function MiUsuarioView({ user }) {
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
-  const nombreUsuario = user?.nombre || user?.username || user?.email || 'Usuario';
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
     if (op.key === 'usuarios' || op.key === 'control-stock') return esPropietario;
@@ -147,24 +135,31 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           ? <ControlStock productos={productos} setProductos={setProductos} />
           : <Placeholder titulo="Acceso restringido" icon="X" />;
       case 'estadisticas': return <Estadisticas />;
-      default:             return <DashboardLanding nombreUsuario={nombreUsuario} />;
+      default:             return null;
     }
   };
 
-  const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? '';
+  const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? 'Dashboard';
   const esPantallaDashboard = !pantalla;
 
   return (
     <div className="dashboard-layout">
+      <button
+        type="button"
+        className={`dashboard-mobile-fab ${menuMovilAbierto ? 'is-open' : ''}`}
+        onClick={() => setMenuMovilAbierto((prev) => !prev)}
+        aria-label={menuMovilAbierto ? 'Cerrar menú' : 'Abrir menú'}
+        aria-expanded={menuMovilAbierto}
+      >
+        {menuMovilAbierto ? '✕' : '☰'}
+      </button>
+      <div
+        className={`dashboard-mobile-backdrop ${menuMovilAbierto ? 'visible' : ''}`}
+        onClick={() => setMenuMovilAbierto(false)}
+        aria-hidden="true"
+      />
       <aside className={`dashboard-sidebar ${menuMovilAbierto ? 'mobile-open' : ''}`}>
         <div className="dashboard-logo-wrap">
-          <button
-            type="button"
-            className="dashboard-mobile-toggle"
-            onClick={() => setMenuMovilAbierto((prev) => !prev)}
-          >
-            {menuMovilAbierto ? '✕' : '☰'}
-          </button>
           <button
             type="button"
             className="dashboard-logo-btn"
@@ -174,9 +169,6 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           >
             <img src="/images/logo2.png" alt="Logo" className="dashboard-logo" />
           </button>
-        </div>
-        <div className="dashboard-welcome">
-          <span className="welcome-label">Bienvenido, {nombreUsuario}!</span>
         </div>
         <nav className="dashboard-nav">
           {opcionesMenu.map(({ key, label, icon }) => (
@@ -200,7 +192,9 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       </aside>
 
       <main className="dashboard-content">
-        <div className="dashboard-topbar">{tituloActual}</div>
+        <div className="dashboard-topbar">
+          <span className="dashboard-topbar-title">{tituloActual}</span>
+        </div>
         <div className={`dashboard-body ${resumen && esPantallaDashboard ? 'with-kpis' : ''}`}>
           {resumen && esPantallaDashboard && (
             <section className="dashboard-kpis-strip">

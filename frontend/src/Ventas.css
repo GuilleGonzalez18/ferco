@@ -1,7 +1,7 @@
 .ventas-main {
   padding: 0.5rem 1.1rem 1.2rem;
   font-size: 0.92rem;
-  min-height: calc(100vh - 66px);
+  min-height: calc(100dvh - 66px);
 }
 
 .ventas-steps {
@@ -60,7 +60,7 @@
   grid-template-columns: 1fr 320px;
   gap: 0.75rem;
   align-items: start;
-  min-height: calc(100vh - 140px);
+  min-height: calc(100dvh - 140px);
 }
 
 .ventas-carrito {
@@ -170,6 +170,7 @@
 .form-entrega textarea {
   border: 1px solid #d3dbe8;
   border-radius: 7px;
+  min-height: 44px;
   padding: 0.45rem 0.5rem;
   font-size: 0.82rem;
 }
@@ -225,8 +226,8 @@
   background: #fff;
   color: #d32f2f;
   border-radius: 6px;
-  width: 22px;
-  height: 22px;
+  width: 38px;
+  height: 38px;
   cursor: pointer;
 }
 
@@ -1268,6 +1269,19 @@
 }
 
 @media (max-width: 760px) {
+  .ventas-main {
+    padding: 0.45rem 0.7rem 0.9rem;
+  }
+
+  .ventas-step {
+    min-height: 40px;
+    padding: 0.45rem 0.62rem;
+  }
+
+  .ventas-carrito {
+    padding: 0.65rem;
+  }
+
   .form-entrega {
     grid-template-columns: 1fr;
   }
@@ -1286,5 +1300,55 @@
 
   .catalogo-grid {
     grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .ventas-main {
+    padding: 0.38rem 0.5rem 0.75rem;
+  }
+
+  .ventas-layout {
+    gap: 0.55rem;
+  }
+
+  .ventas-step {
+    font-size: 0.75rem;
+  }
+
+  .carrito-item {
+    padding: 0.48rem;
+    gap: 0.45rem;
+  }
+
+  .carrito-item strong {
+    font-size: 0.79rem;
+  }
+
+  .carrito-item p {
+    font-size: 0.74rem;
+  }
+
+  .carrito-right {
+    gap: 0.22rem;
+  }
+
+  .descuento-global {
+    flex-direction: column;
+  }
+
+  .descuento-modal-actions button,
+  .venta-final-actions button {
+    min-height: 44px;
+    padding-inline: 0.9rem;
+  }
+
+  .venta-final-actions {
+    flex-direction: column-reverse;
+  }
+
+  .venta-final-actions button {
+    width: 100%;
+    justify-content: center;
   }
 }
