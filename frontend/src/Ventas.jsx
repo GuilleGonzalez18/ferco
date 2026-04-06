@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from './api';
 import jsPDF from 'jspdf';
@@ -65,6 +65,92 @@ function formatMedioPago(value) {
   if (v === 'transferencia') return 'Transferencia';
   return 'Efectivo';
 }
+
+const ProductoCatalogCard = memo(function ProductoCatalogCard({
+  producto,
+  vistaProductos,
+  pickerModo,
+  pickerCantidad,
+  stockDisponible,
+  onSetPickerModo,
+  onSetPickerCantidad,
+  onAddToCart,
+}) {
+  const unidadesPorEmpaque = getEmpaqueUnits(producto);
+  const precioEmpaque = roundMoney(producto.precioEmpaque);
+
+  return (
+    <article className={`producto-card ${vistaProductos === 'list' ? 'list' : ''}`}>
+      <div className="producto-image-wrap">
+        {producto.imagenPreview ? (
+          <img src={producto.imagenPreview} alt={producto.nombre} className="producto-image" />
+        ) : (
+          <div className="producto-image placeholder">Sin imagen</div>
+        )}
+        <div className="overlay">
+          <h4>{producto.nombre}</h4>
+          <small className="overlay-code">Código: {producto.ean || '-'}</small>
+          <span>{money(producto.venta)}</span>
+        </div>
+      </div>
+      <div className="card-footer">
+        <small>Stock disponible: {stockDisponible}</small>
+        <div className="producto-pricing">
+          <small>Unidad: {money(producto.venta)}</small>
+          <small>{producto.tipoEmpaque || 'Empaque'}: {precioEmpaque > 0 ? money(precioEmpaque) : '-'}</small>
+        </div>
+        <div className="producto-picker">
+          <div className="picker-mode">
+            <button
+              type="button"
+              className={`picker-mode-btn ${pickerModo === 'unidad' ? 'active' : ''}`}
+              onClick={() => onSetPickerModo(producto.id, 'unidad')}
+            >
+              Unidad
+            </button>
+            <button
+              type="button"
+              className={`picker-mode-btn ${pickerModo === 'empaque' ? 'active' : ''}`}
+              onClick={() => onSetPickerModo(producto.id, 'empaque')}
+            >
+              {producto.tipoEmpaque || 'Empaque'} ({unidadesPorEmpaque}u)
+            </button>
+          </div>
+          <div className="picker-qty">
+            <button
+              type="button"
+              className="picker-step"
+              onClick={() => onSetPickerCantidad(producto.id, pickerCantidad - 1)}
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={pickerCantidad}
+              onChange={(e) => onSetPickerCantidad(producto.id, e.target.value)}
+            />
+            <button
+              type="button"
+              className="picker-step"
+              onClick={() => onSetPickerCantidad(producto.id, pickerCantidad + 1)}
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            className="picker-add-btn"
+            onClick={() => onAddToCart(producto, pickerModo, pickerCantidad)}
+          >
+            Agregar
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+});
 
 export default function Ventas({
   user,
@@ -259,21 +345,7 @@ export default function Ventas({
     return remaining;
   }, [stockBasePorProducto, stockReservadoPorProducto]);
 
-  const getStockDisponible = (productoId) => {
-    const stockBase = Math.floor(toNumber(stockBasePorProducto[productoId] || 0));
-    const reservado = Math.floor(toNumber(stockReservadoPorProducto[productoId] || 0));
-    return stockBase - reservado;
-  };
-
-  const getPickerForProduct = (producto) => {
-    const saved = productPicker[producto.id];
-    return {
-      modo: saved?.modo === 'empaque' ? 'empaque' : 'unidad',
-      cantidad: Math.max(1, Math.floor(toNumber(saved?.cantidad || 1))),
-    };
-  };
-
-  const setPickerModo = (productoId, modo) => {
+  const setPickerModo = useCallback((productoId, modo) => {
     setProductPicker((prev) => {
       const current = prev[productoId] || { modo: 'unidad', cantidad: 1 };
       return {
@@ -281,9 +353,9 @@ export default function Ventas({
         [productoId]: { ...current, modo: modo === 'empaque' ? 'empaque' : 'unidad' },
       };
     });
-  };
+  }, []);
 
-  const setPickerCantidad = (productoId, cantidad) => {
+  const setPickerCantidad = useCallback((productoId, cantidad) => {
     const next = Math.max(1, Math.floor(toNumber(cantidad || 1)));
     setProductPicker((prev) => {
       const current = prev[productoId] || { modo: 'unidad', cantidad: 1 };
@@ -292,22 +364,23 @@ export default function Ventas({
         [productoId]: { ...current, cantidad: next },
       };
     });
-  };
+  }, []);
 
-  const addToCartFromPicker = (producto) => {
-    const picker = getPickerForProduct(producto);
+  const addToCartFromPicker = useCallback((producto, pickerModo, pickerCantidad) => {
+    const modo = pickerModo === 'empaque' ? 'empaque' : 'unidad';
+    const cantidad = Math.max(1, Math.floor(toNumber(pickerCantidad || 1)));
     const unidadesPorEmpaque = getEmpaqueUnits(producto);
-    const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
-    const unidadesAgregar = picker.cantidad * multiplicador;
+    const multiplicador = modo === 'empaque' ? unidadesPorEmpaque : 1;
+    const unidadesAgregar = cantidad * multiplicador;
     const precioUnidad = roundMoney(producto.venta);
     const precioEmpaque = roundMoney(producto.precioEmpaque);
     const tipoEmpaque = String(producto.tipoEmpaque || 'empaque').trim() || 'empaque';
-    const modoVenta = picker.modo === 'empaque' ? 'empaque' : 'unidad';
+    const modoVenta = modo;
 
-    const itemExistente = carrito.find((i) => i.productoId === producto.id && i.modoVenta === modoVenta);
-    if (itemExistente) {
-      setCarrito((prev) =>
-        prev.map((item) =>
+    setCarrito((prev) => {
+      const itemExistente = prev.find((i) => i.productoId === producto.id && i.modoVenta === modoVenta);
+      if (itemExistente) {
+        return prev.map((item) =>
           item.id === itemExistente.id
             ? {
               ...item,
@@ -320,29 +393,61 @@ export default function Ventas({
               ean: producto.ean || item.ean || '',
             }
             : item
-        )
-      );
-      return;
-    }
+        );
+      }
 
-    setCarrito((prev) => [
-      ...prev,
-      {
-        id: Date.now() + Math.random(),
-        productoId: producto.id,
-        nombre: producto.nombre,
-        ean: producto.ean || '',
-        unidadesSolicitadas: unidadesAgregar,
-        precioUnidad,
-        precioEmpaque,
-        unidadesPorEmpaque,
-        tipoEmpaque,
-        modoVenta,
-        descuentoTipo: 'ninguno',
-        descuentoValor: '',
-      },
-    ]);
-  };
+      return [
+        ...prev,
+        {
+          id: Date.now() + Math.random(),
+          productoId: producto.id,
+          nombre: producto.nombre,
+          ean: producto.ean || '',
+          unidadesSolicitadas: unidadesAgregar,
+          precioUnidad,
+          precioEmpaque,
+          unidadesPorEmpaque,
+          tipoEmpaque,
+          modoVenta,
+          descuentoTipo: 'ninguno',
+          descuentoValor: '',
+        },
+      ];
+    });
+  }, []);
+
+  const catalogoCards = useMemo(() => {
+    if (productosFiltrados.length === 0) return null;
+
+    return productosFiltrados.map((producto) => {
+      const saved = productPicker[producto.id];
+      const pickerModo = saved?.modo === 'empaque' ? 'empaque' : 'unidad';
+      const pickerCantidad = Math.max(1, Math.floor(toNumber(saved?.cantidad || 1)));
+      const stockDisponible = Math.floor(toNumber(stockRestantePorProducto[producto.id] || 0));
+
+      return (
+        <ProductoCatalogCard
+          key={producto.id}
+          producto={producto}
+          vistaProductos={vistaProductos}
+          pickerModo={pickerModo}
+          pickerCantidad={pickerCantidad}
+          stockDisponible={stockDisponible}
+          onSetPickerModo={setPickerModo}
+          onSetPickerCantidad={setPickerCantidad}
+          onAddToCart={addToCartFromPicker}
+        />
+      );
+    });
+  }, [
+    addToCartFromPicker,
+    productosFiltrados,
+    productPicker,
+    setPickerCantidad,
+    setPickerModo,
+    stockRestantePorProducto,
+    vistaProductos,
+  ]);
 
   const removeItem = (itemId) => {
     setCarrito((prev) => prev.filter((i) => i.id !== itemId));
@@ -744,14 +849,14 @@ export default function Ventas({
         medio_pago: pagosConMonto[0]?.medio_pago || 'efectivo',
         pagos: pagosConMonto.map((p) => ({ medio_pago: p.medio_pago, monto: p.montoNumber })),
         observacion,
-         descuento_total_tipo: 'fijo',
-         descuento_total_valor: roundMoney(descuentoTotalAplicado),
-         detalle: carritoCalculado.map((item) => ({
-           producto_id: item.productoId,
-           cantidad: item.unidadesSolicitadas,
-           precio_unitario: toNumber(item.precioUnitarioCalculado),
-          })),
-        });
+        descuento_total_tipo: 'fijo',
+        descuento_total_valor: roundMoney(descuentoTotalAplicado),
+        detalle: carritoCalculado.map((item) => ({
+          producto_id: item.productoId,
+          cantidad: item.unidadesSolicitadas,
+          precio_unitario: toNumber(item.precioUnitarioCalculado),
+        })),
+      });
 
       window.dispatchEvent(
         new CustomEvent('ferco:stats-refresh', {
@@ -796,6 +901,24 @@ export default function Ventas({
     }
   };
 
+  const pasosHeader = (
+    <div className="ventas-steps">
+      {PASOS.map((titulo, i) => {
+        const n = i + 1;
+        const state = n < paso ? 'done' : n === paso ? 'active' : 'pending';
+        return (
+          <div className="ventas-step-wrap" key={titulo}>
+            <div className={`ventas-step ${state}`}>
+              <span className="step-index">{state === 'done' ? '✓' : `${n}.`}</span>
+              <span className="step-title">{titulo}</span>
+            </div>
+            {i < PASOS.length - 1 && <span className="step-arrow">→</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="ventas-main">
       <div
@@ -804,224 +927,144 @@ export default function Ventas({
         aria-hidden={!carritoDrawerOpen}
       />
       <div className="ventas-layout">
-        <section className="ventas-contenido">
-          <div className="ventas-steps">
-            {PASOS.map((titulo, i) => {
-              const n = i + 1;
-              const state = n < paso ? 'done' : n === paso ? 'active' : 'pending';
-              return (
-                <div className="ventas-step-wrap" key={titulo}>
-                  <div className={`ventas-step ${state}`}>
-                  <span className="step-index">{state === 'done' ? '✓' : `${n}.`}</span>
-                  <span className="step-title">{titulo}</span>
-                </div>
-                  {i < PASOS.length - 1 && <span className="step-arrow">→</span>}
-                </div>
-              );
-            })}
-          </div>
+        <section className={`ventas-contenido`}>
 
           {paso === 1 && (
-            <div className="ventas-panel">
-              <div className="catalogo-top">
-                <h3>Seleccionar productos</h3>
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o código..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="vista-toggle"
-                  onClick={() => setVistaProductos((v) => (v === 'grid' ? 'list' : 'grid'))}
-                  title={vistaProductos === 'grid' ? 'Cambiar a lista' : 'Cambiar a cuadrícula'}
-                >
-                  <img
-                    src={vistaProductos === 'grid' ? '/list-view.svg' : '/grid-view.svg'}
-                    alt={vistaProductos === 'grid' ? 'Vista lista' : 'Vista cuadrícula'}
+            <div className="ventas-panel ventas-panel-catalogo">
+              <div className="catalogo-head">
+                {pasosHeader}
+                <div className="catalogo-top">
+                  <h3>Seleccionar productos</h3>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o código..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
                   />
-                </button>
+                  <button
+                    type="button"
+                    className="vista-toggle"
+                    onClick={() => setVistaProductos((v) => (v === 'grid' ? 'list' : 'grid'))}
+                    title={vistaProductos === 'grid' ? 'Cambiar a lista' : 'Cambiar a cuadrícula'}
+                  >
+                    <img
+                      src={vistaProductos === 'grid' ? '/list-view.svg' : '/grid-view.svg'}
+                      alt={vistaProductos === 'grid' ? 'Vista lista' : 'Vista cuadrícula'}
+                    />
+                  </button>
+                </div>
               </div>
 
-              <div className={`catalogo-grid ${vistaProductos === 'list' ? 'catalogo-list' : ''}`}>
+              <div className={`catalogo-grid catalogo-grid-scroll ${vistaProductos === 'list' ? 'catalogo-list' : ''}`}>
                 {productosFiltrados.length === 0 && <p className="muted">No hay productos para mostrar.</p>}
-                {productosFiltrados.map((p) => (
-                  <article key={p.id} className={`producto-card ${vistaProductos === 'list' ? 'list' : ''}`}>
-                    <div className="producto-image-wrap">
-                      {p.imagenPreview ? (
-                        <img src={p.imagenPreview} alt={p.nombre} className="producto-image" />
-                      ) : (
-                        <div className="producto-image placeholder">Sin imagen</div>
-                      )}
-                      <div className="overlay">
-                        <h4>{p.nombre}</h4>
-                        <small className="overlay-code">Código: {p.ean || '-'}</small>
-                        <span>{money(p.venta)}</span>
-                      </div>
-                    </div>
-                    <div className="card-footer">
-                      {(() => {
-                        const picker = getPickerForProduct(p);
-                        const unidadesPorEmpaque = getEmpaqueUnits(p);
-                        const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
-                        const unidadesAgregar = picker.cantidad * multiplicador;
-                        const stockDisponible = getStockDisponible(p.id);
-                        const stockProyectado = stockDisponible - unidadesAgregar;
-                        const precioEmpaque = roundMoney(p.precioEmpaque);
-                        return (
-                          <>
-                            <small>Stock disponible: {stockDisponible}</small>
-                            <div className="producto-pricing">
-                              <small>Unidad: {money(p.venta)}</small>
-                              <small>{p.tipoEmpaque || 'Empaque'}: {precioEmpaque > 0 ? money(precioEmpaque) : '-'}</small>
-                            </div>
-                            <div className="producto-picker">
-                              <div className="picker-mode">
-                                <button
-                                  type="button"
-                                  className={`picker-mode-btn ${picker.modo === 'unidad' ? 'active' : ''}`}
-                                  onClick={() => setPickerModo(p.id, 'unidad')}
-                                >
-                                  Unidad
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`picker-mode-btn ${picker.modo === 'empaque' ? 'active' : ''}`}
-                                  onClick={() => setPickerModo(p.id, 'empaque')}
-                                >
-                                  {p.tipoEmpaque || 'Empaque'} ({unidadesPorEmpaque}u)
-                                </button>
-                              </div>
-                              <div className="picker-qty">
-                                <button type="button" className="picker-step" onClick={() => setPickerCantidad(p.id, picker.cantidad - 1)}>-</button>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  value={picker.cantidad}
-                                  onChange={(e) => setPickerCantidad(p.id, e.target.value)}
-                                />
-                                <button type="button" className="picker-step" onClick={() => setPickerCantidad(p.id, picker.cantidad + 1)}>+</button>
-                              </div>
-                              <button
-                                type="button"
-                                className="picker-add-btn"
-                                onClick={() => addToCartFromPicker(p)}
-                              >
-                                Agregar
-                              </button>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </article>
-                ))}
+                {catalogoCards}
               </div>
             </div>
           )}
 
           {paso === 2 && (
-            <div className="ventas-panel">
-              <h3>Pago y preventa</h3>
-              <div className="form-entrega">
-                <div className="pagos-box full">
-                  <span className="pagos-label">Selecciona uno o más medios de pago</span>
-                  <div className="pago-grid">
-                    {MEDIOS_PAGO.map((method) => {
-                      const row = pagos.find((p) => p.medio_pago === method.key);
-                      const activo = Boolean(row?.activo);
-                      return (
-                        <button
-                          key={method.key}
-                          type="button"
-                          className={`pago-card ${activo ? 'active' : ''}`}
-                          onClick={() => {
-                            setPagos((prev) => prev.map((p) => (
-                              p.medio_pago === method.key ? { ...p, activo: !p.activo } : p
-                            )));
-                          }}
-                        >
-                          <img src={method.icon} alt="" aria-hidden="true" />
-                          <span>{method.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="pago-inputs">
-                    {pagosActivos.map((pago) => (
-                      <label key={`monto-${pago.medio_pago}`}>
-                        <span>{formatMedioPago(pago.medio_pago)}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          placeholder="Monto"
-                          value={esPagoUnico ? total : pago.monto}
-                          readOnly={esPagoUnico}
-                          onChange={(e) => {
-                            if (esPagoUnico) return;
-                            const value = e.target.value;
-                            setPagos((prev) => prev.map((p) => (
-                              p.medio_pago === pago.medio_pago ? { ...p, monto: value } : p
-                            )));
-                          }}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  {esPagoUnico && (
-                    <small className="pago-auto-info">
-                      Monto automático: se completa con el total al usar un solo medio.
-                    </small>
-                  )}
-                  <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
-                    Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
+            <>
+              {pasosHeader}
+              <div className="ventas-panel">
+                <h3>Pago y preventa</h3>
+                <div className="form-entrega">
+                  <div className="pagos-box full">
+                    <span className="pagos-label">Selecciona uno o más medios de pago</span>
+                    <div className="pago-grid">
+                      {MEDIOS_PAGO.map((method) => {
+                        const row = pagos.find((p) => p.medio_pago === method.key);
+                        const activo = Boolean(row?.activo);
+                        return (
+                          <button
+                            key={method.key}
+                            type="button"
+                            className={`pago-card ${activo ? 'active' : ''}`}
+                            onClick={() => {
+                              setPagos((prev) => prev.map((p) => (
+                                p.medio_pago === method.key ? { ...p, activo: !p.activo } : p
+                              )));
+                            }}
+                          >
+                            <img src={method.icon} alt="" aria-hidden="true" />
+                            <span>{method.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="pago-inputs">
+                      {pagosActivos.map((pago) => (
+                        <label key={`monto-${pago.medio_pago}`}>
+                          <span>{formatMedioPago(pago.medio_pago)}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="Monto"
+                            value={esPagoUnico ? total : pago.monto}
+                            readOnly={esPagoUnico}
+                            onChange={(e) => {
+                              if (esPagoUnico) return;
+                              const value = e.target.value;
+                              setPagos((prev) => prev.map((p) => (
+                                p.medio_pago === pago.medio_pago ? { ...p, monto: value } : p
+                              )));
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    {esPagoUnico && (
+                      <small className="pago-auto-info">
+                        Monto automático: se completa con el total al usar un solo medio.
+                      </small>
+                    )}
+                    <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
+                      Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="ticket-resumen">
-                <div className="ticket-header">
-                  <div>
-                    <h4>Pre-ticket de venta</h4>
-                    <span>Vista previa del comprobante</span>
+                <div className="ticket-resumen">
+                  <div className="ticket-header">
+                    <div>
+                      <h4>Pre-ticket de venta</h4>
+                      <span>Vista previa del comprobante</span>
+                    </div>
+                    <strong className="ticket-total-chip">{money(total)}</strong>
                   </div>
-                  <strong className="ticket-total-chip">{money(total)}</strong>
-                </div>
-                <div className="ticket-grid">
-                  <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
-                  <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
-                  <p><span>Pagos:</span> {pagosConMonto.length}</p>
-                  <p><span>Ítems:</span> {carritoCalculado.length}</p>
-                  <p><span>Unidades:</span> {carritoCalculado.reduce((acc, i) => acc + toNumber(i.unidadesSolicitadas), 0)}</p>
-                </div>
-                <ul className="ticket-pagos">
-                  {pagosConMonto.map((pago) => (
-                    <li key={`preview-pago-${pago.medio_pago}`}>
-                      <span>{formatMedioPago(pago.medio_pago)}</span>
-                      <strong>{money(pago.montoNumber)}</strong>
-                    </li>
-                  ))}
-                </ul>
-                <ul className="ticket-items">
-                  {carritoCalculado.map((item) => (
-                    <li key={item.id}>
-                      <span><b>{item.nombre}</b> x {item.unidadesSolicitadas}</span>
-                      <strong>{money(item.subtotalBase)}</strong>
-                      <small>{formatEmpaqueSplit(item)}</small>
-                    </li>
-                  ))}
-                </ul>
-                <div className="ticket-totales">
-                  <p>Subtotal <strong>{money(subtotal)}</strong></p>
-                  <p>Descuento ítems <strong>-{money(descuentoItemsTotal)}</strong></p>
-                  <p>Descuento total <strong>-{money(descuentoGlobal)}</strong></p>
-                  <p className="ticket-total-final">Total <strong>{money(total)}</strong></p>
+                  <div className="ticket-grid">
+                    <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
+                    <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
+                    <p><span>Pagos:</span> {pagosConMonto.length}</p>
+                    <p><span>Ítems:</span> {carritoCalculado.length}</p>
+                    <p><span>Unidades:</span> {carritoCalculado.reduce((acc, i) => acc + toNumber(i.unidadesSolicitadas), 0)}</p>
+                  </div>
+                  <ul className="ticket-pagos">
+                    {pagosConMonto.map((pago) => (
+                      <li key={`preview-pago-${pago.medio_pago}`}>
+                        <span>{formatMedioPago(pago.medio_pago)}</span>
+                        <strong>{money(pago.montoNumber)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                  <ul className="ticket-items">
+                    {carritoCalculado.map((item) => (
+                      <li key={item.id}>
+                        <span><b>{item.nombre}</b> x {item.unidadesSolicitadas}</span>
+                        <strong>{money(item.subtotalBase)}</strong>
+                        <small>{formatEmpaqueSplit(item)}</small>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="ticket-totales">
+                    <p>Subtotal <strong>{money(subtotal)}</strong></p>
+                    <p>Descuento ítems <strong>-{money(descuentoItemsTotal)}</strong></p>
+                    <p>Descuento total <strong>-{money(descuentoGlobal)}</strong></p>
+                    <p className="ticket-total-final">Total <strong>{money(total)}</strong></p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
         </section>
@@ -1094,33 +1137,33 @@ export default function Ventas({
                       onChange={(e) => updateUnits(item.id, e.target.value)}
                     />
                   </div>
-                   <div className="descuentos-item">
-                     {item.descuentoTipo === 'ninguno' ? (
-                       <button
-                         type="button"
-                         className="descuento-action-link"
-                         onClick={() => openDiscountModal(item)}
-                       >
-                         Dar descuento
-                       </button>
-                     ) : (
-                       <>
-                         <span className="descuento-aplicado">
-                           Descuento:{' '}
-                           {item.descuentoTipo === 'porcentaje'
-                             ? `${toNumber(item.descuentoValor)}%`
-                             : money(item.descuentoValor)}
-                         </span>
-                         <button
-                           type="button"
-                           className="descuento-action-link"
-                           onClick={() => removeItemDiscount(item.id)}
-                         >
-                           Eliminar descuento
-                         </button>
-                       </>
-                     )}
-                   </div>
+                  <div className="descuentos-item">
+                    {item.descuentoTipo === 'ninguno' ? (
+                      <button
+                        type="button"
+                        className="descuento-action-link"
+                        onClick={() => openDiscountModal(item)}
+                      >
+                        Dar descuento
+                      </button>
+                    ) : (
+                      <>
+                        <span className="descuento-aplicado">
+                          Descuento:{' '}
+                          {item.descuentoTipo === 'porcentaje'
+                            ? `${toNumber(item.descuentoValor)}%`
+                            : money(item.descuentoValor)}
+                        </span>
+                        <button
+                          type="button"
+                          className="descuento-action-link"
+                          onClick={() => removeItemDiscount(item.id)}
+                        >
+                          Eliminar descuento
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="carrito-right">
                   <span>{money(item.subtotalBase)}</span>
@@ -1139,51 +1182,51 @@ export default function Ventas({
             ))}
           </div>
 
-           <div className="carrito-footer">
-              <div className="carrito-totales">
-                <h4>Subtotal</h4>
-                <p>{money(subtotal)}</p>
-                <p className="resumen-descuento">Descuento ítems: -{money(descuentoItemsTotal)}</p>
-                <div className="descuento-global">
-                 {descuentoTotalTipo === 'ninguno' ? (
-                   <button
-                     type="button"
-                     className="descuento-action-link"
-                     onClick={openGlobalDiscountModal}
-                   >
-                     Dar descuento total
-                   </button>
-                 ) : (
-                   <>
-                     <span className="descuento-aplicado">
-                       Descuento total:{' '}
-                       {descuentoTotalTipo === 'porcentaje'
-                         ? `${toNumber(descuentoTotalValor)}%`
-                         : money(descuentoTotalValor)}
-                     </span>
-                     <button
-                       type="button"
-                       className="descuento-action-link"
-                       onClick={removeGlobalDiscount}
-                     >
-                       Eliminar descuento
-                     </button>
-                   </>
-                 )}
-               </div>
-                <p className="total-final">Total: <strong>{money(total)}</strong></p>
+          <div className="carrito-footer">
+            <div className="carrito-totales">
+              <h4>Subtotal</h4>
+              <p>{money(subtotal)}</p>
+              <p className="resumen-descuento">Descuento ítems: -{money(descuentoItemsTotal)}</p>
+              <div className="descuento-global">
+                {descuentoTotalTipo === 'ninguno' ? (
+                  <button
+                    type="button"
+                    className="descuento-action-link"
+                    onClick={openGlobalDiscountModal}
+                  >
+                    Dar descuento total
+                  </button>
+                ) : (
+                  <>
+                    <span className="descuento-aplicado">
+                      Descuento total:{' '}
+                      {descuentoTotalTipo === 'porcentaje'
+                        ? `${toNumber(descuentoTotalValor)}%`
+                        : money(descuentoTotalValor)}
+                    </span>
+                    <button
+                      type="button"
+                      className="descuento-action-link"
+                      onClick={removeGlobalDiscount}
+                    >
+                      Eliminar descuento
+                    </button>
+                  </>
+                )}
               </div>
-             <div className="ventas-footer">
-               {paso === 1 ? (
-                 <button type="button" onClick={goNext}>Siguiente</button>
-               ) : (
-                 <>
-                   <button type="button" className="secundario" onClick={goBack}>Atrás</button>
-                   <button type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</button>
-                 </>
-               )}
-             </div>
-           </div>
+              <p className="total-final">Total: <strong>{money(total)}</strong></p>
+            </div>
+            <div className="ventas-footer">
+              {paso === 1 ? (
+                <button type="button" onClick={goNext}>Siguiente</button>
+              ) : (
+                <>
+                  <button type="button" className="secundario" onClick={goBack}>Atrás</button>
+                  <button type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</button>
+                </>
+              )}
+            </div>
+          </div>
         </aside>
       </div>
 
