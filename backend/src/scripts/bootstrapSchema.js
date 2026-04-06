@@ -86,6 +86,15 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_ventas_cancelada ON public.ventas (cancelada);
   `,
   `
+  CREATE INDEX IF NOT EXISTS ix_ventas_fecha_entrega ON public.ventas (fecha_entrega);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_ventas_entregado ON public.ventas (entregado);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_ventas_estado_entrega ON public.ventas (estado_entrega);
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -98,6 +107,46 @@ const statements = [
       ALTER TABLE public.ventas
       ADD CONSTRAINT ventas_cliente_id_fkey
       FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_usuario_id_fkey'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_usuario_id_fkey
+      FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id);
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_estado_entrega_check'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_estado_entrega_check
+      CHECK (estado_entrega IN ('pendiente', 'entregado'));
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_medio_pago_check'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_medio_pago_check
+      CHECK (medio_pago IN ('efectivo', 'debito', 'credito', 'transferencia'));
     END IF;
   END $$;
   `,
@@ -196,6 +245,9 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_pagos_venta ON public.pagos (venta_id);
   `,
   `
+  CREATE INDEX IF NOT EXISTS ix_pagos_created_at ON public.pagos (created_at DESC);
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -208,6 +260,22 @@ const statements = [
       ALTER TABLE public.pagos
       ADD CONSTRAINT pagos_venta_id_fkey
       FOREIGN KEY (venta_id) REFERENCES public.ventas(id) ON DELETE CASCADE;
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'pagos'
+        AND constraint_name = 'pagos_medio_pago_check'
+    ) THEN
+      ALTER TABLE public.pagos
+      ADD CONSTRAINT pagos_medio_pago_check
+      CHECK (medio_pago IN ('efectivo', 'debito', 'credito', 'transferencia'));
     END IF;
   END $$;
   `,
