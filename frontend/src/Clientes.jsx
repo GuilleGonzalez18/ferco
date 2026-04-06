@@ -4,6 +4,9 @@ import autoTable from 'jspdf-autotable';
 import { api } from './api';
 import './Clientes.css';
 import { appAlert, appConfirm } from './appDialog';
+import { RiFileExcel2Line } from 'react-icons/ri';
+import { PiFilePdfBold } from 'react-icons/pi';
+import { AiFillPrinter } from 'react-icons/ai';
 
 export default function Clientes() {
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -29,6 +32,7 @@ export default function Clientes() {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [clienteExpandidoId, setClienteExpandidoId] = useState(null);
   const [nuevo, setNuevo] = useState({
@@ -223,6 +227,83 @@ export default function Clientes() {
     logo.onerror = () => renderPdf();
   };
 
+  const exportarExcel = () => {
+    const rowsHtml = filtrados.map((c, idx) => {
+      const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
+      return `
+        <tr style="background:${zebra}">
+          <td>${c.nombre || ''}</td>
+          <td>${c.rut || ''}</td>
+          <td>${c.direccion || ''}</td>
+          <td>${c.telefono || ''}</td>
+          <td>${c.correo || ''}</td>
+          <td>${c.horario_apertura || ''}</td>
+          <td>${c.horario_cierre || ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <html><head><meta charset="UTF-8" /></head><body>
+        <table border="1" style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background:#375f8c;color:#fff">
+              <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Apertura</th><th>Cierre</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </body></html>
+    `;
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clientes.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const imprimirClientes = () => {
+    const rows = filtrados.map((c) => `
+      <tr>
+        <td>${c.nombre || ''}</td>
+        <td>${c.rut || ''}</td>
+        <td>${c.direccion || ''}</td>
+        <td>${c.telefono || ''}</td>
+        <td>${c.correo || ''}</td>
+        <td>${c.horario_apertura || ''}</td>
+        <td>${c.horario_cierre || ''}</td>
+      </tr>
+    `).join('');
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=980,height=700');
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>Clientes</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:16px}
+        h2{color:#375f8c}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}
+        th{background:#375f8c;color:#fff}
+      </style></head>
+      <body>
+        <h2>Lista de clientes</h2>
+        <table>
+          <thead><tr>
+            <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Apertura</th><th>Cierre</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body></html>
+    `);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
   const abrirAlta = () => {
     setEditandoId(null);
     setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
@@ -257,10 +338,37 @@ export default function Clientes() {
           <img src="/add.svg" alt="" aria-hidden="true" />
           <span>CLIENTE</span>
         </button>
-        <button type="button" className="icon-btn" title="Imprimir PDF" onClick={exportarPDF}>
+        <button type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
           <img src="/print.svg" alt="" aria-hidden="true" />
         </button>
       </div>
+
+      {exportModalOpen && (
+        <div className="export-modal-overlay" role="dialog" aria-modal="true">
+          <div className="export-modal-backdrop" onClick={() => setExportModalOpen(false)} />
+          <div className="export-modal">
+            <h4>Exportar clientes</h4>
+            <p>Elige un formato:</p>
+            <div className="export-modal-actions">
+              <button type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
+                <PiFilePdfBold />
+                <span>PDF</span>
+              </button>
+              <button type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
+                <RiFileExcel2Line />
+                <span>EXCEL</span>
+              </button>
+              <button type="button" onClick={() => { imprimirClientes(); setExportModalOpen(false); }}>
+                <AiFillPrinter />
+                <span>Impresora</span>
+              </button>
+            </div>
+            <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       <ul className="lista-clientes">
         <li className="header">

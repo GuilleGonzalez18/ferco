@@ -100,10 +100,17 @@ export const api = {
     const suffix = q.toString();
     return request(`/ventas${suffix ? `?${suffix}` : ''}`);
   },
-  getEntregasResumen: (periodo, fechaBase) => {
+  getEntregasResumen: (filtro, fechaBaseLegacy) => {
     const q = new URLSearchParams();
-    if (periodo) q.set('periodo', periodo);
-    if (fechaBase) q.set('fechaBase', fechaBase);
+    if (filtro && typeof filtro === 'object') {
+      if (filtro.periodo) q.set('periodo', String(filtro.periodo));
+      if (filtro.fechaBase) q.set('fechaBase', String(filtro.fechaBase));
+      if (filtro.desde) q.set('desde', String(filtro.desde));
+      if (filtro.hasta) q.set('hasta', String(filtro.hasta));
+    } else {
+      if (filtro) q.set('periodo', String(filtro));
+      if (fechaBaseLegacy) q.set('fechaBase', String(fechaBaseLegacy));
+    }
     const suffix = q.toString();
     return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
   },

@@ -36,8 +36,10 @@
   border-radius: 8px;
   padding: 0.48rem 0.56rem;
   font-size: 0.84rem;
-  background: #0f1722;
-  color: #ffffff;
+  background: #ffffff;
+  color: #1f2933;
+  color-scheme: light;
+  cursor: text;
 }
 
 .ventas-fecha-filter select {

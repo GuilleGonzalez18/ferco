@@ -66,18 +66,6 @@ function formatMedioPago(value) {
   return 'Efectivo';
 }
 
-function normalizeWhatsappPhone(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  let digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  if (digits.startsWith('00')) digits = digits.slice(2);
-  if (digits.startsWith('598')) return digits;
-  if (digits.startsWith('0')) return `598${digits.slice(1)}`;
-  if (digits.length <= 9) return `598${digits}`;
-  return digits;
-}
-
 export default function Ventas({ user, productos = [], setProductos }) {
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
@@ -619,46 +607,59 @@ export default function Ventas({ user, productos = [], setProductos }) {
   const imprimirTicket = async () => {
     const data = await buildTicketPdf();
     if (!data) return;
-    data.doc.save(data.fileName);
+    const blob = data.doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = blobUrl;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      }
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 7000);
     setTicketImpreso(true);
   };
 
   const enviarTicketWhatsApp = async () => {
     if (!ventaFinalizada) return;
-    const telefonoNormalizado = normalizeWhatsappPhone(ventaFinalizada.clienteTelefono);
-    if (!telefonoNormalizado) {
-      await appAlert('El cliente no tiene teléfono válido para WhatsApp.');
-      return;
-    }
-
     const data = await buildTicketPdf();
     if (!data) return;
-
-    const message = `Hola ${ventaFinalizada.clienteNombre}, te enviamos tu ticket de compra #${ventaFinalizada.id || ''}. Total: ${money(ventaFinalizada.total)}.`;
-    const waUrl = `https://wa.me/${telefonoNormalizado}?text=${encodeURIComponent(message)}`;
     const pdfBlob = data.doc.output('blob');
+    const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
+    const shareData = {
+      files: [file],
+      title: `Ticket ${ventaFinalizada.id || ''}`,
+    };
+    const canShareFile = typeof navigator !== 'undefined'
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare(shareData);
 
-    if (typeof File === 'function' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
-      const canShareFiles = typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] });
-      if (canShareFiles) {
-        try {
-          await navigator.share({
-            title: `Ticket ${ventaFinalizada.id || ''}`,
-            text: message,
-            files: [file],
-          });
-          setTicketImpreso(true);
-          return;
-        } catch {
-          // fallback below
-        }
+    if (canShareFile) {
+      try {
+        await navigator.share(shareData);
+        setTicketImpreso(true);
+        return;
+      } catch {
+        // fallback below
       }
     }
 
     data.doc.save(data.fileName);
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-    await appAlert('Abrimos WhatsApp directo al cliente y descargamos el PDF. Adjunta el archivo desde Descargas y envía.');
+    window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
     setTicketImpreso(true);
   };
 
