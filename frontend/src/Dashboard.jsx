@@ -147,6 +147,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
               productos={productos}
               setProductos={setProductos}
               carritoDrawerOpen={ventasCarritoAbierto}
+              onToggleCarritoDrawer={() => setVentasCarritoAbierto((prev) => !prev)}
               onCloseCarritoDrawer={closeVentasCarritoDrawer}
             />
           );

@@ -157,6 +157,7 @@ export default function Ventas({
   productos = [],
   setProductos,
   carritoDrawerOpen = false,
+  onToggleCarritoDrawer,
   onCloseCarritoDrawer,
 }) {
   const [paso, setPaso] = useState(1);
@@ -585,6 +586,10 @@ export default function Ventas({
 
   const descuentoTotalAplicado = Math.max(0, descuentoItemsTotal + descuentoGlobal);
   const total = Math.max(0, subtotal - descuentoTotalAplicado);
+  const totalUnidadesCarrito = useMemo(
+    () => carritoCalculado.reduce((acc, item) => acc + toNumber(item.unidadesSolicitadas), 0),
+    [carritoCalculado]
+  );
   const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
   const pagosActivos = useMemo(
     () => pagos.filter((p) => p.activo),
@@ -803,6 +808,12 @@ export default function Ventas({
   const closeCarritoDrawer = () => {
     if (typeof onCloseCarritoDrawer === 'function') {
       onCloseCarritoDrawer();
+    }
+  };
+
+  const toggleCarritoDrawer = () => {
+    if (typeof onToggleCarritoDrawer === 'function') {
+      onToggleCarritoDrawer();
     }
   };
 
@@ -1229,6 +1240,19 @@ export default function Ventas({
           </div>
         </aside>
       </div>
+
+      {totalUnidadesCarrito > 0 && !carritoDrawerOpen && (
+        <button
+          type="button"
+          className="carrito-fab"
+          onClick={toggleCarritoDrawer}
+          aria-label={carritoDrawerOpen ? 'Cerrar carrito' : 'Abrir carrito'}
+          aria-expanded={carritoDrawerOpen}
+        >
+          <img src="/cart.svg" alt="" aria-hidden="true" />
+          <span className="carrito-fab-count">{totalUnidadesCarrito}</span>
+        </button>
+      )}
 
       <div
         className={`cliente-overlay ${selectorClienteAbierto ? 'open' : ''}`}
