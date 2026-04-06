@@ -64,7 +64,7 @@
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: 0.75rem;
-  align-items: start;
+  align-items: stretch;
   flex: 1;
   height: 100%;
   min-height: 0;
@@ -308,6 +308,10 @@
   overflow-y: auto;
 }
 
+.ventas-contenido.paso-productos {
+  overflow: hidden;
+}
+
 .cliente-cabecera {
   position: relative;
   margin-bottom: 0.55rem;
@@ -493,6 +497,7 @@
   flex-direction: column;
   gap: 0.65rem;
   min-height: 0;
+  overflow: hidden;
 }
 
 .catalogo-head {
@@ -542,15 +547,34 @@
 }
 
 .catalogo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 0.6rem;
+  --catalogo-card-max: 252px;
+  --catalogo-gap: clamp(0.5rem, 0.9vw, 0.82rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  justify-content: flex-start;
+  gap: var(--catalogo-gap);
+}
+
+.catalogo-grid > .producto-card {
+  flex: 1 1 222px;
+  min-width: 188px;
+  max-width: 252px;
+}
+
+.catalogo-grid .muted {
+  width: 100%;
 }
 
 .catalogo-grid-scroll {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: calc((5 * var(--catalogo-card-max)) + (4 * var(--catalogo-gap)));
+  margin-inline: auto;
   overflow-y: auto;
+  overflow-x: hidden;
   align-content: start;
   padding-right: 0.2rem;
 }
@@ -558,6 +582,19 @@
 .catalogo-grid.catalogo-list {
   display: flex;
   flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.catalogo-grid-scroll.catalogo-list {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.catalogo-grid.catalogo-list > .producto-card {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
 }
 
 .producto-card {
@@ -1412,13 +1449,25 @@
   }
 
   .catalogo-grid {
-    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 0.55rem;
+  }
+
+  .catalogo-grid > .producto-card {
+    flex-basis: 178px;
+    min-width: 156px;
+    max-width: 220px;
   }
 }
 
 @media (max-width: 480px) {
   .ventas-main {
     padding: 0.38rem 0.5rem 0.75rem;
+  }
+
+  .catalogo-grid > .producto-card {
+    flex-basis: 162px;
+    min-width: 148px;
+    max-width: none;
   }
 
   .ventas-layout {

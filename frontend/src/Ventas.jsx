@@ -927,7 +927,7 @@ export default function Ventas({
         aria-hidden={!carritoDrawerOpen}
       />
       <div className="ventas-layout">
-        <section className={`ventas-contenido`}>
+        <section className={`ventas-contenido ${paso === 1 ? 'paso-productos' : ''}`}>
 
           {paso === 1 && (
             <div className="ventas-panel ventas-panel-catalogo">
