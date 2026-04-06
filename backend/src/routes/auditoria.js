@@ -3,6 +3,13 @@ import { query } from '../db.js';
 
 export const auditoriaRouter = Router();
 
+function toIsoDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function parseDateRange(req, res) {
   const { desde, hasta } = req.query;
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -15,6 +22,47 @@ function parseDateRange(req, res) {
     return null;
   }
   return { desde: desde || null, hasta: hasta || null };
+}
+
+function parseStockSeriesRange(req, res) {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = toIsoDate(today);
+
+  const desdeRaw = req.query.desde ? String(req.query.desde) : '';
+  const hastaRaw = req.query.hasta ? String(req.query.hasta) : '';
+  const hasta = hastaRaw
+    ? (hastaRaw > todayIso ? todayIso : hastaRaw)
+    : todayIso;
+
+  const defaultDesde = new Date(today);
+  defaultDesde.setDate(defaultDesde.getDate() - 29);
+  const desde = desdeRaw || toIsoDate(defaultDesde);
+
+  if (!dateRegex.test(desde)) {
+    res.status(400).json({ error: 'Formato de fecha inválido en "desde". Usa YYYY-MM-DD' });
+    return null;
+  }
+  if (!dateRegex.test(hasta)) {
+    res.status(400).json({ error: 'Formato de fecha inválido en "hasta". Usa YYYY-MM-DD' });
+    return null;
+  }
+  if (desde > hasta) {
+    res.status(400).json({ error: '"desde" no puede ser mayor que "hasta"' });
+    return null;
+  }
+
+  const desdeDate = new Date(`${desde}T00:00:00`);
+  const hastaDate = new Date(`${hasta}T00:00:00`);
+  const diffMs = hastaDate.getTime() - desdeDate.getTime();
+  const diffDays = Math.floor(diffMs / 86400000) + 1;
+  if (diffDays > 730) {
+    res.status(400).json({ error: 'El rango máximo permitido es de 730 días' });
+    return null;
+  }
+
+  return { desde, hasta, todayIso };
 }
 
 auditoriaRouter.get('/eventos', async (req, res) => {
@@ -37,6 +85,81 @@ auditoriaRouter.get('/eventos', async (req, res) => {
     [range.desde, range.hasta]
   );
   return res.json(result.rows);
+});
+
+auditoriaRouter.get('/stock-costo-serie', async (req, res) => {
+  const range = parseStockSeriesRange(req, res);
+  if (!range) return;
+  const { desde, hasta, todayIso } = range;
+
+  const productosResult = await query(
+    `SELECT id, COALESCE(stock, 0)::numeric AS stock, ROUND(COALESCE(costo, 0))::int AS costo
+     FROM public.productos`
+  );
+
+  const costoPorProducto = new Map();
+  const stockPorProducto = new Map();
+  let totalCostoActual = 0;
+
+  for (const p of productosResult.rows) {
+    const id = Number(p.id);
+    const costo = Number(p.costo || 0);
+    const stock = Number(p.stock || 0);
+    costoPorProducto.set(id, costo);
+    stockPorProducto.set(id, stock);
+    totalCostoActual += stock * costo;
+  }
+
+  const movimientosResult = await query(
+    `SELECT producto_id, DATE(created_at)::text AS fecha,
+            SUM(COALESCE(stock_nuevo, 0) - COALESCE(stock_anterior, 0))::numeric AS delta
+     FROM public.movimientos_stock
+     WHERE DATE(created_at) > $1::date
+       AND DATE(created_at) <= $2::date
+     GROUP BY producto_id, DATE(created_at)`,
+    [desde, todayIso]
+  );
+
+  const deltasPorDia = new Map();
+  for (const row of movimientosResult.rows) {
+    const fecha = String(row.fecha).slice(0, 10);
+    const productoId = Number(row.producto_id);
+    const delta = Number(row.delta || 0);
+    const list = deltasPorDia.get(fecha) || [];
+    list.push({ productoId, delta });
+    deltasPorDia.set(fecha, list);
+  }
+
+  const totalPorDia = new Map();
+  let total = totalCostoActual;
+  const today = new Date(`${todayIso}T00:00:00`);
+  const desdeDate = new Date(`${desde}T00:00:00`);
+  totalPorDia.set(todayIso, Math.round(total));
+
+  for (let cursor = new Date(today); cursor.getTime() > desdeDate.getTime();) {
+    const diaKey = toIsoDate(cursor);
+    const deltasDia = deltasPorDia.get(diaKey) || [];
+    for (const d of deltasDia) {
+      const costo = Number(costoPorProducto.get(d.productoId) || 0);
+      const stockActual = Number(stockPorProducto.get(d.productoId) || 0);
+      stockPorProducto.set(d.productoId, stockActual - d.delta);
+      total -= d.delta * costo;
+    }
+    cursor.setDate(cursor.getDate() - 1);
+    totalPorDia.set(toIsoDate(cursor), Math.round(total));
+  }
+
+  const hastaDate = new Date(`${hasta}T00:00:00`);
+  const serie = [];
+  for (let cursor = new Date(desdeDate); cursor.getTime() <= hastaDate.getTime(); cursor.setDate(cursor.getDate() + 1)) {
+    const fecha = toIsoDate(cursor);
+    serie.push({
+      fecha,
+      total_costo: Math.round(Number(totalPorDia.get(fecha) || 0)),
+    });
+  }
+
+  return res.json({ desde, hasta, serie });
 });
 
 auditoriaRouter.get('/movimientos-stock', async (req, res) => {
