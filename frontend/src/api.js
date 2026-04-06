@@ -149,4 +149,11 @@ export const api = {
     const suffix = q.toString();
     return request(`/auditoria/movimientos-stock${suffix ? `?${suffix}` : ''}`);
   },
+  getStockCostoSerie: (desde, hasta) => {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const suffix = q.toString();
+    return request(`/auditoria/stock-costo-serie${suffix ? `?${suffix}` : ''}`);
+  },
 };
