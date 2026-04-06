@@ -71,6 +71,13 @@ function getDateRangeByPeriod(baseDateInput, period) {
     return { desde: iso, hasta: iso };
   }
 
+  if (period === 'manana') {
+    const nextDay = new Date(safeBase);
+    nextDay.setDate(safeBase.getDate() + 1);
+    const iso = toIsoDate(nextDay);
+    return { desde: iso, hasta: iso };
+  }
+
   if (period === 'semana') {
     const weekStart = new Date(safeBase);
     const day = weekStart.getDay();
@@ -214,9 +221,6 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   }
   if (desde && hasta && String(desde) > String(hasta)) {
     return res.status(400).json({ error: 'La fecha "desde" no puede ser mayor que "hasta"' });
-  }
-  if (!fecha && (desde || hasta) && (!desde || !hasta)) {
-    return res.status(400).json({ error: 'Para filtrar por rango debes indicar "desde" y "hasta".' });
   }
   if (!Number.isInteger(targetUsuarioId) || targetUsuarioId <= 0) {
     return res.status(400).json({ error: 'usuarioId inválido' });
@@ -699,14 +703,30 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
 
   const periodo = String(req.query.periodo || 'dia').toLowerCase();
   const fechaBase = req.query.fechaBase ? String(req.query.fechaBase) : null;
-  if (!['dia', 'semana', 'mes'].includes(periodo)) {
-    return res.status(400).json({ error: 'Periodo inválido. Usa: dia, semana o mes.' });
+  const desde = req.query.desde ? String(req.query.desde) : null;
+  const hasta = req.query.hasta ? String(req.query.hasta) : null;
+  if (!['dia', 'manana', 'semana', 'mes'].includes(periodo)) {
+    return res.status(400).json({ error: 'Periodo inválido. Usa: dia, manana, semana o mes.' });
   }
   if (fechaBase && !/^\d{4}-\d{2}-\d{2}$/.test(fechaBase)) {
     return res.status(400).json({ error: 'Formato de fechaBase inválido. Usa YYYY-MM-DD' });
   }
+  if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) {
+    return res.status(400).json({ error: 'Formato de fecha "desde" inválido. Usa YYYY-MM-DD' });
+  }
+  if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+    return res.status(400).json({ error: 'Formato de fecha "hasta" inválido. Usa YYYY-MM-DD' });
+  }
+  if ((desde || hasta) && (!desde || !hasta)) {
+    return res.status(400).json({ error: 'Para filtrar por rango debes indicar "desde" y "hasta".' });
+  }
+  if (desde && hasta && desde > hasta) {
+    return res.status(400).json({ error: 'La fecha "desde" no puede ser mayor que "hasta"' });
+  }
 
-  const range = getDateRangeByPeriod(fechaBase, periodo);
+  const range = (desde && hasta)
+    ? { desde, hasta }
+    : getDateRangeByPeriod(fechaBase, periodo);
   if (!range?.desde || !range?.hasta) {
     return res.status(400).json({ error: 'No se pudo calcular el rango de fechas solicitado' });
   }
@@ -769,7 +789,7 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
        AND v.fecha_entrega IS NOT NULL
        AND DATE(v.fecha_entrega) BETWEEN $1::date AND $2::date
        ${userFilter}
-     ORDER BY v.fecha_entrega ASC, v.id ASC`,
+      ORDER BY DATE(v.fecha_entrega) ASC, v.fecha ASC, v.id ASC`,
     params
   );
 

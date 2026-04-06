@@ -42,6 +42,14 @@ function monthRangeISO() {
   return { desde: toISO(start), hasta: toISO(end) };
 }
 
+function tomorrowISO() {
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  base.setDate(base.getDate() + 1);
+  const tzOffset = base.getTimezoneOffset() * 60000;
+  return new Date(base.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
 function formatCurrency(value) {
   const num = Math.round(Number(value || 0));
   return `$${num.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
@@ -128,13 +136,14 @@ export default function VentasHistorial() {
   const [expandedVentaId, setExpandedVentaId] = useState(null);
   const [detalleByVentaId, setDetalleByVentaId] = useState({});
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
-  const [exportPeriodo, setExportPeriodo] = useState('dia');
   const [exportingEntregas, setExportingEntregas] = useState(false);
   const [modalExportOpen, setModalExportOpen] = useState(false);
   const [modalTicketsOpen, setModalTicketsOpen] = useState(false);
   const [printingBatch, setPrintingBatch] = useState(false);
   const [ticketsDesde, setTicketsDesde] = useState(todayISO());
   const [ticketsHasta, setTicketsHasta] = useState(todayISO());
+  const [entregasDesde, setEntregasDesde] = useState(todayISO());
+  const [entregasHasta, setEntregasHasta] = useState(todayISO());
 
   const replicarVenta = async (ventaId) => {
     setPrintingId(ventaId);
@@ -435,12 +444,19 @@ export default function VentasHistorial() {
   const exportarEntregasPDF = async () => {
     setExportingEntregas(true);
     try {
-      const resumen = await api.getEntregasResumen(exportPeriodo, fecha);
+      if (!entregasDesde || !entregasHasta) {
+        await appAlert('Debes seleccionar "Desde" y "Hasta" para generar entregas.');
+        return;
+      }
+      if (entregasDesde > entregasHasta) {
+        await appAlert('La fecha "Desde" no puede ser mayor que "Hasta".');
+        return;
+      }
+      const resumen = await api.getEntregasResumen({ desde: entregasDesde, hasta: entregasHasta });
       const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
       let cursorY = 12;
-      const periodoLabel = exportPeriodo === 'dia' ? 'Día' : exportPeriodo === 'semana' ? 'Semana' : 'Mes';
-      const periodoSlug = exportPeriodo === 'dia' ? 'dia' : exportPeriodo === 'semana' ? 'semana' : 'mes';
+      const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
 
       try {
         const logo = await loadImage('/images/encabezadofacturacion.png');
@@ -457,39 +473,44 @@ export default function VentasHistorial() {
       doc.text('Planilla de entregas', pageWidth / 2, cursorY, { align: 'center' });
       cursorY += 6;
       doc.setFontSize(10);
-      doc.text(`Período: ${periodoLabel} (${resumen.desde} al ${resumen.hasta})`, 14, cursorY);
+      doc.text(`Período: ${periodoLabel}`, 14, cursorY);
       cursorY += 5;
       doc.text(`Ventas pendientes: ${Number(resumen.totalVentas || 0).toLocaleString('es-UY')}`, 14, cursorY);
       doc.text(`Monto total: ${formatCurrency(resumen.totalMonto || 0)}`, 120, cursorY);
       cursorY += 7;
 
+      const entregaHead = [['VENTA', 'CLIENTE', 'TELEFONO', 'DIRECCION', 'FECHA ENTREGA', 'TOTAL', 'HORARIOS', 'DETALLE']];
+      const entregaBody = (resumen.ventas || []).map((v) => [
+        v.id,
+        v.cliente_nombre || 'Consumidor final',
+        v.cliente_telefono || '-',
+        v.cliente_direccion || '-',
+        formatDateOnly(v.fecha_entrega),
+        formatCurrency(v.total || 0),
+        [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-',
+        '',
+      ]);
+
       autoTable(doc, {
         startY: cursorY,
-        head: [['# Venta', 'Fecha entrega', 'Cliente / contacto', 'Dirección', 'Vendedor', 'Total', 'Productos']],
-        body: (resumen.ventas || []).map((v) => [
-          v.id,
-          formatDateOnly(v.fecha_entrega),
-          `${v.cliente_nombre || 'Consumidor final'}\nTel: ${v.cliente_telefono || '-'}`,
-          v.cliente_direccion || '-',
-          v.usuario_nombre || '-',
-          formatCurrency(v.total || 0),
-          (v.productos ? String(v.productos).split('\n').map((line) => `• ${line}`).join('\n') : '-'),
-        ]),
-        styles: { fontSize: 8, valign: 'top', cellPadding: 2 },
+        head: entregaHead,
+        body: entregaBody,
+        styles: { fontSize: 8, valign: 'middle', cellPadding: 2 },
         headStyles: { fillColor: [55, 95, 140] },
         columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 52 },
-          3: { cellWidth: 65 },
-          4: { cellWidth: 42 },
-          5: { cellWidth: 24, halign: 'right' },
-          6: { cellWidth: 'auto' },
+          0: { cellWidth: 18 },
+          1: { cellWidth: 36 },
+          2: { cellWidth: 24 },
+          3: { cellWidth: 56 },
+          4: { cellWidth: 24 },
+          5: { cellWidth: 22, halign: 'right' },
+          6: { cellWidth: 30 },
+          7: { cellWidth: 'auto' },
         },
       });
 
       const suffix = `${resumen.desde || 'desde'}_${resumen.hasta || 'hasta'}`;
-      doc.save(`entregas-${periodoSlug}-${suffix}.pdf`);
+      doc.save(`entregas-${suffix}.pdf`);
     } catch (err) {
       await appAlert(err.message || 'No se pudo exportar el PDF de entregas.');
     } finally {
@@ -497,14 +518,22 @@ export default function VentasHistorial() {
     }
   };
 
-  const construirResumenEntregas = async () => api.getEntregasResumen(exportPeriodo, fecha);
+  const construirResumenEntregas = async () => {
+    if (!entregasDesde || !entregasHasta) {
+      throw new Error('Debes seleccionar "Desde" y "Hasta" para generar entregas.');
+    }
+    if (entregasDesde > entregasHasta) {
+      throw new Error('La fecha "Desde" no puede ser mayor que "Hasta".');
+    }
+    return api.getEntregasResumen({ desde: entregasDesde, hasta: entregasHasta });
+  };
 
   const exportarEntregasExcel = async () => {
     setExportingEntregas(true);
     try {
       const resumen = await construirResumenEntregas();
 
-      const periodoLabel = exportPeriodo === 'dia' ? 'Día' : exportPeriodo === 'semana' ? 'Semana' : 'Mes';
+      const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
       const rowsHtml = (resumen.ventas || [])
         .map((v, idx) => {
           const horarios = [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-';
@@ -513,6 +542,7 @@ export default function VentasHistorial() {
             <tr style="background:${zebra}">
               <td class="td center">${escapeHtml(v.id)}</td>
               <td class="td">${escapeHtml(v.cliente_nombre || 'Consumidor final')}</td>
+              <td class="td center">${escapeHtml(v.cliente_telefono || '-')}</td>
               <td class="td">${escapeHtml(v.cliente_direccion || '-')}</td>
               <td class="td center">${escapeHtml(formatDateOnly(v.fecha_entrega))}</td>
               <td class="td right">${escapeHtml(formatCurrency(v.total || 0))}</td>
@@ -544,14 +574,15 @@ export default function VentasHistorial() {
           </head>
           <body>
             <div class="title">Planilla de entregas</div>
-            <div class="meta">Período: ${escapeHtml(periodoLabel)} (${escapeHtml(resumen.desde)} al ${escapeHtml(resumen.hasta)})</div>
+            <div class="meta">Período: ${escapeHtml(periodoLabel)}</div>
             <div class="meta">Ventas pendientes: ${escapeHtml(Number(resumen.totalVentas || 0))} &nbsp;&nbsp;|&nbsp;&nbsp; Monto total: ${escapeHtml(formatCurrency(resumen.totalMonto || 0))}</div>
             <table>
               <colgroup>
-                <col style="width:8%">
+                <col style="width:7%">
                 <col class="client-col">
-                <col class="addr-col">
                 <col style="width:12%">
+                <col class="addr-col">
+                <col style="width:11%">
                 <col style="width:10%">
                 <col style="width:12%">
                 <col class="detail-col">
@@ -560,6 +591,7 @@ export default function VentasHistorial() {
                 <tr>
                   <th class="th">VENTA</th>
                   <th class="th">CLIENTE</th>
+                  <th class="th">TELEFONO</th>
                   <th class="th">DIRECCION</th>
                   <th class="th">FECHA ENTREGA</th>
                   <th class="th">TOTAL</th>
@@ -569,9 +601,9 @@ export default function VentasHistorial() {
               </thead>
               <tbody>
                 ${rowsHtml}
-                <tr><td colspan="7" style="border:none;height:8px"></td></tr>
+                <tr><td colspan="8" style="border:none;height:8px"></td></tr>
                 <tr class="total-row">
-                  <td colspan="4">TOTAL A RECAUDAR</td>
+                  <td colspan="5">TOTAL A RECAUDAR</td>
                   <td class="right">${escapeHtml(formatCurrency(resumen.totalMonto || 0))}</td>
                   <td colspan="2"></td>
                 </tr>
@@ -583,11 +615,10 @@ export default function VentasHistorial() {
 
       const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const periodoSlug = exportPeriodo === 'dia' ? 'dia' : exportPeriodo === 'semana' ? 'semana' : 'mes';
       const suffix = `${resumen.desde || 'desde'}_${resumen.hasta || 'hasta'}`;
       const a = document.createElement('a');
       a.href = url;
-      a.download = `entregas-${periodoSlug}-${suffix}.xls`;
+      a.download = `entregas-${suffix}.xls`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -606,30 +637,65 @@ export default function VentasHistorial() {
       const resumen = await construirResumenEntregas();
       const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
       doc.setFontSize(14);
       doc.text('Planilla de entregas', pageWidth / 2, 14, { align: 'center' });
       doc.setFontSize(10);
-      doc.text(`Período: ${resumen.desde} al ${resumen.hasta}`, 14, 22);
+      doc.text(`Período: ${periodoLabel}`, 14, 22);
+      const entregaHead = [['VENTA', 'CLIENTE', 'TELEFONO', 'DIRECCION', 'FECHA ENTREGA', 'TOTAL', 'HORARIOS', 'DETALLE']];
+      const entregaBody = (resumen.ventas || []).map((v) => [
+        v.id,
+        v.cliente_nombre || 'Consumidor final',
+        v.cliente_telefono || '-',
+        v.cliente_direccion || '-',
+        formatDateOnly(v.fecha_entrega),
+        formatCurrency(v.total || 0),
+        [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-',
+        '',
+      ]);
       autoTable(doc, {
         startY: 28,
-        head: [['VENTA', 'CLIENTE', 'DIRECCION', 'FECHA ENTREGA', 'TOTAL', 'HORARIOS', 'DETALLE']],
-        body: (resumen.ventas || []).map((v) => [
-          v.id,
-          v.cliente_nombre || 'Consumidor final',
-          v.cliente_direccion || '-',
-          formatDateOnly(v.fecha_entrega),
-          formatCurrency(v.total || 0),
-          [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-',
-          '',
-        ]),
+        head: entregaHead,
+        body: entregaBody,
         styles: { fontSize: 8, valign: 'middle' },
         headStyles: { fillColor: [55, 95, 140] },
+        columnStyles: {
+          0: { cellWidth: 18 },
+          1: { cellWidth: 36 },
+          2: { cellWidth: 24 },
+          3: { cellWidth: 56 },
+          4: { cellWidth: 24 },
+          5: { cellWidth: 22, halign: 'right' },
+          6: { cellWidth: 30 },
+          7: { cellWidth: 'auto' },
+        },
       });
       const y = (doc.lastAutoTable?.finalY || 28) + 8;
       doc.setFontSize(11);
       doc.text(`TOTAL A RECAUDAR: ${formatCurrency(resumen.totalMonto || 0)}`, 14, y);
-      const blobUrl = doc.output('bloburl');
-      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = blobUrl;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        }
+      };
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 7000);
       setModalExportOpen(false);
     } catch (err) {
       await appAlert(err.message || 'No se pudo preparar impresión de entregas.');
@@ -664,8 +730,29 @@ export default function VentasHistorial() {
         if (mode === 'pdf') {
           doc.save(`ticket-venta-${venta.id}.pdf`);
         } else {
-          const blobUrl = doc.output('bloburl');
-          window.open(blobUrl, '_blank', 'noopener,noreferrer');
+          const pdfBlob = doc.output('blob');
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          const iframe = document.createElement('iframe');
+          iframe.style.position = 'fixed';
+          iframe.style.right = '0';
+          iframe.style.bottom = '0';
+          iframe.style.width = '0';
+          iframe.style.height = '0';
+          iframe.style.border = '0';
+          iframe.src = blobUrl;
+          iframe.onload = () => {
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch {
+              window.open(blobUrl, '_blank', 'noopener,noreferrer');
+            }
+          };
+          document.body.appendChild(iframe);
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          }, 7000);
         }
         await delay(350);
       }
@@ -705,20 +792,17 @@ export default function VentasHistorial() {
             disabled={printingBatch || loading}
           >
             <AiFillPrinter />
-            {printingBatch ? 'Procesando tickets...' : 'Tickets por lote'}
+            {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega'}
           </button>
-          <label className="ventas-fecha-filter">
-            <span>PDF entregas</span>
-            <select value={exportPeriodo} onChange={(e) => setExportPeriodo(e.target.value)} disabled={exportingEntregas}>
-              <option value="dia">Para hoy</option>
-              <option value="semana">Para esta semana</option>
-              <option value="mes">Para este mes</option>
-            </select>
-          </label>
           <button
             type="button"
             className="ventas-export-btn"
-            onClick={() => setModalExportOpen(true)}
+            onClick={() => {
+              const t = todayISO();
+              setEntregasDesde(t);
+              setEntregasHasta(t);
+              setModalExportOpen(true);
+            }}
             disabled={exportingEntregas}
           >
             {exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}
@@ -730,8 +814,11 @@ export default function VentasHistorial() {
         <div className="export-modal-overlay" role="dialog" aria-modal="true">
           <div className="export-modal-backdrop" onClick={() => !printingBatch && setModalTicketsOpen(false)} />
           <div className="export-modal">
-            <h4>Tickets de ventas (cola)</h4>
-            <p>Procesa una cola de tickets de ventas activas (no canceladas), uno por uno.</p>
+            <h4>Tickets para entrega</h4>
+            <p>
+              Se imprimirán o descargarán los tickets activos del rango seleccionado, uno por uno.
+              Para cada día de entrega, se respeta el orden en que se creó la venta (más antigua primero).
+            </p>
             <div className="tickets-presets-row">
               <button
                 type="button"
@@ -749,13 +836,25 @@ export default function VentasHistorial() {
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
+                  const t = tomorrowISO();
+                  setTicketsDesde(t);
+                  setTicketsHasta(t);
+                }}
+                disabled={printingBatch}
+              >
+                Mañana
+              </button>
+              <button
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
                   const r = weekRangeISO();
                   setTicketsDesde(r.desde);
                   setTicketsHasta(r.hasta);
                 }}
                 disabled={printingBatch}
               >
-                Semana
+                Esta semana
               </button>
               <button
                 type="button"
@@ -767,7 +866,7 @@ export default function VentasHistorial() {
                 }}
                 disabled={printingBatch}
               >
-                Mes
+                Este mes
               </button>
             </div>
             <div className="tickets-range-row">
@@ -806,8 +905,68 @@ export default function VentasHistorial() {
         <div className="export-modal-overlay" role="dialog" aria-modal="true">
           <div className="export-modal-backdrop" onClick={() => !exportingEntregas && setModalExportOpen(false)} />
           <div className="export-modal">
-            <h4>Exportar planilla de entregas</h4>
-            <p>Elige un formato:</p>
+            <h4>Planilla de entregas</h4>
+            <p>Elige rango y formato.</p>
+            <div className="tickets-presets-row">
+              <button
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const t = todayISO();
+                  setEntregasDesde(t);
+                  setEntregasHasta(t);
+                }}
+                disabled={exportingEntregas}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const t = tomorrowISO();
+                  setEntregasDesde(t);
+                  setEntregasHasta(t);
+                }}
+                disabled={exportingEntregas}
+              >
+                Mañana
+              </button>
+              <button
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const r = weekRangeISO();
+                  setEntregasDesde(r.desde);
+                  setEntregasHasta(r.hasta);
+                }}
+                disabled={exportingEntregas}
+              >
+                Esta semana
+              </button>
+              <button
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const r = monthRangeISO();
+                  setEntregasDesde(r.desde);
+                  setEntregasHasta(r.hasta);
+                }}
+                disabled={exportingEntregas}
+              >
+                Este mes
+              </button>
+            </div>
+            <div className="tickets-range-row">
+              <label className="ventas-fecha-filter">
+                <span>Desde</span>
+                <input type="date" value={entregasDesde} onChange={(e) => setEntregasDesde(e.target.value)} />
+              </label>
+              <label className="ventas-fecha-filter">
+                <span>Hasta</span>
+                <input type="date" value={entregasHasta} onChange={(e) => setEntregasHasta(e.target.value)} />
+              </label>
+            </div>
             <div className="export-modal-actions">
               <button type="button" onClick={exportarEntregasPDF} disabled={exportingEntregas}>
                 <PiFilePdfBold />

@@ -205,6 +205,10 @@
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   font-size: 0.8rem;
+  background: #fff;
+  color: #1f2933;
+  color-scheme: light;
+  cursor: text;
 }
 
 .stats-user-select {
