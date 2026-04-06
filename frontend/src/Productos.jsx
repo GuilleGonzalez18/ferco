@@ -67,6 +67,7 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const mostrarOpcionesCatalogo = false;
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const [nuevo, setNuevo] = useState({
     nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
@@ -737,21 +738,25 @@ export default function Productos({ user, productos = [], setProductos }) {
                   <span>Impresora</span>
                 </button>
               </div>
-              <p className="export-modal-section-title">Imprimir como catálogo</p>
-              <div className="export-modal-actions">
-                <button type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
-                  <PiFilePdfBold />
-                  <span>Catálogo PDF</span>
-                </button>
-                <button type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
-                  <AiFillPrinter />
-                  <span>Catálogo Impresora</span>
-                </button>
-                <button type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
-                  <img src="/whatsapp.svg" alt="" aria-hidden="true" />
-                  <span>Compartir por WhatsApp</span>
-                </button>
-              </div>
+              {mostrarOpcionesCatalogo && (
+                <>
+                  <p className="export-modal-section-title">Imprimir como catálogo</p>
+                  <div className="export-modal-actions">
+                    <button type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
+                      <PiFilePdfBold />
+                      <span>Catálogo PDF</span>
+                    </button>
+                    <button type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
+                      <AiFillPrinter />
+                      <span>Catálogo Impresora</span>
+                    </button>
+                    <button type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
+                      <img src="/whatsapp.svg" alt="" aria-hidden="true" />
+                      <span>Compartir por WhatsApp</span>
+                    </button>
+                  </div>
+                </>
+              )}
               <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
                 Cerrar
               </button>
