@@ -10,6 +10,7 @@ import ControlStock from './ControlStock';
 import './Dashboard.css';
 import { api } from './api';
 import { CgArrowsExchange } from 'react-icons/cg';
+import { FiShoppingCart } from 'react-icons/fi';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
@@ -48,6 +49,7 @@ function MiUsuarioView({ user }) {
 
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
@@ -60,6 +62,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const handleNavigate = (seccion) => {
     onNavigate(seccion);
     setMenuMovilAbierto(false);
+    setVentasCarritoAbierto(false);
   };
 
   const handleLogout = () => {
@@ -77,6 +80,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     window.addEventListener('ferco:navigate', onNavigateEvent);
     return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
   }, [onNavigate]);
+
+  useEffect(() => {
+    if (pantalla !== 'nueva-venta') {
+      setVentasCarritoAbierto(false);
+    }
+  }, [pantalla]);
 
   useEffect(() => {
     const loadResumen = async () => {
@@ -123,7 +132,16 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
   const renderContent = () => {
     switch (pantalla) {
-      case 'nueva-venta':  return <Ventas user={user} productos={productos} setProductos={setProductos} />;
+      case 'nueva-venta':
+        return (
+          <Ventas
+            user={user}
+            productos={productos}
+            setProductos={setProductos}
+            carritoDrawerOpen={ventasCarritoAbierto}
+            onCloseCarritoDrawer={() => setVentasCarritoAbierto(false)}
+          />
+        );
       case 'ventas':       return <VentasHistorial />;
       case 'productos':    return <Productos user={user} productos={productos} setProductos={setProductos} />;
       case 'clientes':     return <Clientes />;
@@ -193,7 +211,23 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
       <main className="dashboard-content">
         <div className="dashboard-topbar">
-          <span className="dashboard-topbar-title">{tituloActual}</span>
+          <div className="dashboard-topbar-content">
+            <span className="dashboard-topbar-title">{tituloActual}</span>
+            <div className="dashboard-topbar-actions">
+              {pantalla === 'nueva-venta' && (
+                <button
+                  type="button"
+                  className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''}`}
+                  onClick={() => setVentasCarritoAbierto((prev) => !prev)}
+                  aria-label={ventasCarritoAbierto ? 'Cerrar carrito' : 'Abrir carrito'}
+                  aria-expanded={ventasCarritoAbierto}
+                >
+                  <FiShoppingCart aria-hidden="true" />
+                  <span>Carrito</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
         <div className={`dashboard-body ${resumen && esPantallaDashboard ? 'with-kpis' : ''}`}>
           {resumen && esPantallaDashboard && (

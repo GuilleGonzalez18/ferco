@@ -66,7 +66,13 @@ function formatMedioPago(value) {
   return 'Efectivo';
 }
 
-export default function Ventas({ user, productos = [], setProductos }) {
+export default function Ventas({
+  user,
+  productos = [],
+  setProductos,
+  carritoDrawerOpen = false,
+  onCloseCarritoDrawer,
+}) {
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [vistaProductos, setVistaProductos] = useState('grid');
@@ -669,6 +675,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
     resetVenta();
   };
 
+  const closeCarritoDrawer = () => {
+    if (typeof onCloseCarritoDrawer === 'function') {
+      onCloseCarritoDrawer();
+    }
+  };
+
   const cerrarVentaFinalDesdeBackdrop = () => {
     if (!ventaFinalizada) return;
     if (!ticketImpreso) {
@@ -766,6 +778,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   return (
     <div className="ventas-main">
+      <div
+        className={`ventas-carrito-overlay ${carritoDrawerOpen ? 'open' : ''}`}
+        onClick={closeCarritoDrawer}
+        aria-hidden={!carritoDrawerOpen}
+      />
       <div className="ventas-layout">
         <section className="ventas-contenido">
           <div className="ventas-steps">
@@ -989,7 +1006,18 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
         </section>
 
-        <aside className="ventas-carrito">
+        <aside className={`ventas-carrito ${carritoDrawerOpen ? 'mobile-open' : ''}`}>
+          <div className="ventas-carrito-mobile-head">
+            <h3>Carrito</h3>
+            <button
+              type="button"
+              className="ventas-carrito-close"
+              onClick={closeCarritoDrawer}
+              aria-label="Cerrar carrito"
+            >
+              ✕
+            </button>
+          </div>
           <div className="cliente-cabecera">
             <button
               type="button"
@@ -1016,7 +1044,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
             </label>
           </div>
 
-          <h3>Carrito</h3>
+          <h3 className="ventas-carrito-title">Carrito</h3>
           {carritoCalculado.length === 0 && <p className="muted">Aún no agregaste productos.</p>}
           <div className="carrito-list">
             {carritoCalculado.map((item) => (
