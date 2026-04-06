@@ -21,6 +21,15 @@ const statements = [
   CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON public.usuarios (correo);
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.departamentos (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS departamentos_nombre_key ON public.departamentos (nombre);
+  `,
+  `
   CREATE TABLE IF NOT EXISTS public.clientes (
     id serial PRIMARY KEY,
     nombre varchar(180) NOT NULL,
@@ -38,6 +47,29 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_clientes_nombre ON public.clientes (nombre);
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.barrios (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL,
+    departamento_id integer NULL
+  );
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'barrios'
+        AND constraint_name = 'barrios_departamento_id_fkey'
+    ) THEN
+      ALTER TABLE public.barrios
+      ADD CONSTRAINT barrios_departamento_id_fkey
+      FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id) ON DELETE CASCADE;
+    END IF;
+  END $$;
+  `,
+  `
   CREATE TABLE IF NOT EXISTS public.productos (
     id serial PRIMARY KEY,
     nombre varchar(180) NOT NULL,
@@ -49,11 +81,31 @@ const statements = [
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
     empaque varchar(80) NULL,
-    precio_empaque numeric(12,2) NOT NULL DEFAULT 0
+    precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
+    empaque_id integer NULL
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_productos_nombre ON public.productos (nombre);
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.empaques (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL,
+    activo boolean NOT NULL DEFAULT true,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS empaques_nombre_key ON public.empaques (nombre);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_empaques_nombre ON public.empaques (nombre);
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS productos_ean_unique
+    ON public.productos (ean)
+    WHERE ean IS NOT NULL;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.ventas (
@@ -119,6 +171,50 @@ const statements = [
       ALTER TABLE public.ventas
       ADD CONSTRAINT ventas_usuario_id_fkey
       FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id);
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'clientes'
+        AND constraint_name = 'clientes_departamento_id_fkey'
+    ) THEN
+      ALTER TABLE public.clientes
+      ADD CONSTRAINT clientes_departamento_id_fkey
+      FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id) ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'clientes'
+        AND constraint_name = 'clientes_barrio_id_fkey'
+    ) THEN
+      ALTER TABLE public.clientes
+      ADD CONSTRAINT clientes_barrio_id_fkey
+      FOREIGN KEY (barrio_id) REFERENCES public.barrios(id) ON DELETE SET NULL;
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'productos'
+        AND constraint_name = 'productos_empaque_id_fkey'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_empaque_id_fkey
+      FOREIGN KEY (empaque_id) REFERENCES public.empaques(id);
     END IF;
   END $$;
   `,

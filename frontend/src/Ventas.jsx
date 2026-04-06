@@ -548,11 +548,11 @@ export default function Ventas({
 
     try {
       const logo = await loadImage('/images/encabezadofacturacion.png');
-      const logoWidth = 120;
-      const logoHeight = 24;
+      const logoWidth = 64;
+      const logoHeight = 12;
       const x = (pageWidth - logoWidth) / 2;
       doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-      cursorY += logoHeight + 6;
+      cursorY += logoHeight + 4;
     } catch {
       cursorY += 2;
     }
@@ -561,23 +561,21 @@ export default function Ventas({
     doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
     cursorY += 6;
 
-    doc.setFontSize(10);
-    doc.text(`Venta: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, 14, cursorY);
-    doc.text(`Fecha: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, 120, cursorY);
-    cursorY += 5;
-    doc.text(`Cliente: ${ventaFinalizada.clienteNombre}`, 14, cursorY);
-    cursorY += 5;
-    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre}`, 14, cursorY);
-    cursorY += 5;
-    doc.text(`Entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, 14, cursorY);
+    const leftX = 14;
+    const rightX = pageWidth / 2 + 4;
+    const lineH = 4.8;
+    doc.setFontSize(9.5);
+    doc.text(`Fecha Emisión: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, leftX, cursorY);
+    doc.text(`Cliente: ${ventaFinalizada.clienteNombre || '-'}`, rightX, cursorY);
+    cursorY += lineH;
+    doc.text(`Número de ticket: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, leftX, cursorY);
+    doc.text(`Número de teléfono: ${ventaFinalizada.clienteTelefono || '-'}`, rightX, cursorY);
+    cursorY += lineH;
+    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
+    doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
+    cursorY += lineH;
+    doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
     cursorY += 6;
-    doc.text(`Medio(s) de pago:`, 14, cursorY);
-    cursorY += 5;
-    (ventaFinalizada.pagos || []).forEach((pago) => {
-      doc.text(`- ${formatMedioPago(pago.medio_pago)}: ${money(pago.monto)}`, 18, cursorY);
-      cursorY += 4;
-    });
-    cursorY += 2;
 
     autoTable(doc, {
       startY: cursorY,
@@ -595,15 +593,30 @@ export default function Ventas({
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
+    const totalsRightX = pageWidth - 14;
+    const pagosLabelX = pageWidth - 52;
+    const pagosValueX = pageWidth - 14;
+    let totalsY = finalY + 8;
     doc.setFontSize(10);
-    doc.text(`Subtotal: ${money(ventaFinalizada.subtotal)}`, 14, finalY + 8);
-    doc.text(`Descuento total: -${money(ventaFinalizada.descuentoGlobal)}`, 14, finalY + 14);
+    doc.text(`Subtotal: ${money(ventaFinalizada.subtotal)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 5;
+    doc.text(`Descuentos: -${money(ventaFinalizada.descuentoGlobal)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 5;
     doc.setFontSize(12);
-    doc.text(`TOTAL: ${money(ventaFinalizada.total)}`, 14, finalY + 22);
+    doc.text(`Total: ${money(ventaFinalizada.total)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 6;
+    doc.setFontSize(10);
+    doc.text('Pagos:', totalsRightX, totalsY, { align: 'right' });
+    totalsY += 4;
+    (ventaFinalizada.pagos || []).forEach((pago) => {
+      doc.text(`- ${formatMedioPago(pago.medio_pago)}:`, pagosLabelX, totalsY, { align: 'right' });
+      doc.text(`${money(pago.monto)}`, pagosValueX, totalsY, { align: 'right' });
+      totalsY += 4;
+    });
 
     if (ventaFinalizada.observacion) {
       doc.setFontSize(9);
-      doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, finalY + 30);
+      doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, totalsY + 2);
     }
 
     const fileName = `ticket-venta-${ventaFinalizada.id || Date.now()}.pdf`;
@@ -636,6 +649,13 @@ export default function Ventas({
       URL.revokeObjectURL(blobUrl);
       if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
     }, 7000);
+    setTicketImpreso(true);
+  };
+
+  const descargarTicketPdf = async () => {
+    const data = await buildTicketPdf();
+    if (!data) return;
+    data.doc.save(data.fileName);
     setTicketImpreso(true);
   };
 
@@ -1354,6 +1374,10 @@ export default function Ventas({
             <button type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
               <img src="/whatsapp.svg" alt="" aria-hidden="true" />
               Enviar por WhatsApp
+            </button>
+            <button type="button" onClick={descargarTicketPdf}>
+              <img src="/pdf.svg" alt="" aria-hidden="true" />
+              PDF
             </button>
             <button type="button" onClick={imprimirTicket}>
               <img src="/print.svg" alt="" aria-hidden="true" />
