@@ -65,10 +65,10 @@ function App() {
   }
 
   return (
-    <>
+    <div className="app-shell">
       <AppDialogHost />
       {productosError ? (
-        <div style={{ margin: '0.7rem 1rem', padding: '0.55rem 0.7rem', border: '1px solid #f4c7c3', background: '#fff5f4', color: '#b42318', borderRadius: '8px', fontSize: '0.82rem' }}>
+        <div className="app-global-alert app-global-alert-error" role="alert">
           {productosError}
         </div>
       ) : null}
@@ -84,7 +84,7 @@ function App() {
           setPantalla('');
         }}
       />
-    </>
+    </div>
   );
 }
 
