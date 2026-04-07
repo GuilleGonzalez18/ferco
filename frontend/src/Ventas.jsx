@@ -938,14 +938,14 @@ export default function Ventas({
         aria-hidden={!carritoDrawerOpen}
       />
       <div className="ventas-layout">
-        <section className={`ventas-contenido ${paso === 1 ? 'paso-productos' : ''}`}>
+        <section className={`ventas-contenido ${paso === 1 ? 'paso-productos' : paso === 2 ? 'paso-preventa' : ''}`}>
 
           {paso === 1 && (
             <div className="ventas-panel ventas-panel-catalogo">
               <div className="catalogo-head">
-                {pasosHeader}
+                {/* {pasosHeader} */}
                 <div className="catalogo-top">
-                  <h3>Seleccionar productos</h3>
+                  <h3>Buscar</h3>
                   <input
                     type="text"
                     placeholder="Buscar por nombre o código..."
@@ -974,10 +974,11 @@ export default function Ventas({
           )}
 
           {paso === 2 && (
-            <>
-              {pasosHeader}
-              <div className="ventas-panel">
+            <div className="ventas-panel ventas-panel-preventa">
+              <div className="preventa-head">
                 <h3>Pago y preventa</h3>
+              </div>
+              <div className="preventa-scroll">
                 <div className="form-entrega">
                   <div className="pagos-box full">
                     <span className="pagos-label">Selecciona uno o más medios de pago</span>
@@ -1075,7 +1076,7 @@ export default function Ventas({
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
         </section>
