@@ -3,9 +3,9 @@ import { query } from '../db.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
 import { getAuthUserFromRequest } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import { sendMail } from '../mailer.js';
 
 export const usuariosRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
@@ -37,21 +37,6 @@ async function comparePassword(plainText, hashed) {
   } catch {
     return false;
   }
-}
-
-function getMailTransport() {
-  const host = process.env.SMTP_HOST || '';
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  const secure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
-  if (!host || !user || !pass) return null;
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
 }
 
 usuariosRouter.get('/', async (req, res) => {
@@ -320,17 +305,17 @@ usuariosRouter.post('/forgot-password', async (req, res) => {
     [userId, tokenHash, expireAt.toISOString()]
   );
 
-  const transporter = getMailTransport();
-  if (!transporter) {
-    return res.json({ ok: true });
-  }
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || '';
-  await transporter.sendMail({
-    from,
-    to: correo,
-    subject: 'Recuperar contraseña - Ferco',
-    text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
-  });
+  try {
+    await sendMail({
+      from,
+      to: correo,
+      subject: 'Recuperar contraseña - Ferco',
+      text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
+    });
+  } catch (error) {
+    return res.status(502).json({ error: 'No se pudo enviar el correo en este momento. Intenta nuevamente.' });
+  }
 
   return res.json({ ok: true });
 });

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
-import nodemailer from 'nodemailer';
+import { sendMail } from '../mailer.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -1192,13 +1192,13 @@ ventasRouter.post('/:id/enviar-email', async (req, res) => {
     return res.status(400).json({ error: 'Id de venta inválido' });
   }
 
-  const smtpHost = process.env.SMTP_HOST || '';
-  const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER || '';
-  const smtpPass = process.env.SMTP_PASS || '';
-  const mailFrom = process.env.SMTP_FROM || smtpUser;
-  if (!smtpHost || !smtpUser || !smtpPass || !mailFrom) {
-    return res.status(500).json({ error: 'SMTP no configurado. Define SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_FROM' });
+  const mailFrom = process.env.SMTP_FROM || process.env.SMTP_USER || '';
+  const hasBrevo = String(process.env.BREVO_API_KEY || '').trim().length > 0;
+  const hasSmtp = String(process.env.SMTP_HOST || '').trim()
+    && String(process.env.SMTP_USER || '').trim()
+    && String(process.env.SMTP_PASS || '').trim();
+  if (!mailFrom || (!hasBrevo && !hasSmtp)) {
+    return res.status(500).json({ error: 'Email no configurado. Define BREVO_API_KEY o SMTP_* y SMTP_FROM' });
   }
 
   if (typeof pdfBase64 !== 'string' || !pdfBase64.trim()) {
@@ -1235,28 +1235,24 @@ ventasRouter.post('/:id/enviar-email', async (req, res) => {
   }
 
   const safeFileName = String(fileName || `ticket-venta-${ventaId}.pdf`).replace(/[^\w.\-]/g, '_');
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    auth: { user: smtpUser, pass: smtpPass },
-  });
 
   const fechaText = venta.fecha ? new Date(venta.fecha).toLocaleString('es-UY') : '-';
-  await transporter.sendMail({
-    from: mailFrom,
-    to,
-    subject: `Factura de venta #${ventaId}`,
-    text: `Hola ${venta.cliente_nombre || 'cliente'},\n\nTe compartimos la factura de tu compra #${ventaId}.\nFecha: ${fechaText}\nTotal: $${roundMoney(venta.total).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nSaludos.`,
-    attachments: [
-      {
-        filename: safeFileName,
-        content: pdfContentBase64,
-        encoding: 'base64',
-        contentType: 'application/pdf',
-      },
-    ],
-  });
+  try {
+    await sendMail({
+      from: mailFrom,
+      to,
+      subject: `Factura de venta #${ventaId}`,
+      text: `Hola ${venta.cliente_nombre || 'cliente'},\n\nTe compartimos la factura de tu compra #${ventaId}.\nFecha: ${fechaText}\nTotal: $${roundMoney(venta.total).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nSaludos.`,
+      attachments: [
+        {
+          filename: safeFileName,
+          content: pdfContentBase64,
+        },
+      ],
+    });
+  } catch (_error) {
+    return res.status(502).json({ error: 'No se pudo enviar el correo en este momento. Revisa la configuración SMTP.' });
+  }
 
   await pool.query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
