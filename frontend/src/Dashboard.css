@@ -196,6 +196,15 @@
   background: #a62828;
 }
 
+.dashboard-version-label {
+  margin: -0.35rem 1rem 0.9rem;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: center;
+  display: block;
+}
+
 /* ── Main content ── */
 .dashboard-content {
   display: flex;
