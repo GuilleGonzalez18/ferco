@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
+import { sendDbError } from '../dbErrors.js';
 
 export const empaquesRouter = Router();
 
@@ -51,10 +52,7 @@ empaquesRouter.post('/', async (req, res) => {
 
     return res.status(201).json(result.rows[0]);
   } catch (error) {
-    if (error.code === '23505') {
-      return res.status(409).json({ error: 'Ya existe un empaque con ese nombre' });
-    }
-    return res.status(400).json({ error: error.message });
+    return sendDbError(res, error, 'No se pudo crear el empaque');
   }
 });
 
@@ -98,10 +96,7 @@ empaquesRouter.put('/:id', async (req, res) => {
 
     return res.json(result.rows[0]);
   } catch (error) {
-    if (error.code === '23505') {
-      return res.status(409).json({ error: 'Ya existe un empaque con ese nombre' });
-    }
-    return res.status(400).json({ error: error.message });
+    return sendDbError(res, error, 'No se pudo actualizar el empaque');
   }
 });
 

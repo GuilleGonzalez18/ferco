@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
+import { sendDbError } from '../dbErrors.js';
 
 export const productosRouter = Router();
 
@@ -11,6 +12,20 @@ function toMoneyInt(value) {
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
+}
+
+async function getProductoRowById(id) {
+  const result = await query(
+    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id,
+            e.nombre AS empaque_nombre,
+            ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
+     FROM public.productos p
+     LEFT JOIN public.empaques e ON e.id = p.empaque_id
+     WHERE p.id = $1`,
+    [id]
+  );
+  return result.rows[0] || null;
 }
 
 productosRouter.get('/', async (_req, res) => {
@@ -60,45 +75,50 @@ productosRouter.post('/', async (req, res) => {
     }
   }
 
-  const result = await query(
-    `INSERT INTO public.productos
-      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-     RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt]
-  );
-  await query(
-    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [
-      'producto',
-      result.rows[0].id,
-      'crear',
-      `Producto creado: ${result.rows[0].nombre}`,
-      authUser?.id || null,
-      actorName(authUser),
-    ]
-  );
-  await query(
-    `INSERT INTO public.movimientos_stock
-      (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-    [
-      result.rows[0].id,
-      result.rows[0].nombre,
-      'entrada',
-      'creacion_producto',
-      Number(result.rows[0].stock || 0),
-      0,
-      Number(result.rows[0].stock || 0),
-      'producto',
-      result.rows[0].id,
-      'Stock inicial al crear producto',
-      authUser?.id || null,
-      actorName(authUser),
-    ]
-  );
-  res.status(201).json(result.rows[0]);
+  try {
+    const result = await query(
+      `INSERT INTO public.productos
+        (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt]
+    );
+    await query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'producto',
+        result.rows[0].id,
+        'crear',
+        `Producto creado: ${result.rows[0].nombre}`,
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    await query(
+      `INSERT INTO public.movimientos_stock
+        (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [
+        result.rows[0].id,
+        result.rows[0].nombre,
+        'entrada',
+        'creacion_producto',
+        Number(result.rows[0].stock || 0),
+        0,
+        Number(result.rows[0].stock || 0),
+        'producto',
+        result.rows[0].id,
+        'Stock inicial al crear producto',
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    const createdRow = await getProductoRowById(result.rows[0].id);
+    return res.status(201).json(createdRow || result.rows[0]);
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo crear el producto');
+  }
 });
 
 productosRouter.put('/:id', async (req, res) => {
@@ -139,60 +159,65 @@ productosRouter.put('/:id', async (req, res) => {
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
 
-  const result = await query(
-    `UPDATE public.productos
-     SET nombre = $1,
-         costo = $2,
-         precio = $3,
-         stock = $4,
-         unidad = $5,
-         imagen = $6,
-         ean = $7,
-         cantidad_empaque = $8,
-         empaque_id = $9,
-         precio_empaque = $10
-     WHERE id = $11
-     RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, id]
-  );
-  const actualizado = result.rows[0];
-  const stockAnterior = Number(prev.stock || 0);
-  const stockNuevo = Number(actualizado.stock || 0);
-  const delta = stockNuevo - stockAnterior;
-  await query(
-    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [
-      'producto',
-      id,
-      'editar',
-      `Producto editado: ${actualizado.nombre}`,
-      authUser?.id || null,
-      actorName(authUser),
-    ]
-  );
-  if (delta !== 0) {
+  try {
+    const result = await query(
+      `UPDATE public.productos
+       SET nombre = $1,
+           costo = $2,
+           precio = $3,
+           stock = $4,
+           unidad = $5,
+           imagen = $6,
+           ean = $7,
+           cantidad_empaque = $8,
+           empaque_id = $9,
+           precio_empaque = $10
+       WHERE id = $11
+       RETURNING *`,
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, id]
+    );
+    const actualizado = result.rows[0];
+    const stockAnterior = Number(prev.stock || 0);
+    const stockNuevo = Number(actualizado.stock || 0);
+    const delta = stockNuevo - stockAnterior;
     await query(
-      `INSERT INTO public.movimientos_stock
-        (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
       [
-        actualizado.id,
-        actualizado.nombre,
-        delta > 0 ? 'entrada' : 'salida',
-        'ajuste_manual',
-        Math.abs(delta),
-        stockAnterior,
-        stockNuevo,
         'producto',
-        actualizado.id,
-        'Ajuste manual de stock en edición de producto',
+        id,
+        'editar',
+        `Producto editado: ${actualizado.nombre}`,
         authUser?.id || null,
         actorName(authUser),
       ]
     );
+    if (delta !== 0) {
+      await query(
+        `INSERT INTO public.movimientos_stock
+          (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [
+          actualizado.id,
+          actualizado.nombre,
+          delta > 0 ? 'entrada' : 'salida',
+          'ajuste_manual',
+          Math.abs(delta),
+          stockAnterior,
+          stockNuevo,
+          'producto',
+          actualizado.id,
+          'Ajuste manual de stock en edición de producto',
+          authUser?.id || null,
+          actorName(authUser),
+        ]
+      );
+    }
+    const updatedRow = await getProductoRowById(id);
+    return res.json(updatedRow || result.rows[0]);
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo actualizar el producto');
   }
-  return res.json(result.rows[0]);
 });
 
 productosRouter.delete('/:id', async (req, res) => {

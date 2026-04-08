@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
+import { sendDbError } from '../dbErrors.js';
 
 export const clientesRouter = Router();
 
@@ -105,41 +106,45 @@ clientesRouter.post('/', async (req, res) => {
   });
   if (horarios?.error) return res.status(400).json({ error: horarios.error });
 
-  const result = await query(
-    `INSERT INTO public.clientes
-      (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-     RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
-               tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-               departamento_id, barrio_id`,
-    [
-      nombre,
-      rut,
-      direccion,
-      telefono,
-      correo,
-      horarios.horario_apertura,
-      horarios.horario_cierre,
-      horarios.tiene_reapertura,
-      horarios.horario_reapertura,
-      horarios.horario_cierre_reapertura,
-      departamento_id,
-      barrio_id,
-    ]
-  );
-  await query(
-    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [
-      'cliente',
-      result.rows[0].id,
-      'crear',
-      `Cliente creado: ${result.rows[0].nombre}`,
-      authUser?.id || null,
-      actorName(authUser),
-    ]
-  );
-  res.status(201).json(result.rows[0]);
+  try {
+    const result = await query(
+      `INSERT INTO public.clientes
+        (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
+                 tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
+                 departamento_id, barrio_id`,
+      [
+        nombre,
+        rut,
+        direccion,
+        telefono,
+        correo,
+        horarios.horario_apertura,
+        horarios.horario_cierre,
+        horarios.tiene_reapertura,
+        horarios.horario_reapertura,
+        horarios.horario_cierre_reapertura,
+        departamento_id,
+        barrio_id,
+      ]
+    );
+    await query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'cliente',
+        result.rows[0].id,
+        'crear',
+        `Cliente creado: ${result.rows[0].nombre}`,
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    return res.status(201).json(result.rows[0]);
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo crear el cliente');
+  }
 });
 
 clientesRouter.put('/:id', async (req, res) => {
@@ -168,54 +173,58 @@ clientesRouter.put('/:id', async (req, res) => {
   });
   if (horarios?.error) return res.status(400).json({ error: horarios.error });
 
-  const result = await query(
-    `UPDATE public.clientes
-     SET nombre = $1,
-         rut = $2,
-         direccion = $3,
-         telefono = $4,
-         correo = $5,
-         horario_apertura = $6,
-         horario_cierre = $7,
-         tiene_reapertura = $8,
-         horario_reapertura = $9,
-         horario_cierre_reapertura = $10,
-         departamento_id = $11,
-         barrio_id = $12
-     WHERE id = $13
-     RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
-               tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-               departamento_id, barrio_id`,
-    [
-      nombre,
-      rut,
-      direccion,
-      telefono,
-      correo,
-      horarios.horario_apertura,
-      horarios.horario_cierre,
-      horarios.tiene_reapertura,
-      horarios.horario_reapertura,
-      horarios.horario_cierre_reapertura,
-      departamento_id,
-      barrio_id,
-      id,
-    ]
-  );
-  if (!result.rowCount) return res.status(404).json({ error: 'Cliente no encontrado' });
-  await query(
-    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [
-      'cliente',
-      id,
-      'editar',
-      `Cliente editado: ${result.rows[0].nombre}`,
-      authUser?.id || null,
-      actorName(authUser),
-    ]
-  );
-  return res.json(result.rows[0]);
+  try {
+    const result = await query(
+      `UPDATE public.clientes
+       SET nombre = $1,
+           rut = $2,
+           direccion = $3,
+           telefono = $4,
+           correo = $5,
+           horario_apertura = $6,
+           horario_cierre = $7,
+           tiene_reapertura = $8,
+           horario_reapertura = $9,
+           horario_cierre_reapertura = $10,
+           departamento_id = $11,
+           barrio_id = $12
+       WHERE id = $13
+       RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
+                 tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
+                 departamento_id, barrio_id`,
+      [
+        nombre,
+        rut,
+        direccion,
+        telefono,
+        correo,
+        horarios.horario_apertura,
+        horarios.horario_cierre,
+        horarios.tiene_reapertura,
+        horarios.horario_reapertura,
+        horarios.horario_cierre_reapertura,
+        departamento_id,
+        barrio_id,
+        id,
+      ]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Cliente no encontrado' });
+    await query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'cliente',
+        id,
+        'editar',
+        `Cliente editado: ${result.rows[0].nombre}`,
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    return res.json(result.rows[0]);
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo actualizar el cliente');
+  }
 });
 
 clientesRouter.delete('/:id', async (req, res) => {

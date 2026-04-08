@@ -977,6 +977,15 @@ export default function Ventas({ user, productos = [], setProductos }) {
                   <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
                     Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
                   </div>
+                  <label className="observacion-venta">
+                    <span>Observación</span>
+                    <textarea
+                      value={observacion}
+                      onChange={(e) => setObservacion(e.target.value)}
+                      placeholder="Observación (opcional)"
+                      rows={3}
+                    />
+                  </label>
                 </div>
               </div>
 
