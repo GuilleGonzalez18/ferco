@@ -45,7 +45,12 @@ function App() {
         setProductosError(error.message || 'No se pudieron cargar productos.');
       }
     };
+    const onStockRefresh = () => {
+      loadProductos();
+    };
     loadProductos();
+    window.addEventListener('ferco:stock-refresh', onStockRefresh);
+    return () => window.removeEventListener('ferco:stock-refresh', onStockRefresh);
   }, [authReady]);
 
   useEffect(() => {

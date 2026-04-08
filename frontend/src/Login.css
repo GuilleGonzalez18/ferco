@@ -70,6 +70,88 @@
   text-align: center;
 }
 
+.ok-message {
+  width: 100%;
+  color: #0f5132;
+  background: #d1e7dd;
+  border: 1px solid #badbcc;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.62rem;
+  text-align: center;
+}
+
+.login-link-btn {
+  background: transparent !important;
+  color: var(--color-primary) !important;
+  border: 1px solid #d4deec !important;
+}
+
+.login-forgot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+}
+
+.login-forgot-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.36);
+}
+
+.login-forgot-modal {
+  position: relative;
+  width: min(420px, calc(100vw - 1.4rem));
+  margin: min(17vh, 120px) auto 0;
+  background: #fff;
+  border: 1px solid #d7e2f0;
+  border-radius: 14px;
+  box-shadow: 0 14px 36px rgba(15, 24, 36, 0.22);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.login-forgot-modal h4 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.login-forgot-modal p {
+  margin: 0;
+  color: #4f5f73;
+  font-size: 0.9rem;
+}
+
+.login-forgot-modal input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.68rem 0.82rem;
+  border: 1.5px solid #9ba8ba;
+  border-radius: 9px;
+  font-size: 0.95rem;
+  background: #f9fbfe;
+  color: #1d2b3e;
+}
+
+.login-forgot-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.login-forgot-actions button {
+  min-height: 42px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .login-logo {
   width: 100%;
   max-width: 320px;

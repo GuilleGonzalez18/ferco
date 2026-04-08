@@ -837,6 +837,27 @@
   color: #b42318;
 }
 
+.observacion-venta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: #375f8c;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.observacion-venta textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 76px;
+  border: 1px solid #d3dbe8;
+  border-radius: 8px;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+}
+
 .ticket-pagos {
   list-style: none;
   margin: 0 0 0.55rem;

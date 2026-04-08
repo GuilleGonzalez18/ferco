@@ -14,6 +14,7 @@
     "db:seed:test": "node src/scripts/seedClientesVentasTest.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",

@@ -58,6 +58,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ correo, password }),
     }),
+  forgotPassword: (correo) =>
+    request('/usuarios/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ correo }),
+    }),
+  resetPassword: (token, newPassword) =>
+    request('/usuarios/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
   me: () => request('/usuarios/me'),
   getUsuarios: () => request('/usuarios'),
   createUsuario: (payload) =>
@@ -81,6 +91,13 @@ export const api = {
     }),
   getMovimientosProducto: (id, limit = 10) =>
     request(`/productos/${id}/movimientos?limit=${encodeURIComponent(limit)}`),
+  getEmpaques: () => request('/empaques'),
+  createEmpaque: (payload) =>
+    request('/empaques', { method: 'POST', body: JSON.stringify(payload) }),
+  updateEmpaque: (id, payload) =>
+    request(`/empaques/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteEmpaque: (id) =>
+    request(`/empaques/${id}`, { method: 'DELETE' }),
 
   getClientes: () => request('/clientes'),
   createCliente: (payload) =>
