@@ -8,6 +8,10 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function roundMoney(value) {
+  return Math.round(toNumber(value) * 100) / 100;
+}
+
 export const ventasRouter = Router();
 const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado', 'cancelado']);
 const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
@@ -22,7 +26,7 @@ function normalizePaymentMethods(pagos = []) {
   if (!list.length) return [];
   return list.map((p) => {
     const medioPago = String(p?.medio_pago || '').trim().toLowerCase();
-    const monto = toNumber(p?.monto);
+    const monto = roundMoney(p?.monto);
     if (!MEDIOS_PAGO.has(medioPago)) {
       throw new Error('Medio de pago inválido');
     }
@@ -1007,6 +1011,7 @@ ventasRouter.post('/', async (req, res) => {
 
       subtotal += cantidad * precioUnitario;
     }
+    subtotal = roundMoney(subtotal);
 
     let descuentoGlobal = 0;
     const descuentoValor = toNumber(descuento_total_valor);
@@ -1016,12 +1021,13 @@ ventasRouter.post('/', async (req, res) => {
     } else if (descuento_total_tipo === 'fijo') {
       descuentoGlobal = Math.max(0, Math.min(subtotal, descuentoValor));
     }
-    const total = Math.max(0, subtotal - descuentoGlobal);
+    descuentoGlobal = roundMoney(descuentoGlobal);
+    const total = roundMoney(Math.max(0, subtotal - descuentoGlobal));
     const estadoSolicitado = String(estado_entrega || '').trim().toLowerCase();
     const estadoNormalizado = estadoSolicitado === 'entregado' ? 'entregado' : 'pendiente';
     const entregadoFinal = estadoNormalizado === 'entregado' ? true : Boolean(entregado);
 
-    const totalPagos = pagosNormalizados.reduce((acc, p) => acc + toNumber(p.monto), 0);
+    const totalPagos = roundMoney(pagosNormalizados.reduce((acc, p) => acc + toNumber(p.monto), 0));
     if (pagosNormalizados.length > 0 && Math.abs(totalPagos - total) > 0.01) {
       throw new Error('La suma de pagos debe coincidir con el total de la venta');
     }
@@ -1037,7 +1043,7 @@ ventasRouter.post('/', async (req, res) => {
         (usuario_id, cliente_id, fecha_entrega, medio_pago, cancelada, entregado, estado_entrega, observacion, subtotal, descuento_total_tipo, descuento_total_valor, total)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
-      [usuarioVentaId, cliente_id, fecha_entrega, medioPagoPrincipal, false, entregadoFinal, estadoNormalizado, observacion, subtotal, descuento_total_tipo, descuentoValor, total]
+      [usuarioVentaId, cliente_id, fecha_entrega, medioPagoPrincipal, false, entregadoFinal, estadoNormalizado, observacion, subtotal, descuento_total_tipo, roundMoney(descuentoValor), total]
     );
 
     const ventaId = ventaResult.rows[0].id;
@@ -1241,7 +1247,7 @@ ventasRouter.post('/:id/enviar-email', async (req, res) => {
     from: mailFrom,
     to,
     subject: `Factura de venta #${ventaId}`,
-    text: `Hola ${venta.cliente_nombre || 'cliente'},\n\nTe compartimos la factura de tu compra #${ventaId}.\nFecha: ${fechaText}\nTotal: $${Math.round(Number(venta.total || 0)).toLocaleString('es-UY')}\n\nSaludos.`,
+    text: `Hola ${venta.cliente_nombre || 'cliente'},\n\nTe compartimos la factura de tu compra #${ventaId}.\nFecha: ${fechaText}\nTotal: $${roundMoney(venta.total).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nSaludos.`,
     attachments: [
       {
         filename: safeFileName,

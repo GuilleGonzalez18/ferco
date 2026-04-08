@@ -52,8 +52,8 @@ function tomorrowISO() {
 }
 
 function formatCurrency(value) {
-  const num = Math.round(Number(value || 0));
-  return `$${num.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  const num = Math.round(Number(value || 0) * 100) / 100;
+  return `$${num.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDateTime(value) {

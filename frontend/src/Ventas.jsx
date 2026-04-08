@@ -20,12 +20,16 @@ function toNumber(value) {
 }
 
 function roundMoney(value) {
-  return Math.round(toNumber(value));
+  return Math.round(toNumber(value) * 100) / 100;
 }
 
 function money(value) {
   const rounded = roundMoney(value);
-  return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  return `$${rounded.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isSameMoney(a, b) {
+  return Math.abs(roundMoney(a) - roundMoney(b)) < 0.001;
 }
 
 function getEmpaqueUnits(producto) {
@@ -459,12 +463,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
   }, [carrito]);
 
   const descuentoItemsTotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0)),
     [carritoCalculado]
   );
 
   const subtotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0)),
     [carritoCalculado]
   );
 
@@ -483,8 +487,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
     return 0;
   }, [descuentoTotalTipo, descuentoTotalValor, baseParaDescuentoGlobal]);
 
-  const descuentoTotalAplicado = Math.max(0, descuentoItemsTotal + descuentoGlobal);
-  const total = Math.max(0, subtotal - descuentoTotalAplicado);
+  const descuentoTotalAplicado = roundMoney(Math.max(0, descuentoItemsTotal + descuentoGlobal));
+  const total = roundMoney(Math.max(0, subtotal - descuentoTotalAplicado));
   const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
   const pagosActivos = useMemo(
     () => pagos.filter((p) => p.activo),
@@ -503,7 +507,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
     [pagosActivos, total]
   );
   const totalPagos = useMemo(
-    () => pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0),
+    () => roundMoney(pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0)),
     [pagosConMonto]
   );
 
@@ -726,7 +730,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
       await appAlert('Debes cargar al menos un medio de pago con monto.');
       return;
     }
-    if (totalPagos !== total) {
+    if (!isSameMoney(totalPagos, total)) {
       await appAlert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
@@ -954,7 +958,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                         <input
                           type="number"
                           min="0"
-                          step="1"
+                          step="0.01"
                           placeholder="Monto"
                           value={esPagoUnico ? total : pago.monto}
                           readOnly={esPagoUnico}
@@ -974,7 +978,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       Monto automático: se completa con el total al usar un solo medio.
                     </small>
                   )}
-                  <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
+                  <div className={`pagos-total ${isSameMoney(totalPagos, total) ? 'ok' : 'warn'}`}>
                     Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
                   </div>
                   <label className="observacion-venta">
@@ -1257,7 +1261,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoItemModal.valor}
             onChange={(e) => setDescuentoItemModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -1300,7 +1304,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoGlobalModal.valor}
             onChange={(e) => setDescuentoGlobalModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
