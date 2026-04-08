@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './Login.css';
 import { api } from './api';
+import { APP_VERSION } from './version';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -133,6 +134,7 @@ export default function Login({ onLogin }) {
             >
               Olvidé mi contraseña
             </button>
+            <small className="app-version-label">v. {APP_VERSION}</small>
           </>
         ) : (
           <>
