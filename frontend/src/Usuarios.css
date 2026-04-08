@@ -86,6 +86,30 @@
   padding: 0;
 }
 
+.usuarios-table-grid {
+  min-width: 980px;
+}
+
+.usuarios-table .app-table-row.usuario-row {
+  cursor: pointer;
+}
+
+.usuarios-table .app-table-row.usuario-row.expanded {
+  background: #f7fbff;
+}
+
+.usuarios-table .app-table-expanded-content {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.34rem 0.62rem;
+}
+
+.usuarios-table .usuario-actions {
+  position: static;
+  transform: none;
+  display: inline-flex;
+}
+
 .lista-usuarios li {
   position: relative;
   display: grid;
@@ -297,5 +321,9 @@
     position: static;
     transform: none;
     margin-top: 0.25rem;
+  }
+
+  .usuarios-table-grid {
+    min-width: 700px;
   }
 }

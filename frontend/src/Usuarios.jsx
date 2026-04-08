@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Usuarios.css';
 import { appAlert, appConfirm } from './appDialog';
+import AppTable from './AppTable';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -200,6 +201,71 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     }
   }, [onlySelf, esPropietario, usuarioPropio]);
 
+  const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
+
+  const usuariosColumns = [
+    {
+      key: 'nombre',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+          Nombre {sortMark('nombre')}
+        </button>
+      ),
+      mobileLabel: 'Nombre',
+      render: (u) => `${u.nombre || ''} ${u.apellido || ''}`.trim() || '-',
+    },
+    {
+      key: 'username',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('username')}>
+          Usuario {sortMark('username')}
+        </button>
+      ),
+      mobileLabel: 'Usuario',
+      render: (u) => u.username || '-',
+    },
+    {
+      key: 'correo',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>
+          Correo {sortMark('correo')}
+        </button>
+      ),
+      mobileLabel: 'Correo',
+      render: (u) => u.correo || '-',
+    },
+    {
+      key: 'tipo',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('tipo')}>
+          Tipo {sortMark('tipo')}
+        </button>
+      ),
+      mobileLabel: 'Tipo',
+      render: (u) => u.tipo || '-',
+    },
+    {
+      key: 'telefono',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>
+          Teléfono {sortMark('telefono')}
+        </button>
+      ),
+      mobileLabel: 'Teléfono',
+      render: (u) => u.telefono || '-',
+    },
+    {
+      key: 'direccion',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>
+          Dirección {sortMark('direccion')}
+        </button>
+      ),
+      mobileLabel: 'Dirección',
+      render: (u) => u.direccion || '-',
+    },
+  ];
+
   return (
     <div className="usuarios-main">
       {!onlySelf && (
@@ -242,38 +308,27 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       {!loading && error && <div className="usuarios-msg error">{error}</div>}
 
       {!onlySelf && !loading && !error && (
-        <ul className="lista-usuarios">
-          <li className="header">
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('username')}>Usuario {sortBy === 'username' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>Correo {sortBy === 'correo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('tipo')}>Tipo {sortBy === 'tipo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>Teléfono {sortBy === 'telefono' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>Dirección {sortBy === 'direccion' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          </li>
-          {usuariosOrdenados.length === 0 && <li className="vacio">No hay usuarios registrados.</li>}
-          {usuariosOrdenados.map((u) => {
-            const expanded = usuarioExpandidoId === u.id;
-            return (
-              <li key={u.id} className={`usuario-row ${expanded ? 'expanded' : ''}`} onClick={() => setUsuarioExpandidoId(expanded ? null : u.id)}>
-                <span>{`${u.nombre || ''} ${u.apellido || ''}`.trim() || '-'}</span>
-                <span>{u.username || '-'}</span>
-                <span>{u.correo || '-'}</span>
-                <span>{u.tipo || '-'}</span>
-                <span>{u.telefono || '-'}</span>
-                <span>{u.direccion || '-'}</span>
-                <div className={`usuario-actions ${expanded ? 'show' : ''}`}>
-                  {(esPropietario || Number(u.id) === currentUserId) && (
-                    <button type="button" className="edit-btn" onClick={(e) => { e.stopPropagation(); editarUsuario(u); }}>Editar</button>
-                  )}
-                  {esPropietario && Number(u.id) !== currentUserId && (
-                    <button type="button" className="delete-btn" onClick={(e) => { e.stopPropagation(); eliminarUsuario(u.id); }}>Eliminar</button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <AppTable
+          className="usuarios-table"
+          tableClassName="usuarios-table-grid"
+          columns={usuariosColumns}
+          rows={usuariosOrdenados}
+          rowKey="id"
+          emptyMessage="No hay usuarios registrados."
+          onRowClick={(u) => setUsuarioExpandidoId((prev) => (prev === u.id ? null : u.id))}
+          rowClassName={(u) => `usuario-row ${usuarioExpandidoId === u.id ? 'expanded' : ''}`}
+          expandedRowId={usuarioExpandidoId}
+          renderExpandedRow={(u) => (
+            <div className="usuario-actions show">
+              {(esPropietario || Number(u.id) === currentUserId) && (
+                <button type="button" className="edit-btn" onClick={() => editarUsuario(u)}>Editar</button>
+              )}
+              {esPropietario && Number(u.id) !== currentUserId && (
+                <button type="button" className="delete-btn" onClick={() => eliminarUsuario(u.id)}>Eliminar</button>
+              )}
+            </div>
+          )}
+        />
       )}
 
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''} ${onlySelf ? 'only-self' : ''}`} aria-hidden={!mostrarForm}>

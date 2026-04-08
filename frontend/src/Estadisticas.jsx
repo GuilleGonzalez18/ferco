@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 import './Estadisticas.css';
+import AppTable from './AppTable';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
@@ -372,6 +373,29 @@ export default function Estadisticas({ compact = false }) {
     })
   ), [stockCostoChart]);
 
+  const ventasUsuarioColumns = useMemo(() => ([
+    {
+      key: 'usuario',
+      header: 'Usuario',
+      mobileLabel: 'Usuario',
+      render: (u) => u.usuario_nombre || '-',
+    },
+    {
+      key: 'ventas',
+      header: 'Ventas',
+      mobileLabel: 'Ventas',
+      align: 'right',
+      render: (u) => qty(u.cantidad_ventas),
+    },
+    {
+      key: 'total',
+      header: 'Total vendido',
+      mobileLabel: 'Total vendido',
+      align: 'right',
+      render: (u) => money(u.total_vendido),
+    },
+  ]), []);
+
   return (
     <div className={`stats-main ${compact ? 'compact' : ''}`}>
       <div className="stats-toolbar">
@@ -696,23 +720,14 @@ export default function Estadisticas({ compact = false }) {
                 <div className="stats-table-head">
                   <h4>Detalle de ventas por usuario</h4>
                 </div>
-                <ul className="stats-table">
-                  <li className="header">
-                    <span>Usuario</span>
-                    <span>Ventas</span>
-                    <span>Total vendido</span>
-                  </li>
-                  {(stats?.ventasPorUsuario || []).length === 0 && (
-                    <li className="empty">Aún no hay ventas registradas.</li>
-                  )}
-                  {(stats?.ventasPorUsuario || []).map((u) => (
-                    <li key={`${u.usuario_id || 'na'}-${u.usuario_nombre}`}>
-                      <span>{u.usuario_nombre || '-'}</span>
-                      <span>{qty(u.cantidad_ventas)}</span>
-                      <span>{money(u.total_vendido)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <AppTable
+                  className="stats-table-unified"
+                  tableClassName="stats-table-grid"
+                  columns={ventasUsuarioColumns}
+                  rows={stats?.ventasPorUsuario || []}
+                  rowKey={(u) => `${u.usuario_id || 'na'}-${u.usuario_nombre}`}
+                  emptyMessage="Aún no hay ventas registradas."
+                />
               </section>
             </>
           )}

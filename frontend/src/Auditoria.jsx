@@ -3,6 +3,7 @@ import { api } from './api';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import AppTable from './AppTable';
 
 const PAGE_SIZE = 10;
 
@@ -125,6 +126,89 @@ export default function Auditoria() {
 
   const totalMovimientosPages = Math.max(1, Math.ceil(movimientosFiltrados.length / PAGE_SIZE));
   const totalEventosPages = Math.max(1, Math.ceil(eventosFiltrados.length / PAGE_SIZE));
+
+  const movimientosColumns = useMemo(() => ([
+    {
+      key: 'fecha',
+      header: 'Fecha',
+      mobileLabel: 'Fecha',
+      render: (m) => formatDateTime(m.created_at),
+    },
+    {
+      key: 'producto',
+      header: 'Producto',
+      mobileLabel: 'Producto',
+      render: (m) => m.producto_nombre || `#${m.producto_id}`,
+    },
+    {
+      key: 'tipo',
+      header: 'Tipo',
+      mobileLabel: 'Tipo',
+      render: (m) => (
+        <span className={m.tipo === 'entrada' ? 'tag in' : 'tag out'}>
+          {m.tipo === 'entrada' ? 'Entrada' : 'Salida'}
+        </span>
+      ),
+    },
+    {
+      key: 'origen',
+      header: 'Origen',
+      mobileLabel: 'Origen',
+      accessor: 'origen',
+    },
+    {
+      key: 'cantidad',
+      header: 'Cantidad',
+      mobileLabel: 'Cantidad',
+      align: 'right',
+      render: (m) => formatQty(m.cantidad),
+    },
+    {
+      key: 'stock',
+      header: 'Stock',
+      mobileLabel: 'Stock',
+      render: (m) => `${formatQty(m.stock_anterior)} -> ${formatQty(m.stock_nuevo)}`,
+    },
+    {
+      key: 'usuario',
+      header: 'Usuario',
+      mobileLabel: 'Usuario',
+      render: (m) => m.usuario_nombre || '-',
+    },
+  ]), []);
+
+  const eventosColumns = useMemo(() => ([
+    {
+      key: 'fecha',
+      header: 'Fecha',
+      mobileLabel: 'Fecha',
+      render: (e) => formatDateTime(e.created_at),
+    },
+    {
+      key: 'entidad',
+      header: 'Entidad',
+      mobileLabel: 'Entidad',
+      render: (e) => `${e.entidad} #${e.entidad_id ?? '-'}`,
+    },
+    {
+      key: 'accion',
+      header: 'Acción',
+      mobileLabel: 'Acción',
+      accessor: 'accion',
+    },
+    {
+      key: 'detalle',
+      header: 'Detalle',
+      mobileLabel: 'Detalle',
+      render: (e) => e.detalle || '-',
+    },
+    {
+      key: 'usuario',
+      header: 'Usuario',
+      mobileLabel: 'Usuario',
+      render: (e) => e.usuario_nombre || '-',
+    },
+  ]), []);
 
   const movimientosPaginados = useMemo(() => {
     const start = (movimientosPage - 1) * PAGE_SIZE;
@@ -282,35 +366,14 @@ export default function Auditoria() {
                 Limpiar filtros
               </button>
             </div>
-            <ul className="auditoria-list stock">
-              <li className="header">
-                <span>Fecha</span>
-                <span>Producto</span>
-                <span>Tipo</span>
-                <span>Origen</span>
-                <span>Cantidad</span>
-                <span>Stock</span>
-                <span>Usuario</span>
-              </li>
-              {movimientosFiltrados.length === 0 && (
-                <li className="vacio">No hay movimientos para los filtros seleccionados.</li>
-              )}
-              {movimientosPaginados.map((m) => (
-                <li key={m.id}>
-                  <span>{formatDateTime(m.created_at)}</span>
-                  <span>{m.producto_nombre || `#${m.producto_id}`}</span>
-                  <span className={m.tipo === 'entrada' ? 'tag in' : 'tag out'}>
-                    {m.tipo === 'entrada' ? 'Entrada' : 'Salida'}
-                  </span>
-                  <span>{m.origen}</span>
-                  <span>{formatQty(m.cantidad)}</span>
-                  <span>
-                    {formatQty(m.stock_anterior)} → {formatQty(m.stock_nuevo)}
-                  </span>
-                  <span>{m.usuario_nombre || '-'}</span>
-                </li>
-              ))}
-            </ul>
+            <AppTable
+              className="auditoria-table auditoria-table-stock"
+              tableClassName="auditoria-table-stock-grid"
+              columns={movimientosColumns}
+              rows={movimientosPaginados}
+              rowKey="id"
+              emptyMessage="No hay movimientos para los filtros seleccionados."
+            />
             <div className="auditoria-pager">
               <span className="auditoria-range">{movimientosRange}</span>
               <button
@@ -393,25 +456,14 @@ export default function Auditoria() {
                 Limpiar filtros
               </button>
             </div>
-            <ul className="auditoria-list eventos">
-              <li className="header">
-                <span>Fecha</span>
-                <span>Entidad</span>
-                <span>Acción</span>
-                <span>Detalle</span>
-                <span>Usuario</span>
-              </li>
-              {eventosFiltrados.length === 0 && <li className="vacio">No hay eventos para los filtros seleccionados.</li>}
-              {eventosPaginados.map((e) => (
-                <li key={e.id}>
-                  <span>{formatDateTime(e.created_at)}</span>
-                  <span>{e.entidad} #{e.entidad_id ?? '-'}</span>
-                  <span>{e.accion}</span>
-                  <span>{e.detalle || '-'}</span>
-                  <span>{e.usuario_nombre || '-'}</span>
-                </li>
-              ))}
-            </ul>
+            <AppTable
+              className="auditoria-table auditoria-table-eventos"
+              tableClassName="auditoria-table-eventos-grid"
+              columns={eventosColumns}
+              rows={eventosPaginados}
+              rowKey="id"
+              emptyMessage="No hay eventos para los filtros seleccionados."
+            />
             <div className="auditoria-pager">
               <span className="auditoria-range">{eventosRange}</span>
               <button

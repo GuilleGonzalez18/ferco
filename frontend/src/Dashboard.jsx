@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Productos from './Productos';
 import Ventas from './Ventas';
 import VentasHistorial from './VentasHistorial';
@@ -10,6 +10,7 @@ import ControlStock from './ControlStock';
 import './Dashboard.css';
 import { api } from './api';
 import { CgArrowsExchange } from 'react-icons/cg';
+import { FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from './version';
 
 const OPCIONES = [
@@ -49,6 +50,7 @@ function MiUsuarioView({ user }) {
 
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
@@ -61,12 +63,23 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const handleNavigate = (seccion) => {
     onNavigate(seccion);
     setMenuMovilAbierto(false);
+    setVentasCarritoAbierto(false);
   };
+
+  const closeVentasCarritoDrawer = useCallback(() => {
+    setVentasCarritoAbierto(false);
+  }, []);
 
   const handleLogout = () => {
     setMenuMovilAbierto(false);
+    setVentasCarritoAbierto(false);
     onLogout();
   };
+
+  useEffect(() => {
+    document.body.classList.add('dashboard-scroll-lock');
+    return () => document.body.classList.remove('dashboard-scroll-lock');
+  }, []);
 
   useEffect(() => {
     const onNavigateEvent = (event) => {
@@ -74,6 +87,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       if (typeof target !== 'string') return;
       onNavigate(target);
       setMenuMovilAbierto(false);
+      setVentasCarritoAbierto(false);
     };
     window.addEventListener('ferco:navigate', onNavigateEvent);
     return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
@@ -122,26 +136,46 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         { key: 'promedioVentasMensual', label: 'Promedio ventas al mes', value: avgCount(resumen?.promedioVentasMensual), icon: '/average.svg' },
       ];
 
-  const renderContent = () => {
-    switch (pantalla) {
-      case 'nueva-venta':  return <Ventas user={user} productos={productos} setProductos={setProductos} />;
-      case 'ventas':       return <VentasHistorial />;
-      case 'productos':    return <Productos user={user} productos={productos} setProductos={setProductos} />;
-      case 'clientes':     return <Clientes />;
-      case 'usuarios':     return <Usuarios currentUser={user} />;
-      case 'mi-usuario':   return <MiUsuarioView user={user} />;
-      case 'auditoria':    return <Auditoria />;
-      case 'control-stock':
-        return esPropietario
-          ? <ControlStock productos={productos} setProductos={setProductos} />
-          : <Placeholder titulo="Acceso restringido" icon="X" />;
-      case 'estadisticas': return <Estadisticas />;
-      default:             return null;
-    }
-  };
-
   const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? 'Dashboard';
   const esPantallaDashboard = !pantalla;
+  const contenidoPantalla = useMemo(
+    () => {
+      switch (pantalla) {
+        case 'nueva-venta':
+          return (
+            <Ventas
+              user={user}
+              productos={productos}
+              setProductos={setProductos}
+              carritoDrawerOpen={ventasCarritoAbierto}
+              onToggleCarritoDrawer={() => setVentasCarritoAbierto((prev) => !prev)}
+              onCloseCarritoDrawer={closeVentasCarritoDrawer}
+            />
+          );
+        case 'ventas':       return <VentasHistorial />;
+        case 'productos':    return <Productos user={user} productos={productos} setProductos={setProductos} />;
+        case 'clientes':     return <Clientes />;
+        case 'usuarios':     return <Usuarios currentUser={user} />;
+        case 'mi-usuario':   return <MiUsuarioView user={user} />;
+        case 'auditoria':    return <Auditoria />;
+        case 'control-stock':
+          return esPropietario
+            ? <ControlStock productos={productos} setProductos={setProductos} />
+            : <Placeholder titulo="Acceso restringido" icon="X" />;
+        case 'estadisticas': return <Estadisticas />;
+        default:             return null;
+      }
+    },
+    [
+      pantalla,
+      user,
+      productos,
+      setProductos,
+      esPropietario,
+      ventasCarritoAbierto,
+      closeVentasCarritoDrawer,
+    ]
+  );
 
   return (
     <div className="dashboard-layout">
@@ -195,7 +229,23 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
       <main className="dashboard-content">
         <div className="dashboard-topbar">
-          <span className="dashboard-topbar-title">{tituloActual}</span>
+          <div className="dashboard-topbar-content">
+            <span className="dashboard-topbar-title">{tituloActual}</span>
+            <div className="dashboard-topbar-actions">
+              {pantalla === 'nueva-venta' && (
+                <button
+                  type="button"
+                  className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''}`}
+                  onClick={() => setVentasCarritoAbierto((prev) => !prev)}
+                  aria-label={ventasCarritoAbierto ? 'Cerrar carrito' : 'Abrir carrito'}
+                  aria-expanded={ventasCarritoAbierto}
+                >
+                  <FiShoppingCart aria-hidden="true" />
+                  <span>Carrito</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
         <div className={`dashboard-body ${resumen && esPantallaDashboard ? 'with-kpis' : ''}`}>
           {resumen && esPantallaDashboard && (
@@ -220,7 +270,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
               ))}
             </section>
           )}
-          {renderContent()}
+          {contenidoPantalla}
         </div>
       </main>
     </div>

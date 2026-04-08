@@ -304,3 +304,19 @@
   }
 }
 
+@media (max-width: 900px) {
+  .control-stock-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 44vw);
+    gap: 0.55rem;
+    align-items: start;
+  }
+
+  .control-stock-panel.is-active {
+    position: sticky;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 25;
+    animation: none;
+  }
+}
+

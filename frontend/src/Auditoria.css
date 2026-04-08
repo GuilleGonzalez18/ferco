@@ -123,6 +123,18 @@
   min-width: 250px;
 }
 
+.auditoria-table {
+  margin-bottom: 0.1rem;
+}
+
+.auditoria-table-stock-grid {
+  min-width: 980px;
+}
+
+.auditoria-table-eventos-grid {
+  min-width: 860px;
+}
+
 .auditoria-list {
   list-style: none;
   margin: 0;

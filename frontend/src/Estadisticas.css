@@ -441,6 +441,14 @@
   color: #77879d;
 }
 
+.stats-table-unified {
+  border-color: #e9eef6;
+}
+
+.stats-table-grid {
+  min-width: 620px;
+}
+
 .stats-table li:not(.header):not(.empty):hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(38, 67, 99, 0.08);
