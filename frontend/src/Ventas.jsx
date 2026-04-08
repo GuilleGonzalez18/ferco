@@ -4,6 +4,7 @@ import { api } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from './appDialog';
+import { formatHorarioCliente } from './horarios';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [
@@ -125,7 +126,17 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const loadClientes = async () => {
       try {
         const rows = await api.getClientes();
-        setClientes(rows.map((c) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono || '' })));
+        setClientes(rows.map((c) => ({
+          id: c.id,
+          nombre: c.nombre,
+          telefono: c.telefono || '',
+          direccion: c.direccion || '',
+          horario_apertura: c.horario_apertura || '',
+          horario_cierre: c.horario_cierre || '',
+          tiene_reapertura: Boolean(c.tiene_reapertura),
+          horario_reapertura: c.horario_reapertura || '',
+          horario_cierre_reapertura: c.horario_cierre_reapertura || '',
+        })));
       } catch (error) {
         console.error('Error cargando clientes', error);
       }
@@ -568,6 +579,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
     doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
     doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
     cursorY += lineH;
+    doc.text(`Horarios: ${ventaFinalizada.clienteHorarios || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
+    cursorY += lineH;
     doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
     cursorY += 6;
 
@@ -763,6 +776,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
         clienteId: Number(clienteId),
         clienteNombre: cliente?.nombre || 'Cliente',
         clienteTelefono: cliente?.telefono || '',
+        clienteDireccion: cliente?.direccion || '',
+        clienteHorarios: formatHorarioCliente(cliente || {}),
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
         fechaEntrega,
         pagos: (ventaCreada?.pagos || pagosConMonto).map((p) => ({
@@ -975,6 +990,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 </div>
                 <div className="ticket-grid">
                   <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
+                  <p><span>Horarios:</span> {formatHorarioCliente(clienteSeleccionado || {})}</p>
                   <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
                   <p><span>Pagos:</span> {pagosConMonto.length}</p>
                   <p><span>Ítems:</span> {carritoCalculado.length}</p>
@@ -1305,6 +1321,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
               </p>
               <p className="venta-final-cliente">
                 Teléfono: <strong>{ventaFinalizada.clienteTelefono || '-'}</strong>
+              </p>
+              <p className="venta-final-cliente">
+                Horarios: <strong>{ventaFinalizada.clienteHorarios || '-'}</strong>
               </p>
               <p className="venta-final-cliente">
                 Pagos: <strong>{(ventaFinalizada.pagos || []).length}</strong>

@@ -8,6 +8,7 @@ import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import { FaReplyAll } from 'react-icons/fa6';
 import { appAlert, appConfirm } from './appDialog';
+import { formatHorarioCliente } from './horarios';
 
 function todayISO() {
   const now = new Date();
@@ -111,6 +112,16 @@ function normalizeWhatsappPhone(value) {
   if (digits.startsWith('0')) return `598${digits.slice(1)}`;
   if (digits.length <= 9) return `598${digits}`;
   return digits;
+}
+
+function formatHorarioClienteEntrega(venta) {
+  return formatHorarioCliente({
+    horario_apertura: venta?.cliente_horario_apertura,
+    horario_cierre: venta?.cliente_horario_cierre,
+    tiene_reapertura: venta?.cliente_tiene_reapertura,
+    horario_reapertura: venta?.cliente_horario_reapertura,
+    horario_cierre_reapertura: venta?.cliente_horario_cierre_reapertura,
+  });
 }
 
 function escapeHtml(value) {
@@ -275,6 +286,8 @@ export default function VentasHistorial() {
     cursorY += 5;
     doc.text(`Cliente: ${venta.cliente_nombre || 'Consumidor final'}`, 14, cursorY);
     cursorY += 5;
+    doc.text(`Horarios: ${formatHorarioClienteEntrega(venta)}`, 14, cursorY);
+    cursorY += 5;
     doc.text(`Vendedor: ${venta.usuario_nombre || '-'}`, 14, cursorY);
     cursorY += 5;
     doc.text(`Entrega: ${formatDateOnly(venta.fecha_entrega)}`, 14, cursorY);
@@ -424,6 +437,16 @@ export default function VentasHistorial() {
     setCancelandoVentaId(ventaId);
     try {
       await api.cancelarVenta(ventaId);
+      window.dispatchEvent(
+        new CustomEvent('ferco:stats-refresh', {
+          detail: { source: 'venta-cancelada', ventaId },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('ferco:stock-refresh', {
+          detail: { source: 'venta-cancelada', ventaId },
+        })
+      );
       setVentas((prev) =>
         prev.map((v) => (
           v.id === ventaId
@@ -487,7 +510,7 @@ export default function VentasHistorial() {
         v.cliente_direccion || '-',
         formatDateOnly(v.fecha_entrega),
         formatCurrency(v.total || 0),
-        [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-',
+        formatHorarioClienteEntrega(v),
         '',
       ]);
 
@@ -536,7 +559,7 @@ export default function VentasHistorial() {
       const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
       const rowsHtml = (resumen.ventas || [])
         .map((v, idx) => {
-          const horarios = [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-';
+          const horarios = formatHorarioClienteEntrega(v);
           const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
           return `
             <tr style="background:${zebra}">
@@ -650,7 +673,7 @@ export default function VentasHistorial() {
         v.cliente_direccion || '-',
         formatDateOnly(v.fecha_entrega),
         formatCurrency(v.total || 0),
-        [v.cliente_horario_apertura, v.cliente_horario_cierre].filter(Boolean).join(' - ') || '-',
+        formatHorarioClienteEntrega(v),
         '',
       ]);
       autoTable(doc, {

@@ -9,7 +9,7 @@ function toNumber(value) {
 }
 
 export const ventasRouter = Router();
-const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado']);
+const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado', 'cancelado']);
 const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
 
 function actorName(authUser) {
@@ -750,8 +750,11 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
        c.direccion AS cliente_direccion,
        c.horario_apertura AS cliente_horario_apertura,
        c.horario_cierre AS cliente_horario_cierre,
-         COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo) AS usuario_nombre,
-        COALESCE(det.productos, '') AS productos
+       c.tiene_reapertura AS cliente_tiene_reapertura,
+       c.horario_reapertura AS cliente_horario_reapertura,
+       c.horario_cierre_reapertura AS cliente_horario_cierre_reapertura,
+          COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.nombre, u.apellido)), ''), u.username, u.correo) AS usuario_nombre,
+         COALESCE(det.productos, '') AS productos
      FROM public.ventas v
      LEFT JOIN public.clientes c ON c.id = v.cliente_id
      LEFT JOIN public.usuarios u ON u.id = v.usuario_id
@@ -806,6 +809,9 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
     cliente_direccion: row.cliente_direccion || '',
     cliente_horario_apertura: row.cliente_horario_apertura || '',
     cliente_horario_cierre: row.cliente_horario_cierre || '',
+    cliente_tiene_reapertura: Boolean(row.cliente_tiene_reapertura),
+    cliente_horario_reapertura: row.cliente_horario_reapertura || '',
+    cliente_horario_cierre_reapertura: row.cliente_horario_cierre_reapertura || '',
     usuario_nombre: row.usuario_nombre || '-',
     productos: row.productos || '-',
   }));
@@ -845,6 +851,10 @@ ventasRouter.get('/', async (req, res) => {
     `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
             v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
             c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
+            c.direccion AS cliente_direccion,
+            c.horario_apertura AS cliente_horario_apertura, c.horario_cierre AS cliente_horario_cierre,
+            c.tiene_reapertura AS cliente_tiene_reapertura,
+            c.horario_reapertura AS cliente_horario_reapertura, c.horario_cierre_reapertura AS cliente_horario_cierre_reapertura,
             u.nombre AS usuario_nombre
      FROM public.ventas v
      LEFT JOIN public.clientes c ON c.id = v.cliente_id
@@ -892,6 +902,10 @@ ventasRouter.get('/:id', async (req, res) => {
       `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
               v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
               c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
+              c.direccion AS cliente_direccion,
+              c.horario_apertura AS cliente_horario_apertura, c.horario_cierre AS cliente_horario_cierre,
+              c.tiene_reapertura AS cliente_tiene_reapertura,
+              c.horario_reapertura AS cliente_horario_reapertura, c.horario_cierre_reapertura AS cliente_horario_cierre_reapertura,
               u.nombre AS usuario_nombre
        FROM public.ventas v
        LEFT JOIN public.clientes c ON c.id = v.cliente_id

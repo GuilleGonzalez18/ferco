@@ -39,6 +39,9 @@ const statements = [
     correo varchar(180) NULL,
     horario_apertura varchar(5) NULL,
     horario_cierre varchar(5) NULL,
+    tiene_reapertura boolean NOT NULL DEFAULT false,
+    horario_reapertura varchar(5) NULL,
+    horario_cierre_reapertura varchar(5) NULL,
     departamento_id integer NULL,
     barrio_id integer NULL
   );
@@ -147,6 +150,18 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_ventas_estado_entrega ON public.ventas (estado_entrega);
   `,
   `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS tiene_reapertura boolean NOT NULL DEFAULT false;
+  `,
+  `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS horario_reapertura varchar(5) NULL;
+  `,
+  `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS horario_cierre_reapertura varchar(5) NULL;
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -230,7 +245,7 @@ const statements = [
     ) THEN
       ALTER TABLE public.ventas
       ADD CONSTRAINT ventas_estado_entrega_check
-      CHECK (estado_entrega IN ('pendiente', 'entregado'));
+      CHECK (estado_entrega IN ('pendiente', 'entregado', 'cancelado'));
     END IF;
 
     IF NOT EXISTS (
@@ -409,7 +424,7 @@ const statements = [
     END
   WHERE estado_entrega IS NULL
      OR estado_entrega = ''
-     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado')
+     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado', 'cancelado')
      OR entregado IS TRUE
      OR medio_pago IS NULL
      OR TRIM(medio_pago) = ''
