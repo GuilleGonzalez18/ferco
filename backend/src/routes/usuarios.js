@@ -9,8 +9,7 @@ import { getAuthUserFromRequest } from '../auth.js';
 export const usuariosRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES || 30);
-const RESET_BASE_URL = process.env.RESET_PASSWORD_URL_BASE || '';
+const RESET_CODE_TTL_MINUTES = Number(process.env.RESET_CODE_TTL_MINUTES || 10);
 
 function normalizeTipo(value) {
   const tipo = String(value || '').trim().toLowerCase();
@@ -296,13 +295,15 @@ usuariosRouter.post('/forgot-password', async (req, res) => {
   );
 
   if (!userQ.rowCount) {
-    return res.json({ ok: true });
+    return res.status(404).json({
+      error: 'El correo no pertenece a la empresa, si esto es un error comunicate con un propietario.',
+    });
   }
 
   const userId = Number(userQ.rows[0].id);
-  const plainToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(plainToken).digest('hex');
-  const expireAt = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
+  const plainCode = String(Math.floor(100000 + Math.random() * 900000));
+  const tokenHash = crypto.createHash('sha256').update(plainCode).digest('hex');
+  const expireAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
 
   await query(
     `INSERT INTO public.password_reset_tokens (usuario_id, token_hash, expires_at, used)
@@ -311,17 +312,15 @@ usuariosRouter.post('/forgot-password', async (req, res) => {
   );
 
   const transporter = getMailTransport();
-  if (!transporter || !RESET_BASE_URL) {
+  if (!transporter) {
     return res.json({ ok: true });
   }
-
-  const resetUrl = `${RESET_BASE_URL}${RESET_BASE_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(plainToken)}`;
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || '';
   await transporter.sendMail({
     from,
     to: correo,
     subject: 'Recuperar contraseña - Ferco',
-    text: `Recibimos una solicitud para restablecer tu contraseña.\n\nUsa este enlace:\n${resetUrl}\n\nEste enlace vence en ${RESET_TOKEN_TTL_MINUTES} minutos.`,
+    text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
   });
 
   return res.json({ ok: true });
@@ -331,7 +330,7 @@ usuariosRouter.post('/reset-password', async (req, res) => {
   const token = String(req.body?.token || '').trim();
   const newPassword = String(req.body?.newPassword || '');
   if (!token || !newPassword) {
-    return res.status(400).json({ error: 'Token y nueva contraseña son requeridos' });
+    return res.status(400).json({ error: 'Código y nueva contraseña son requeridos' });
   }
   if (newPassword.length < 8) {
     return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
@@ -346,12 +345,12 @@ usuariosRouter.post('/reset-password', async (req, res) => {
      LIMIT 1`,
     [tokenHash]
   );
-  if (!tokenQ.rowCount) return res.status(400).json({ error: 'Token inválido o vencido' });
+  if (!tokenQ.rowCount) return res.status(400).json({ error: 'Código inválido o vencido' });
 
   const row = tokenQ.rows[0];
-  if (row.used) return res.status(400).json({ error: 'Token inválido o vencido' });
+  if (row.used) return res.status(400).json({ error: 'Código inválido o vencido' });
   if (new Date(row.expires_at).getTime() < Date.now()) {
-    return res.status(400).json({ error: 'Token inválido o vencido' });
+    return res.status(400).json({ error: 'Código inválido o vencido' });
   }
 
   const newHash = await hashPassword(newPassword);

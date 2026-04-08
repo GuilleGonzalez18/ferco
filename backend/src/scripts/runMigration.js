@@ -161,6 +161,7 @@ const statements = [
     END
   WHERE estado_entrega IS NULL
      OR estado_entrega = ''
+     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado')
      OR entregado IS TRUE
      OR medio_pago IS NULL
      OR TRIM(medio_pago) = ''

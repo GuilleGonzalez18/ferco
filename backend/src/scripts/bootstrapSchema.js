@@ -396,11 +396,24 @@ const statements = [
   `,
   `
   UPDATE public.ventas
-  SET estado_entrega = CASE
-    WHEN entregado IS TRUE THEN 'entregado'
-    ELSE COALESCE(NULLIF(estado_entrega, ''), 'pendiente')
-  END
-  WHERE estado_entrega IS NULL OR estado_entrega = '' OR entregado IS TRUE;
+  SET
+    estado_entrega = CASE
+      WHEN entregado IS TRUE THEN 'entregado'
+      WHEN COALESCE(NULLIF(TRIM(LOWER(estado_entrega)), ''), 'pendiente') = 'entregado' THEN 'entregado'
+      ELSE 'pendiente'
+    END,
+    medio_pago = CASE
+      WHEN COALESCE(NULLIF(TRIM(LOWER(medio_pago)), ''), 'efectivo') IN ('efectivo', 'debito', 'credito', 'transferencia')
+        THEN COALESCE(NULLIF(TRIM(LOWER(medio_pago)), ''), 'efectivo')
+      ELSE 'efectivo'
+    END
+  WHERE estado_entrega IS NULL
+     OR estado_entrega = ''
+     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado')
+     OR entregado IS TRUE
+     OR medio_pago IS NULL
+     OR TRIM(medio_pago) = ''
+     OR LOWER(TRIM(medio_pago)) NOT IN ('efectivo', 'debito', 'credito', 'transferencia');
   `,
 ];
 

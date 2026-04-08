@@ -7,6 +7,8 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotError, setForgotError] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [mode, setMode] = useState('login');
@@ -36,26 +38,27 @@ export default function Login({ onLogin }) {
 
   const handleForgotPassword = async () => {
     if (!forgotEmail) {
-      setError('Ingresa tu correo para recuperar contraseña');
+      setForgotError('Ingresa tu correo para recuperar contraseña');
       return;
     }
     try {
-      setError('');
-      setMessage('');
+      setForgotError('');
+      setForgotMessage('');
       await api.forgotPassword(forgotEmail);
-      setMessage('Si el correo existe, enviamos instrucciones para restablecer contraseña.');
+      setMessage('Código enviado correctamente. Revisa tu correo e ingrésalo para restablecer la contraseña.');
       setEmail(forgotEmail);
-      setForgotModalOpen(false);
+      setPassword('');
       setMode('reset');
+      setForgotModalOpen(false);
     } catch (e) {
-      setError(e.message || 'No se pudo iniciar recuperación');
+      setForgotError(e.message || 'No se pudo iniciar recuperación');
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!resetToken || !newPassword) {
-      setError('Completa token y nueva contraseña');
+      setError('Completa código y nueva contraseña');
       return;
     }
     try {
@@ -99,10 +102,10 @@ export default function Login({ onLogin }) {
           <>
             <input
               type="text"
-              placeholder="Token recibido por correo"
-              value={resetToken}
-              onChange={e => setResetToken(e.target.value)}
-            />
+                placeholder="Código de 6 dígitos"
+                value={resetToken}
+                onChange={e => setResetToken(e.target.value)}
+              />
             <input
               type="password"
               placeholder="Nueva contraseña (mínimo 8)"
@@ -121,6 +124,8 @@ export default function Login({ onLogin }) {
               className="login-link-btn"
               onClick={() => {
                 setForgotEmail(email || '');
+                setForgotError('');
+                setForgotMessage('');
                 setForgotModalOpen(true);
                 setError('');
                 setMessage('');
@@ -132,7 +137,14 @@ export default function Login({ onLogin }) {
         ) : (
           <>
             <button type="button" onClick={handleResetPassword}>Restablecer contraseña</button>
-            <button type="button" className="login-link-btn" onClick={() => setMode('login')}>
+            <button
+              type="button"
+              className="login-link-btn"
+              onClick={() => {
+                setMode('login');
+                setPassword('');
+              }}
+            >
               Volver a iniciar sesión
             </button>
           </>
@@ -151,12 +163,22 @@ export default function Login({ onLogin }) {
               value={forgotEmail}
               onChange={(e) => setForgotEmail(e.target.value)}
             />
+            {forgotError && <div className="error">{forgotError}</div>}
+            {forgotMessage && <div className="ok-message">{forgotMessage}</div>}
             <div className="login-forgot-actions">
-              <button type="button" className="login-link-btn" onClick={() => setForgotModalOpen(false)}>
+              <button
+                type="button"
+                className="login-link-btn"
+                onClick={() => {
+                  setForgotModalOpen(false);
+                  setForgotError('');
+                  setForgotMessage('');
+                }}
+              >
                 Cancelar
               </button>
               <button type="button" onClick={handleForgotPassword}>
-                Enviar
+                Enviar código
               </button>
             </div>
           </div>
