@@ -8,6 +8,14 @@ export default function AppDialogHost() {
   const descriptionId = useId();
   const cardRef = useRef(null);
   const lastFocusedRef = useRef(null);
+  const close = (result) => {
+    setDialog((current) => {
+      if (current) {
+        resolveAppDialog(current.id, result);
+      }
+      return null;
+    });
+  };
 
   useEffect(() => {
     return subscribeAppDialogs((detail) => {
@@ -70,11 +78,6 @@ export default function AppDialogHost() {
   }, [dialog]);
 
   if (!dialog) return null;
-
-  const close = (result) => {
-    resolveAppDialog(dialog.id, result);
-    setDialog(null);
-  };
 
   return (
     <div className="app-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}>

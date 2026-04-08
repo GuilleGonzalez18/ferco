@@ -11,6 +11,7 @@ import './Dashboard.css';
 import { api } from './api';
 import { CgArrowsExchange } from 'react-icons/cg';
 import { FiShoppingCart } from 'react-icons/fi';
+import { APP_VERSION } from './version';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
@@ -223,6 +224,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           <img src="/logout.svg" alt="" className="logout-icon-img" aria-hidden="true" />
           Cerrar sesión
         </button>
+        <small className="dashboard-version-label">v. {APP_VERSION}</small>
       </aside>
 
       <main className="dashboard-content">

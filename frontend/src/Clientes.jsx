@@ -8,25 +8,11 @@ import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import AppTable from './AppTable';
+import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from './horarios';
 
 export default function Clientes() {
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const MINUTOS = ['00', '15', '30', '45'];
-
-  const splitHora = (value) => {
-    const raw = String(value || '').trim();
-    if (!raw.includes(':')) return { h: '', m: '' };
-    const [h, m] = raw.split(':');
-    const hh = /^\d{1,2}$/.test(h) ? String(Number(h)).padStart(2, '0') : '';
-    const mm = /^\d{1,2}$/.test(m) ? String(Number(m)).padStart(2, '0') : '';
-    return { h: hh, m: mm };
-  };
-
-  const normalizeHoraForSave = (value) => {
-    const { h, m } = splitHora(value);
-    if (!h || !m) return null;
-    return `${h}:${m}`;
-  };
 
   const [clientes, setClientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
@@ -44,6 +30,9 @@ export default function Clientes() {
     correo: '',
     horario_apertura: '',
     horario_cierre: '',
+    tiene_reapertura: false,
+    horario_reapertura: '',
+    horario_cierre_reapertura: '',
   });
 
   useEffect(() => {
@@ -108,6 +97,15 @@ export default function Clientes() {
     setNuevo((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleReaperturaChange = (checked) => {
+    setNuevo((prev) => ({
+      ...prev,
+      tiene_reapertura: checked,
+      horario_reapertura: checked ? prev.horario_reapertura : '',
+      horario_cierre_reapertura: checked ? prev.horario_cierre_reapertura : '',
+    }));
+  };
+
   const setHorarioPart = (field, part, value) => {
     setNuevo((prev) => {
       const current = splitHora(prev[field]);
@@ -130,7 +128,31 @@ export default function Clientes() {
         correo: nuevo.correo || null,
         horario_apertura: normalizeHoraForSave(nuevo.horario_apertura),
         horario_cierre: normalizeHoraForSave(nuevo.horario_cierre),
+        tiene_reapertura: Boolean(nuevo.tiene_reapertura),
+        horario_reapertura: nuevo.tiene_reapertura ? normalizeHoraForSave(nuevo.horario_reapertura) : null,
+        horario_cierre_reapertura: nuevo.tiene_reapertura ? normalizeHoraForSave(nuevo.horario_cierre_reapertura) : null,
       };
+
+      if (!isValidHorarioRange(payload.horario_apertura, payload.horario_cierre)) {
+        await appAlert('El horario de apertura debe ser menor al horario de cierre.');
+        return;
+      }
+      if (payload.tiene_reapertura && (!payload.horario_apertura || !payload.horario_cierre)) {
+        await appAlert('Si el cliente tiene reapertura, completa también apertura y cierre principal.');
+        return;
+      }
+      if (payload.tiene_reapertura && !payload.horario_reapertura && !payload.horario_cierre_reapertura) {
+        await appAlert('Debes completar el horario de reapertura.');
+        return;
+      }
+      if (payload.tiene_reapertura && (!payload.horario_reapertura || !payload.horario_cierre_reapertura)) {
+        await appAlert('Debes completar ambos horarios de reapertura.');
+        return;
+      }
+      if (payload.tiene_reapertura && !isValidHorarioRange(payload.horario_reapertura, payload.horario_cierre_reapertura)) {
+        await appAlert('El horario de reapertura debe ser menor al cierre de reapertura.');
+        return;
+      }
 
       if (editandoId) {
         const actualizado = await api.updateCliente(editandoId, payload);
@@ -140,7 +162,18 @@ export default function Clientes() {
         setClientes((prev) => [creado, ...prev]);
       }
 
-      setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
+      setNuevo({
+        nombre: '',
+        rut: '',
+        direccion: '',
+        telefono: '',
+        correo: '',
+        horario_apertura: '',
+        horario_cierre: '',
+        tiene_reapertura: false,
+        horario_reapertura: '',
+        horario_cierre_reapertura: '',
+      });
       setMostrarForm(false);
       setEditandoId(null);
     } catch (error) {
@@ -159,6 +192,9 @@ export default function Clientes() {
       correo: cliente.correo || '',
       horario_apertura: cliente.horario_apertura || '',
       horario_cierre: cliente.horario_cierre || '',
+      tiene_reapertura: Boolean(cliente.tiene_reapertura),
+      horario_reapertura: cliente.horario_reapertura || '',
+      horario_cierre_reapertura: cliente.horario_cierre_reapertura || '',
     });
     setMostrarForm(true);
   };
@@ -177,7 +213,18 @@ export default function Clientes() {
       if (editandoId === id) {
         setEditandoId(null);
         setMostrarForm(false);
-        setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
+        setNuevo({
+          nombre: '',
+          rut: '',
+          direccion: '',
+          telefono: '',
+          correo: '',
+          horario_apertura: '',
+          horario_cierre: '',
+          tiene_reapertura: false,
+          horario_reapertura: '',
+          horario_cierre_reapertura: '',
+        });
       }
     } catch (error) {
       await appAlert(`No se pudo eliminar: ${error.message}`);
@@ -205,18 +252,26 @@ export default function Clientes() {
 
       autoTable(doc, {
         startY,
-        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Apertura', 'Cierre']],
+        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Horarios']],
         body: filtrados.map((c) => [
           c.nombre || '',
           c.rut || '',
           c.direccion || '',
           c.telefono || '',
           c.correo || '',
-          c.horario_apertura || '',
-          c.horario_cierre || '',
+          formatHorarioCliente(c).replace(' y ', '\n'),
         ]),
-        styles: { fontSize: 9 },
+        styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
         headStyles: { fillColor: [55, 95, 140] },
+        tableWidth: 'wrap',
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 18 },
+          2: { cellWidth: 44 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 32 },
+          5: { cellWidth: 36 },
+        },
       });
 
       doc.save('clientes.pdf');
@@ -238,8 +293,7 @@ export default function Clientes() {
           <td>${c.direccion || ''}</td>
           <td>${c.telefono || ''}</td>
           <td>${c.correo || ''}</td>
-          <td>${c.horario_apertura || ''}</td>
-          <td>${c.horario_cierre || ''}</td>
+          <td>${formatHorarioCliente(c)}</td>
         </tr>
       `;
     }).join('');
@@ -249,7 +303,7 @@ export default function Clientes() {
         <table border="1" style="border-collapse:collapse;width:100%">
           <thead>
             <tr style="background:#375f8c;color:#fff">
-              <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Apertura</th><th>Cierre</th>
+              <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Horarios</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
@@ -275,8 +329,7 @@ export default function Clientes() {
         <td>${c.direccion || ''}</td>
         <td>${c.telefono || ''}</td>
         <td>${c.correo || ''}</td>
-        <td>${c.horario_apertura || ''}</td>
-        <td>${c.horario_cierre || ''}</td>
+        <td>${formatHorarioCliente(c)}</td>
       </tr>
     `).join('');
     const w = window.open('', '_blank', 'noopener,noreferrer,width=980,height=700');
@@ -294,7 +347,7 @@ export default function Clientes() {
         <h2>Lista de clientes</h2>
         <table>
           <thead><tr>
-            <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Apertura</th><th>Cierre</th>
+            <th>Nombre</th><th>Rut/C.I.</th><th>Dirección</th><th>Teléfono</th><th>Mail</th><th>Horarios</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -307,18 +360,42 @@ export default function Clientes() {
 
   const abrirAlta = () => {
     setEditandoId(null);
-    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
+    setNuevo({
+      nombre: '',
+      rut: '',
+      direccion: '',
+      telefono: '',
+      correo: '',
+      horario_apertura: '',
+      horario_cierre: '',
+      tiene_reapertura: false,
+      horario_reapertura: '',
+      horario_cierre_reapertura: '',
+    });
     setMostrarForm(true);
   };
 
   const cerrarPanel = () => {
     setMostrarForm(false);
     setEditandoId(null);
-    setNuevo({ nombre: '', rut: '', direccion: '', telefono: '', correo: '', horario_apertura: '', horario_cierre: '' });
+    setNuevo({
+      nombre: '',
+      rut: '',
+      direccion: '',
+      telefono: '',
+      correo: '',
+      horario_apertura: '',
+      horario_cierre: '',
+      tiene_reapertura: false,
+      horario_reapertura: '',
+      horario_cierre_reapertura: '',
+    });
   };
 
   const aperturaPartes = splitHora(nuevo.horario_apertura);
   const cierrePartes = splitHora(nuevo.horario_cierre);
+  const reaperturaPartes = splitHora(nuevo.horario_reapertura);
+  const cierreReaperturaPartes = splitHora(nuevo.horario_cierre_reapertura);
 
   const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
 
@@ -377,21 +454,11 @@ export default function Clientes() {
       key: 'horario_apertura',
       header: (
         <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_apertura')}>
-          Apertura {sortMark('horario_apertura')}
+          Horarios {sortMark('horario_apertura')}
         </button>
       ),
-      mobileLabel: 'Apertura',
-      render: (c) => c.horario_apertura || '-',
-    },
-    {
-      key: 'horario_cierre',
-      header: (
-        <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_cierre')}>
-          Cierre {sortMark('horario_cierre')}
-        </button>
-      ),
-      mobileLabel: 'Cierre',
-      render: (c) => c.horario_cierre || '-',
+      mobileLabel: 'Horarios',
+      render: (c) => formatHorarioCliente(c),
     },
   ];
 
@@ -458,10 +525,24 @@ export default function Clientes() {
         expandedRowId={clienteExpandidoId}
         renderExpandedRow={(c) => (
           <div className="acciones-cliente-panel">
-            <button type="button" className="edit-btn" onClick={() => editarCliente(c)}>
+            <button
+              type="button"
+              className="edit-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                editarCliente(c);
+              }}
+            >
               Editar
             </button>
-            <button type="button" className="delete-btn" onClick={() => eliminarCliente(c.id)}>
+            <button
+              type="button"
+              className="delete-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                eliminarCliente(c.id);
+              }}
+            >
               Eliminar
             </button>
           </div>
@@ -529,6 +610,56 @@ export default function Clientes() {
                 </select>
               </div>
             </label>
+            <label className="field-label field-checkbox-inline">
+              <input
+                type="checkbox"
+                checked={Boolean(nuevo.tiene_reapertura)}
+                onChange={(e) => handleReaperturaChange(e.target.checked)}
+              />
+              <span>Tiene reapertura</span>
+            </label>
+            {nuevo.tiene_reapertura && (
+              <>
+                <label className="field-label">Horario reapertura
+                  <div className="time-selects">
+                    <select
+                      value={reaperturaPartes.h}
+                      onChange={(e) => setHorarioPart('horario_reapertura', 'h', e.target.value)}
+                    >
+                      <option value="">Hora</option>
+                      {HORAS.map((h) => <option key={`ra-h-${h}`} value={h}>{h}</option>)}
+                    </select>
+                    <span>:</span>
+                    <select
+                      value={reaperturaPartes.m}
+                      onChange={(e) => setHorarioPart('horario_reapertura', 'm', e.target.value)}
+                    >
+                      <option value="">Min</option>
+                      {MINUTOS.map((m) => <option key={`ra-m-${m}`} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                </label>
+                <label className="field-label">Cierre reapertura
+                  <div className="time-selects">
+                    <select
+                      value={cierreReaperturaPartes.h}
+                      onChange={(e) => setHorarioPart('horario_cierre_reapertura', 'h', e.target.value)}
+                    >
+                      <option value="">Hora</option>
+                      {HORAS.map((h) => <option key={`rc-h-${h}`} value={h}>{h}</option>)}
+                    </select>
+                    <span>:</span>
+                    <select
+                      value={cierreReaperturaPartes.m}
+                      onChange={(e) => setHorarioPart('horario_cierre_reapertura', 'm', e.target.value)}
+                    >
+                      <option value="">Min</option>
+                      {MINUTOS.map((m) => <option key={`rc-m-${m}`} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                </label>
+              </>
+            )}
             <div className="cliente-form-actions">
               <button type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</button>
               <button type="button" onClick={cerrarPanel}>Cancelar</button>

@@ -39,6 +39,9 @@ const statements = [
     correo varchar(180) NULL,
     horario_apertura varchar(5) NULL,
     horario_cierre varchar(5) NULL,
+    tiene_reapertura boolean NOT NULL DEFAULT false,
+    horario_reapertura varchar(5) NULL,
+    horario_cierre_reapertura varchar(5) NULL,
     departamento_id integer NULL,
     barrio_id integer NULL
   );
@@ -80,13 +83,16 @@ const statements = [
     imagen text NULL,
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
-    empaque varchar(80) NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
     empaque_id integer NULL
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_productos_nombre ON public.productos (nombre);
+  `,
+  `
+  ALTER TABLE public.productos
+  DROP COLUMN IF EXISTS empaque;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.empaques (
@@ -145,6 +151,18 @@ const statements = [
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_ventas_estado_entrega ON public.ventas (estado_entrega);
+  `,
+  `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS tiene_reapertura boolean NOT NULL DEFAULT false;
+  `,
+  `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS horario_reapertura varchar(5) NULL;
+  `,
+  `
+  ALTER TABLE public.clientes
+  ADD COLUMN IF NOT EXISTS horario_cierre_reapertura varchar(5) NULL;
   `,
   `
   DO $$
@@ -230,7 +248,7 @@ const statements = [
     ) THEN
       ALTER TABLE public.ventas
       ADD CONSTRAINT ventas_estado_entrega_check
-      CHECK (estado_entrega IN ('pendiente', 'entregado'));
+      CHECK (estado_entrega IN ('pendiente', 'entregado', 'cancelado'));
     END IF;
 
     IF NOT EXISTS (
@@ -338,6 +356,25 @@ const statements = [
   );
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
+    id bigserial PRIMARY KEY,
+    usuario_id integer NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    token_hash varchar(64) NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    used boolean NOT NULL DEFAULT false,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_usuario ON public.password_reset_tokens (usuario_id);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_expires ON public.password_reset_tokens (expires_at);
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_password_reset_tokens_hash ON public.password_reset_tokens (token_hash);
+  `,
+  `
   CREATE INDEX IF NOT EXISTS ix_pagos_venta ON public.pagos (venta_id);
   `,
   `
@@ -377,11 +414,24 @@ const statements = [
   `,
   `
   UPDATE public.ventas
-  SET estado_entrega = CASE
-    WHEN entregado IS TRUE THEN 'entregado'
-    ELSE COALESCE(NULLIF(estado_entrega, ''), 'pendiente')
-  END
-  WHERE estado_entrega IS NULL OR estado_entrega = '' OR entregado IS TRUE;
+  SET
+    estado_entrega = CASE
+      WHEN entregado IS TRUE THEN 'entregado'
+      WHEN COALESCE(NULLIF(TRIM(LOWER(estado_entrega)), ''), 'pendiente') = 'entregado' THEN 'entregado'
+      ELSE 'pendiente'
+    END,
+    medio_pago = CASE
+      WHEN COALESCE(NULLIF(TRIM(LOWER(medio_pago)), ''), 'efectivo') IN ('efectivo', 'debito', 'credito', 'transferencia')
+        THEN COALESCE(NULLIF(TRIM(LOWER(medio_pago)), ''), 'efectivo')
+      ELSE 'efectivo'
+    END
+  WHERE estado_entrega IS NULL
+     OR estado_entrega = ''
+     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado', 'cancelado')
+     OR entregado IS TRUE
+     OR medio_pago IS NULL
+     OR TRIM(medio_pago) = ''
+     OR LOWER(TRIM(medio_pago)) NOT IN ('efectivo', 'debito', 'credito', 'transferencia');
   `,
 ];
 

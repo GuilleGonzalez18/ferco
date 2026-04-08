@@ -11,6 +11,8 @@ function toNumber(value) {
 
 export default function ControlStock({ productos = [], setProductos }) {
   const [busqueda, setBusqueda] = useState('');
+  const [sortBy, setSortBy] = useState('nombre');
+  const [sortDir, setSortDir] = useState('asc');
   const [productoIdActivo, setProductoIdActivo] = useState(null);
   const [cantidad, setCantidad] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -22,9 +24,34 @@ export default function ControlStock({ productos = [], setProductos }) {
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return productos;
-    return productos.filter((p) => `${p.nombre || ''} ${p.ean || ''}`.toLowerCase().includes(q));
-  }, [productos, busqueda]);
+    const filtered = !q
+      ? [...productos]
+      : productos.filter((p) => `${p.nombre || ''} ${p.ean || ''}`.toLowerCase().includes(q));
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'stock') {
+        const aStock = Math.floor(toNumber(a.stock));
+        const bStock = Math.floor(toNumber(b.stock));
+        return sortDir === 'asc' ? aStock - bStock : bStock - aStock;
+      }
+      const aNombre = String(a.nombre || '').toLowerCase();
+      const bNombre = String(b.nombre || '').toLowerCase();
+      if (aNombre < bNombre) return sortDir === 'asc' ? -1 : 1;
+      if (aNombre > bNombre) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [productos, busqueda, sortBy, sortDir]);
+
+  const toggleSort = (field) => {
+    if (sortBy === field) {
+      setSortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortBy(field);
+    setSortDir('asc');
+  };
 
   const productoActivo = useMemo(
     () => productos.find((p) => Number(p.id) === Number(productoIdActivo)) || null,
@@ -106,11 +133,19 @@ export default function ControlStock({ productos = [], setProductos }) {
 
       <div className="control-stock-layout">
         <section className="control-stock-list">
+          <div className="stock-table-head">
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+              Producto {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </button>
+            <button type="button" className="sort-header-btn stock-col-right" onClick={() => toggleSort('stock')}>
+              Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </button>
+          </div>
           {productosFiltrados.map((p) => (
             <button
               key={p.id}
               type="button"
-              className={`stock-item ${Number(productoIdActivo) === Number(p.id) ? 'active' : ''}`}
+              className={`stock-table-row ${Number(productoIdActivo) === Number(p.id) ? 'active' : ''}`}
               onClick={() => setProductoIdActivo(p.id)}
             >
               <span className="stock-item-left">

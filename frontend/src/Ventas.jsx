@@ -4,6 +4,7 @@ import { api } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from './appDialog';
+import { formatHorarioCliente } from './horarios';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [
@@ -19,12 +20,16 @@ function toNumber(value) {
 }
 
 function roundMoney(value) {
-  return Math.round(toNumber(value));
+  return Math.round(toNumber(value) * 100) / 100;
 }
 
 function money(value) {
   const rounded = roundMoney(value);
-  return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  return `$${rounded.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isSameMoney(a, b) {
+  return Math.abs(roundMoney(a) - roundMoney(b)) < 0.001;
 }
 
 function getEmpaqueUnits(producto) {
@@ -218,7 +223,17 @@ export default function Ventas({
     const loadClientes = async () => {
       try {
         const rows = await api.getClientes();
-        setClientes(rows.map((c) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono || '' })));
+        setClientes(rows.map((c) => ({
+          id: c.id,
+          nombre: c.nombre,
+          telefono: c.telefono || '',
+          direccion: c.direccion || '',
+          horario_apertura: c.horario_apertura || '',
+          horario_cierre: c.horario_cierre || '',
+          tiene_reapertura: Boolean(c.tiene_reapertura),
+          horario_reapertura: c.horario_reapertura || '',
+          horario_cierre_reapertura: c.horario_cierre_reapertura || '',
+        })));
       } catch (error) {
         console.error('Error cargando clientes', error);
       }
@@ -265,22 +280,6 @@ export default function Ventas({
       })
       .filter(Boolean);
 
-    if (itemsReplicados.length > 0) {
-      setCarrito(itemsReplicados);
-    }
-    setClienteId(venta.cliente_id ? String(venta.cliente_id) : '');
-    setFechaEntrega(venta.fecha_entrega ? String(venta.fecha_entrega).slice(0, 10) : '');
-    setObservacion(venta.observacion || '');
-    setDescuentoTotalTipo(
-      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
-        ? venta.descuento_total_tipo
-        : 'ninguno'
-    );
-    setDescuentoTotalValor(
-      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
-        ? String(roundMoney(venta.descuento_total_valor))
-        : ''
-    );
     const pagosVenta = Array.isArray(venta.pagos) ? venta.pagos : [];
     const pagosReplicados = MEDIOS_PAGO.map((medio) => {
       const pago = pagosVenta.find((p) => p?.medio_pago === medio.key);
@@ -290,21 +289,39 @@ export default function Ventas({
         monto: pago ? String(roundMoney(pago.monto)) : '',
       };
     });
-    setPagos(
-      pagosReplicados.some((p) => p.activo)
-        ? pagosReplicados
-        : [
-          { medio_pago: 'efectivo', activo: true, monto: '' },
-          { medio_pago: 'debito', activo: false, monto: '' },
-          { medio_pago: 'credito', activo: false, monto: '' },
-          { medio_pago: 'transferencia', activo: false, monto: '' },
-        ]
-    );
-    setPaso(1);
-    setVentaFinalizada(null);
-    setTicketImpreso(false);
-    setSelectorClienteAbierto(false);
-    setBusquedaCliente('');
+    queueMicrotask(() => {
+      if (itemsReplicados.length > 0) {
+        setCarrito(itemsReplicados);
+      }
+      setClienteId(venta.cliente_id ? String(venta.cliente_id) : '');
+      setFechaEntrega(venta.fecha_entrega ? String(venta.fecha_entrega).slice(0, 10) : '');
+      setObservacion(venta.observacion || '');
+      setDescuentoTotalTipo(
+        venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+          ? venta.descuento_total_tipo
+          : 'ninguno'
+      );
+      setDescuentoTotalValor(
+        venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+          ? String(roundMoney(venta.descuento_total_valor))
+          : ''
+      );
+      setPagos(
+        pagosReplicados.some((p) => p.activo)
+          ? pagosReplicados
+          : [
+            { medio_pago: 'efectivo', activo: true, monto: '' },
+            { medio_pago: 'debito', activo: false, monto: '' },
+            { medio_pago: 'credito', activo: false, monto: '' },
+            { medio_pago: 'transferencia', activo: false, monto: '' },
+          ]
+      );
+      setPaso(1);
+      setVentaFinalizada(null);
+      setTicketImpreso(false);
+      setSelectorClienteAbierto(false);
+      setBusquedaCliente('');
+    });
     sessionStorage.removeItem('ferco_replicar_venta');
   }, [productos]);
 
@@ -560,12 +577,12 @@ export default function Ventas({
   }, [carrito]);
 
   const descuentoItemsTotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0)),
     [carritoCalculado]
   );
 
   const subtotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0)),
     [carritoCalculado]
   );
 
@@ -584,8 +601,8 @@ export default function Ventas({
     return 0;
   }, [descuentoTotalTipo, descuentoTotalValor, baseParaDescuentoGlobal]);
 
-  const descuentoTotalAplicado = Math.max(0, descuentoItemsTotal + descuentoGlobal);
-  const total = Math.max(0, subtotal - descuentoTotalAplicado);
+  const descuentoTotalAplicado = roundMoney(Math.max(0, descuentoItemsTotal + descuentoGlobal));
+  const total = roundMoney(Math.max(0, subtotal - descuentoTotalAplicado));
   const totalUnidadesCarrito = useMemo(
     () => carritoCalculado.reduce((acc, item) => acc + toNumber(item.unidadesSolicitadas), 0),
     [carritoCalculado]
@@ -608,7 +625,7 @@ export default function Ventas({
     [pagosActivos, total]
   );
   const totalPagos = useMemo(
-    () => pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0),
+    () => roundMoney(pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0)),
     [pagosConMonto]
   );
 
@@ -683,6 +700,8 @@ export default function Ventas({
     cursorY += lineH;
     doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
     doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
+    cursorY += lineH;
+    doc.text(`Horarios: ${ventaFinalizada.clienteHorarios || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
     cursorY += lineH;
     doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
     cursorY += 6;
@@ -841,7 +860,7 @@ export default function Ventas({
       await appAlert('Debes cargar al menos un medio de pago con monto.');
       return;
     }
-    if (totalPagos !== total) {
+    if (!isSameMoney(totalPagos, total)) {
       await appAlert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
@@ -891,6 +910,8 @@ export default function Ventas({
         clienteId: Number(clienteId),
         clienteNombre: cliente?.nombre || 'Cliente',
         clienteTelefono: cliente?.telefono || '',
+        clienteDireccion: cliente?.direccion || '',
+        clienteHorarios: formatHorarioCliente(cliente || {}),
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
         fechaEntrega,
         pagos: (ventaCreada?.pagos || pagosConMonto).map((p) => ({
@@ -911,24 +932,6 @@ export default function Ventas({
       await appAlert(`No se pudo registrar la venta: ${error.message}`);
     }
   };
-
-  const pasosHeader = (
-    <div className="ventas-steps">
-      {PASOS.map((titulo, i) => {
-        const n = i + 1;
-        const state = n < paso ? 'done' : n === paso ? 'active' : 'pending';
-        return (
-          <div className="ventas-step-wrap" key={titulo}>
-            <div className={`ventas-step ${state}`}>
-              <span className="step-index">{state === 'done' ? '✓' : `${n}.`}</span>
-              <span className="step-title">{titulo}</span>
-            </div>
-            {i < PASOS.length - 1 && <span className="step-arrow">→</span>}
-          </div>
-        );
-      })}
-    </div>
-  );
 
   return (
     <div className="ventas-main">
@@ -1010,7 +1013,7 @@ export default function Ventas({
                           <input
                             type="number"
                             min="0"
-                            step="1"
+                            step="0.01"
                             placeholder="Monto"
                             value={esPagoUnico ? total : pago.monto}
                             readOnly={esPagoUnico}
@@ -1030,9 +1033,18 @@ export default function Ventas({
                         Monto automático: se completa con el total al usar un solo medio.
                       </small>
                     )}
-                    <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
+                    <div className={`pagos-total ${isSameMoney(totalPagos, total) ? 'ok' : 'warn'}`}>
                       Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
                     </div>
+                    <label className="observacion-venta">
+                      <span>Observación</span>
+                      <textarea
+                        value={observacion}
+                        onChange={(e) => setObservacion(e.target.value)}
+                        placeholder="Observación (opcional)"
+                        rows={3}
+                      />
+                    </label>
                   </div>
                 </div>
 
@@ -1046,6 +1058,7 @@ export default function Ventas({
                   </div>
                   <div className="ticket-grid">
                     <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
+                    <p><span>Horarios:</span> {formatHorarioCliente(clienteSeleccionado || {})}</p>
                     <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
                     <p><span>Pagos:</span> {pagosConMonto.length}</p>
                     <p><span>Ítems:</span> {carritoCalculado.length}</p>
@@ -1328,7 +1341,7 @@ export default function Ventas({
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoItemModal.valor}
             onChange={(e) => setDescuentoItemModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -1371,7 +1384,7 @@ export default function Ventas({
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoGlobalModal.valor}
             onChange={(e) => setDescuentoGlobalModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -1401,6 +1414,9 @@ export default function Ventas({
               </p>
               <p className="venta-final-cliente">
                 Teléfono: <strong>{ventaFinalizada.clienteTelefono || '-'}</strong>
+              </p>
+              <p className="venta-final-cliente">
+                Horarios: <strong>{ventaFinalizada.clienteHorarios || '-'}</strong>
               </p>
               <p className="venta-final-cliente">
                 Pagos: <strong>{(ventaFinalizada.pagos || []).length}</strong>

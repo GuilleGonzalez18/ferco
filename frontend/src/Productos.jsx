@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,8 +8,6 @@ import { appAlert, appConfirm } from './appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
-
-const tiposEmpaque = ['Caja', 'Bolsa', 'Botella', 'Lata', 'Pack', 'Otro'];
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -67,11 +65,29 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [empaquesModalOpen, setEmpaquesModalOpen] = useState(false);
+  const [empaques, setEmpaques] = useState([]);
+  const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
   const mostrarOpcionesCatalogo = false;
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const [nuevo, setNuevo] = useState({
-    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
+    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
+
+  const loadEmpaques = async () => {
+    try {
+      const rows = await api.getEmpaques();
+      setEmpaques(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      await appAlert(error.message || 'No se pudieron cargar los empaques.');
+    }
+  };
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      loadEmpaques();
+    });
+  }, []);
 
   const normalizeImageUrl = (value) => {
     const trimmed = String(value || '').trim();
@@ -112,6 +128,15 @@ export default function Productos({ user, productos = [], setProductos }) {
       }));
       return;
     }
+    if (name === 'empaqueId') {
+      const selected = empaques.find((e) => String(e.id) === String(value));
+      setNuevo(n => ({
+        ...n,
+        empaqueId: value,
+        tipoEmpaque: selected?.nombre || '',
+      }));
+      return;
+    }
     setNuevo(n => ({ ...n, [name]: value }));
   };
 
@@ -132,7 +157,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         const created = await api.createProducto(toApiProducto(nuevo));
         setProductos([fromApiProducto(created), ...productos]);
       }
-      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
       setMostrarForm(false);
       setImagenUrlError('');
     } catch (error) {
@@ -142,7 +167,12 @@ export default function Productos({ user, productos = [], setProductos }) {
 
   const handleEditar = prod => {
     setProductoExpandidoId(null);
-    setNuevo({ ...prod, imagen: null });
+    const matchedByName = empaques.find((e) => String(e.nombre || '').toLowerCase() === String(prod.tipoEmpaque || '').toLowerCase());
+    setNuevo({
+      ...prod,
+      imagen: null,
+      empaqueId: prod.empaqueId || (matchedByName ? String(matchedByName.id) : ''),
+    });
     setImagenUrlError('');
     setEditando(prod.id);
     setMostrarForm(true);
@@ -161,6 +191,41 @@ export default function Productos({ user, productos = [], setProductos }) {
       setProductoExpandidoId((prev) => (prev === id ? null : prev));
     } catch (error) {
       await appAlert(`No se pudo eliminar: ${error.message}`);
+    }
+  };
+
+  const crearEmpaque = async () => {
+    const nombre = String(nuevoEmpaqueNombre || '').trim();
+    if (!nombre) {
+      await appAlert('Ingresa un nombre para el empaque.');
+      return;
+    }
+    try {
+      const created = await api.createEmpaque({ nombre });
+      setEmpaques((prev) => [...prev, created].sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''))));
+      setNuevoEmpaqueNombre('');
+    } catch (error) {
+      await appAlert(error.message || 'No se pudo crear el empaque.');
+    }
+  };
+
+  const eliminarEmpaque = async (empaque) => {
+    const ok = await appConfirm(`¿Eliminar empaque "${empaque.nombre}"?`, {
+      title: 'Eliminar empaque',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      await api.deleteEmpaque(empaque.id);
+      setEmpaques((prev) => prev.filter((e) => Number(e.id) !== Number(empaque.id)));
+      setNuevo((prev) => (
+        String(prev.empaqueId) === String(empaque.id)
+          ? { ...prev, empaqueId: '', tipoEmpaque: '' }
+          : prev
+      ));
+    } catch (error) {
+      await appAlert(error.message || 'No se pudo eliminar el empaque.');
     }
   };
 
@@ -392,7 +457,9 @@ export default function Productos({ user, productos = [], setProductos }) {
         img.src = '/images/logo2.png';
       });
       doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {}
+    } catch {
+      // noop
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -422,7 +489,9 @@ export default function Productos({ user, productos = [], setProductos }) {
             el.src = item.imagen;
           });
           doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
-        } catch {}
+        } catch {
+          // noop
+        }
       }
 
       doc.setTextColor(31, 41, 51);
@@ -476,7 +545,9 @@ export default function Productos({ user, productos = [], setProductos }) {
         img.src = '/images/logo2.png';
       });
       doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {}
+    } catch {
+      // noop
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -506,7 +577,9 @@ export default function Productos({ user, productos = [], setProductos }) {
             el.src = item.imagen;
           });
           doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
-        } catch {}
+        } catch {
+          // noop
+        }
       }
 
       doc.setTextColor(31, 41, 51);
@@ -555,7 +628,9 @@ export default function Productos({ user, productos = [], setProductos }) {
       try {
         await navigator.share(shareData);
         return;
-      } catch {}
+      } catch {
+        // noop
+      }
     }
 
     const blobUrl = URL.createObjectURL(blob);
@@ -666,14 +741,14 @@ export default function Productos({ user, productos = [], setProductos }) {
   const abrirAlta = () => {
     setMostrarForm(true);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
     setImagenUrlError('');
   };
 
   const cerrarPanel = () => {
     setMostrarForm(false);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
     setImagenUrlError('');
   };
 
@@ -697,6 +772,9 @@ export default function Productos({ user, productos = [], setProductos }) {
           <button className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
             <img src="/add.svg" alt="" aria-hidden="true" />
             <span>PRODUCTO</span>
+          </button>
+          <button className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
+            <span>EMPAQUES</span>
           </button>
           <button className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
             <img src="/print.svg" alt="" aria-hidden="true" />
@@ -758,6 +836,37 @@ export default function Productos({ user, productos = [], setProductos }) {
                 </>
               )}
               <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {empaquesModalOpen && (
+          <div className="export-modal-overlay" role="dialog" aria-modal="true">
+            <div className="export-modal-backdrop" onClick={() => setEmpaquesModalOpen(false)} />
+            <div className="export-modal">
+              <h4>Gestionar empaques</h4>
+              <p>Agrega y administra los tipos de empaque.</p>
+              <div className="empaques-create-row">
+                <input
+                  type="text"
+                  value={nuevoEmpaqueNombre}
+                  onChange={(e) => setNuevoEmpaqueNombre(e.target.value)}
+                  placeholder="Nuevo empaque"
+                />
+                <button type="button" onClick={crearEmpaque}>Agregar</button>
+              </div>
+              <div className="empaques-list">
+                {empaques.map((e) => (
+                  <div key={e.id} className="empaque-item">
+                    <span>{e.nombre}</span>
+                    <button type="button" onClick={() => eliminarEmpaque(e)}>Eliminar</button>
+                  </div>
+                ))}
+                {!empaques.length && <p className="empaque-empty">No hay empaques cargados.</p>}
+              </div>
+              <button type="button" className="export-modal-close" onClick={() => setEmpaquesModalOpen(false)}>
                 Cerrar
               </button>
             </div>
@@ -867,9 +976,9 @@ export default function Productos({ user, productos = [], setProductos }) {
               <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
             </label>
             <label className="field-label">Tipo de empaque
-              <select name="tipoEmpaque" value={nuevo.tipoEmpaque} onChange={handleChange} required>
-                <option value="">Tipo empaque</option>
-                {tiposEmpaque.map(t => <option key={t} value={t}>{t}</option>)}
+              <select name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
+                <option value="">Seleccionar empaque</option>
+                {empaques.map((e) => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
               </select>
             </label>
             <label className="field-label">Cantidad por empaque
