@@ -15,10 +15,13 @@ function actorName(authUser) {
 
 productosRouter.get('/', async (_req, res) => {
   const result = await query(
-    `SELECT id, nombre, ROUND(COALESCE(costo, 0))::int AS costo, ROUND(COALESCE(precio, 0))::int AS precio,
-            stock, unidad, imagen, ean, cantidad_empaque, empaque, ROUND(COALESCE(precio_empaque, 0))::int AS precio_empaque
-     FROM public.productos
-     ORDER BY id DESC`
+    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id,
+            e.nombre AS empaque_nombre,
+            ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
+      FROM public.productos p
+      LEFT JOIN public.empaques e ON e.id = p.empaque_id
+      ORDER BY p.id DESC`
   );
   res.json(result.rows);
 });
@@ -33,7 +36,7 @@ productosRouter.post('/', async (req, res) => {
     imagen = null,
     ean,
     cantidad_empaque = null,
-    empaque = null,
+    empaque_id = null,
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
@@ -41,12 +44,28 @@ productosRouter.post('/', async (req, res) => {
   const precioInt = toMoneyInt(precio);
   const precioEmpaqueInt = toMoneyInt(precio_empaque);
 
+  const empaqueIdSafe = empaque_id == null || empaque_id === '' ? null : Number(empaque_id);
+  if (empaqueIdSafe !== null && (!Number.isInteger(empaqueIdSafe) || empaqueIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Empaque inválido' });
+  }
+  if (empaqueIdSafe !== null) {
+    const empaqueQ = await query(
+      `SELECT id
+       FROM public.empaques
+       WHERE id = $1 AND activo = true`,
+      [empaqueIdSafe]
+    );
+    if (!empaqueQ.rowCount) {
+      return res.status(400).json({ error: 'Empaque no encontrado o inactivo' });
+    }
+  }
+
   const result = await query(
     `INSERT INTO public.productos
-      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
+      (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt]
   );
   await query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -93,13 +112,29 @@ productosRouter.put('/:id', async (req, res) => {
     imagen = null,
     ean,
     cantidad_empaque = null,
-    empaque = null,
+    empaque_id = null,
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
   const costoInt = toMoneyInt(costo);
   const precioInt = toMoneyInt(precio);
   const precioEmpaqueInt = toMoneyInt(precio_empaque);
+  const empaqueIdSafe = empaque_id == null || empaque_id === '' ? null : Number(empaque_id);
+  if (empaqueIdSafe !== null && (!Number.isInteger(empaqueIdSafe) || empaqueIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Empaque inválido' });
+  }
+  if (empaqueIdSafe !== null) {
+    const empaqueQ = await query(
+      `SELECT id
+       FROM public.empaques
+       WHERE id = $1 AND activo = true`,
+      [empaqueIdSafe]
+    );
+    if (!empaqueQ.rowCount) {
+      return res.status(400).json({ error: 'Empaque no encontrado o inactivo' });
+    }
+  }
+
   const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1`, [id]);
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
@@ -114,11 +149,11 @@ productosRouter.put('/:id', async (req, res) => {
          imagen = $6,
          ean = $7,
          cantidad_empaque = $8,
-         empaque = $9,
+         empaque_id = $9,
          precio_empaque = $10
      WHERE id = $11
      RETURNING *`,
-    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaque, precioEmpaqueInt, id]
+    [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, id]
   );
   const actualizado = result.rows[0];
   const stockAnterior = Number(prev.stock || 0);

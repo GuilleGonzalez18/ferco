@@ -83,13 +83,16 @@ const statements = [
     imagen text NULL,
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
-    empaque varchar(80) NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
     empaque_id integer NULL
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_productos_nombre ON public.productos (nombre);
+  `,
+  `
+  ALTER TABLE public.productos
+  DROP COLUMN IF EXISTS empaque;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.empaques (
