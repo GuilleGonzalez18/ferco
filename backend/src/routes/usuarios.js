@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
 import { getAuthUserFromRequest } from '../auth.js';
+import { sendDbError } from '../dbErrors.js';
 
 export const usuariosRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
@@ -116,15 +117,19 @@ usuariosRouter.post('/', async (req, res) => {
     return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
   }
 
-  const hashedPassword = await hashPassword(passwordValue);
-  const result = await query(
-    `INSERT INTO public.usuarios
-      (username, password, tipo, nombre, apellido, correo, telefono, direccion)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-    [usernameValue, hashedPassword, normalizeTipo(tipo), nombre, apellido, correoValue, telefono, direccion]
-  );
-  return res.status(201).json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+  try {
+    const hashedPassword = await hashPassword(passwordValue);
+    const result = await query(
+      `INSERT INTO public.usuarios
+        (username, password, tipo, nombre, apellido, correo, telefono, direccion)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
+      [usernameValue, hashedPassword, normalizeTipo(tipo), nombre, apellido, correoValue, telefono, direccion]
+    );
+    return res.status(201).json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo crear el usuario');
+  }
 });
 
 usuariosRouter.put('/:id', async (req, res) => {
@@ -189,27 +194,31 @@ usuariosRouter.put('/:id', async (req, res) => {
     return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
   }
 
-  let hashedPassword = '';
-  if (passwordValue) {
-    hashedPassword = await hashPassword(passwordValue);
-  }
+  try {
+    let hashedPassword = '';
+    if (passwordValue) {
+      hashedPassword = await hashPassword(passwordValue);
+    }
 
-  const result = await query(
-    `UPDATE public.usuarios
-     SET username = $1,
-          password = COALESCE(NULLIF($2, ''), password),
-          tipo = $3,
-          nombre = $4,
-          apellido = $5,
-          correo = $6,
-          telefono = $7,
-          direccion = $8
-     WHERE id = $9
-     RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-    [usernameValue, hashedPassword, tipoFinal, nombre, apellido, correoValue, telefono, direccion, id]
-  );
-  if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
-  return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+    const result = await query(
+      `UPDATE public.usuarios
+       SET username = $1,
+            password = COALESCE(NULLIF($2, ''), password),
+            tipo = $3,
+            nombre = $4,
+            apellido = $5,
+            correo = $6,
+            telefono = $7,
+            direccion = $8
+       WHERE id = $9
+       RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
+      [usernameValue, hashedPassword, tipoFinal, nombre, apellido, correoValue, telefono, direccion, id]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+    return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+  } catch (error) {
+    return sendDbError(res, error, 'No se pudo actualizar el usuario');
+  }
 });
 
 usuariosRouter.delete('/:id', async (req, res) => {

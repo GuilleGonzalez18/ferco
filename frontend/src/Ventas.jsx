@@ -4,6 +4,7 @@ import { api } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from './appDialog';
+import { formatHorarioCliente } from './horarios';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [
@@ -19,12 +20,16 @@ function toNumber(value) {
 }
 
 function roundMoney(value) {
-  return Math.round(toNumber(value));
+  return Math.round(toNumber(value) * 100) / 100;
 }
 
 function money(value) {
   const rounded = roundMoney(value);
-  return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  return `$${rounded.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isSameMoney(a, b) {
+  return Math.abs(roundMoney(a) - roundMoney(b)) < 0.001;
 }
 
 function getEmpaqueUnits(producto) {
@@ -125,7 +130,17 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const loadClientes = async () => {
       try {
         const rows = await api.getClientes();
-        setClientes(rows.map((c) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono || '' })));
+        setClientes(rows.map((c) => ({
+          id: c.id,
+          nombre: c.nombre,
+          telefono: c.telefono || '',
+          direccion: c.direccion || '',
+          horario_apertura: c.horario_apertura || '',
+          horario_cierre: c.horario_cierre || '',
+          tiene_reapertura: Boolean(c.tiene_reapertura),
+          horario_reapertura: c.horario_reapertura || '',
+          horario_cierre_reapertura: c.horario_cierre_reapertura || '',
+        })));
       } catch (error) {
         console.error('Error cargando clientes', error);
       }
@@ -448,12 +463,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
   }, [carrito]);
 
   const descuentoItemsTotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.descuentoAplicado), 0)),
     [carritoCalculado]
   );
 
   const subtotal = useMemo(
-    () => carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0),
+    () => roundMoney(carritoCalculado.reduce((acc, i) => acc + toNumber(i.subtotalBase), 0)),
     [carritoCalculado]
   );
 
@@ -472,8 +487,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
     return 0;
   }, [descuentoTotalTipo, descuentoTotalValor, baseParaDescuentoGlobal]);
 
-  const descuentoTotalAplicado = Math.max(0, descuentoItemsTotal + descuentoGlobal);
-  const total = Math.max(0, subtotal - descuentoTotalAplicado);
+  const descuentoTotalAplicado = roundMoney(Math.max(0, descuentoItemsTotal + descuentoGlobal));
+  const total = roundMoney(Math.max(0, subtotal - descuentoTotalAplicado));
   const clienteSeleccionado = clientes.find((c) => String(c.id) === String(clienteId));
   const pagosActivos = useMemo(
     () => pagos.filter((p) => p.activo),
@@ -492,7 +507,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
     [pagosActivos, total]
   );
   const totalPagos = useMemo(
-    () => pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0),
+    () => roundMoney(pagosConMonto.reduce((acc, p) => acc + p.montoNumber, 0)),
     [pagosConMonto]
   );
 
@@ -567,6 +582,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
     cursorY += lineH;
     doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
     doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
+    cursorY += lineH;
+    doc.text(`Horarios: ${ventaFinalizada.clienteHorarios || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
     cursorY += lineH;
     doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
     cursorY += 6;
@@ -713,7 +730,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
       await appAlert('Debes cargar al menos un medio de pago con monto.');
       return;
     }
-    if (totalPagos !== total) {
+    if (!isSameMoney(totalPagos, total)) {
       await appAlert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
@@ -763,6 +780,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
         clienteId: Number(clienteId),
         clienteNombre: cliente?.nombre || 'Cliente',
         clienteTelefono: cliente?.telefono || '',
+        clienteDireccion: cliente?.direccion || '',
+        clienteHorarios: formatHorarioCliente(cliente || {}),
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
         fechaEntrega,
         pagos: (ventaCreada?.pagos || pagosConMonto).map((p) => ({
@@ -939,7 +958,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                         <input
                           type="number"
                           min="0"
-                          step="1"
+                          step="0.01"
                           placeholder="Monto"
                           value={esPagoUnico ? total : pago.monto}
                           readOnly={esPagoUnico}
@@ -959,9 +978,18 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       Monto automático: se completa con el total al usar un solo medio.
                     </small>
                   )}
-                  <div className={`pagos-total ${totalPagos === total ? 'ok' : 'warn'}`}>
+                  <div className={`pagos-total ${isSameMoney(totalPagos, total) ? 'ok' : 'warn'}`}>
                     Pagos: <strong>{money(totalPagos)}</strong> / Total: <strong>{money(total)}</strong>
                   </div>
+                  <label className="observacion-venta">
+                    <span>Observación</span>
+                    <textarea
+                      value={observacion}
+                      onChange={(e) => setObservacion(e.target.value)}
+                      placeholder="Observación (opcional)"
+                      rows={3}
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -975,6 +1003,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 </div>
                 <div className="ticket-grid">
                   <p><span>Cliente:</span> {clienteSeleccionado?.nombre || 'Sin seleccionar'}</p>
+                  <p><span>Horarios:</span> {formatHorarioCliente(clienteSeleccionado || {})}</p>
                   <p><span>Entrega:</span> {fechaEntrega || 'Sin definir'}</p>
                   <p><span>Pagos:</span> {pagosConMonto.length}</p>
                   <p><span>Ítems:</span> {carritoCalculado.length}</p>
@@ -1232,7 +1261,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoItemModal.valor}
             onChange={(e) => setDescuentoItemModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -1275,7 +1304,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
           <input
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={descuentoGlobalModal.valor}
             onChange={(e) => setDescuentoGlobalModal((prev) => ({ ...prev, valor: e.target.value }))}
             placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
@@ -1305,6 +1334,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
               </p>
               <p className="venta-final-cliente">
                 Teléfono: <strong>{ventaFinalizada.clienteTelefono || '-'}</strong>
+              </p>
+              <p className="venta-final-cliente">
+                Horarios: <strong>{ventaFinalizada.clienteHorarios || '-'}</strong>
               </p>
               <p className="venta-final-cliente">
                 Pagos: <strong>{(ventaFinalizada.pagos || []).length}</strong>
