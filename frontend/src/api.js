@@ -58,6 +58,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ correo, password }),
     }),
+  forgotPassword: (correo) =>
+    request('/usuarios/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ correo }),
+    }),
+  resetPassword: (token, newPassword) =>
+    request('/usuarios/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
   me: () => request('/usuarios/me'),
   getUsuarios: () => request('/usuarios'),
   createUsuario: (payload) =>

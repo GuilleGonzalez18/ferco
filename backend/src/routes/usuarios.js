@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 import { getAuthUserFromRequest } from '../auth.js';
 
 export const usuariosRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const RESET_CODE_TTL_MINUTES = Number(process.env.RESET_CODE_TTL_MINUTES || 10);
 
 function normalizeTipo(value) {
   const tipo = String(value || '').trim().toLowerCase();
@@ -15,6 +19,38 @@ function normalizeTipo(value) {
 
 function isPropietario(authUser) {
   return normalizeTipo(authUser?.tipo) === 'propietario';
+}
+
+function isBcryptHash(value) {
+  const v = String(value || '');
+  return /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(v);
+}
+
+async function hashPassword(plainText) {
+  return bcrypt.hash(plainText, 12);
+}
+
+async function comparePassword(plainText, hashed) {
+  try {
+    return await bcrypt.compare(plainText, hashed);
+  } catch {
+    return false;
+  }
+}
+
+function getMailTransport() {
+  const host = process.env.SMTP_HOST || '';
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER || '';
+  const pass = process.env.SMTP_PASS || '';
+  const secure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
+  if (!host || !user || !pass) return null;
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
 }
 
 usuariosRouter.get('/', async (req, res) => {
@@ -58,31 +94,35 @@ usuariosRouter.post('/', async (req, res) => {
     direccion = null,
   } = req.body || {};
 
-  if (!username || !password || !correo) {
+  const usernameValue = String(username || '').trim();
+  const correoValue = String(correo || '').trim().toLowerCase();
+  const passwordValue = String(password || '');
+  if (!usernameValue || !passwordValue || !correoValue) {
     return res.status(400).json({ error: 'username, password y correo son requeridos' });
   }
 
   const usernameExists = await query(
     `SELECT id FROM public.usuarios WHERE username = $1 LIMIT 1`,
-    [username]
+    [usernameValue]
   );
   if (usernameExists.rowCount) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese username' });
   }
   const correoExists = await query(
     `SELECT id FROM public.usuarios WHERE correo = $1 LIMIT 1`,
-    [correo]
+    [correoValue]
   );
   if (correoExists.rowCount) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
   }
 
+  const hashedPassword = await hashPassword(passwordValue);
   const result = await query(
     `INSERT INTO public.usuarios
       (username, password, tipo, nombre, apellido, correo, telefono, direccion)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-    [username, password, normalizeTipo(tipo), nombre, apellido, correo, telefono, direccion]
+    [usernameValue, hashedPassword, normalizeTipo(tipo), nombre, apellido, correoValue, telefono, direccion]
   );
   return res.status(201).json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
 });
@@ -110,7 +150,9 @@ usuariosRouter.put('/:id', async (req, res) => {
   if (!canManageAll && !isSelf) {
     return res.status(403).json({ error: 'Solo puedes editar tu propio usuario' });
   }
-  if (!username || !correo) {
+  const usernameValue = String(username || '').trim();
+  const correoValue = String(correo || '').trim().toLowerCase();
+  if (!usernameValue || !correoValue) {
     return res.status(400).json({ error: 'username y correo son requeridos' });
   }
 
@@ -131,7 +173,7 @@ usuariosRouter.put('/:id', async (req, res) => {
      FROM public.usuarios
      WHERE username = $1 AND id <> $2
      LIMIT 1`,
-    [username, id]
+    [usernameValue, id]
   );
   if (usernameExists.rowCount) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese username' });
@@ -141,10 +183,15 @@ usuariosRouter.put('/:id', async (req, res) => {
      FROM public.usuarios
      WHERE correo = $1 AND id <> $2
      LIMIT 1`,
-    [correo, id]
+    [correoValue, id]
   );
   if (correoExists.rowCount) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
+  }
+
+  let hashedPassword = '';
+  if (passwordValue) {
+    hashedPassword = await hashPassword(passwordValue);
   }
 
   const result = await query(
@@ -156,10 +203,10 @@ usuariosRouter.put('/:id', async (req, res) => {
           apellido = $5,
           correo = $6,
           telefono = $7,
-           direccion = $8
+          direccion = $8
      WHERE id = $9
      RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-    [username, passwordValue, tipoFinal, nombre, apellido, correo, telefono, direccion, id]
+    [usernameValue, hashedPassword, tipoFinal, nombre, apellido, correoValue, telefono, direccion, id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
   return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
@@ -184,16 +231,42 @@ usuariosRouter.delete('/:id', async (req, res) => {
 });
 
 usuariosRouter.post('/login', async (req, res) => {
-  const { correo, password } = req.body;
+  const correo = String(req.body?.correo || '').trim().toLowerCase();
+  const password = String(req.body?.password || '');
+  if (!correo || !password) {
+    return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
+  }
+
   const result = await query(
-    `SELECT id, username, tipo, nombre, apellido, correo
+    `SELECT id, username, password, tipo, nombre, apellido, correo
      FROM public.usuarios
-     WHERE correo = $1 AND password = $2
+     WHERE correo = $1
      LIMIT 1`,
-    [correo, password]
+    [correo]
   );
   if (!result.rowCount) return res.status(401).json({ error: 'Credenciales inválidas' });
-  const user = { ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) };
+
+  const dbUser = result.rows[0];
+  let passwordOk = false;
+  if (isBcryptHash(dbUser.password)) {
+    passwordOk = await comparePassword(password, dbUser.password);
+  } else {
+    passwordOk = dbUser.password === password;
+    if (passwordOk) {
+      const upgradedHash = await hashPassword(password);
+      await query(`UPDATE public.usuarios SET password = $1 WHERE id = $2`, [upgradedHash, dbUser.id]);
+    }
+  }
+  if (!passwordOk) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+  const user = {
+    id: dbUser.id,
+    username: dbUser.username,
+    tipo: normalizeTipo(dbUser.tipo),
+    nombre: dbUser.nombre,
+    apellido: dbUser.apellido,
+    correo: dbUser.correo,
+  };
   const token = jwt.sign(
     {
       sub: user.id,
@@ -207,6 +280,85 @@ usuariosRouter.post('/login', async (req, res) => {
     { expiresIn: JWT_EXPIRES_IN }
   );
   return res.json({ user, token });
+});
+
+usuariosRouter.post('/forgot-password', async (req, res) => {
+  const correo = String(req.body?.correo || '').trim().toLowerCase();
+  if (!correo) return res.status(400).json({ error: 'Correo requerido' });
+
+  const userQ = await query(
+    `SELECT id, correo
+     FROM public.usuarios
+     WHERE correo = $1
+     LIMIT 1`,
+    [correo]
+  );
+
+  if (!userQ.rowCount) {
+    return res.status(404).json({
+      error: 'El correo no pertenece a la empresa, si esto es un error comunicate con un propietario.',
+    });
+  }
+
+  const userId = Number(userQ.rows[0].id);
+  const plainCode = String(Math.floor(100000 + Math.random() * 900000));
+  const tokenHash = crypto.createHash('sha256').update(plainCode).digest('hex');
+  const expireAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
+
+  await query(
+    `INSERT INTO public.password_reset_tokens (usuario_id, token_hash, expires_at, used)
+     VALUES ($1, $2, $3, false)`,
+    [userId, tokenHash, expireAt.toISOString()]
+  );
+
+  const transporter = getMailTransport();
+  if (!transporter) {
+    return res.json({ ok: true });
+  }
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || '';
+  await transporter.sendMail({
+    from,
+    to: correo,
+    subject: 'Recuperar contraseña - Ferco',
+    text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
+  });
+
+  return res.json({ ok: true });
+});
+
+usuariosRouter.post('/reset-password', async (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  const newPassword = String(req.body?.newPassword || '');
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Código y nueva contraseña son requeridos' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const tokenQ = await query(
+    `SELECT id, usuario_id, expires_at, used
+     FROM public.password_reset_tokens
+     WHERE token_hash = $1
+     ORDER BY id DESC
+     LIMIT 1`,
+    [tokenHash]
+  );
+  if (!tokenQ.rowCount) return res.status(400).json({ error: 'Código inválido o vencido' });
+
+  const row = tokenQ.rows[0];
+  if (row.used) return res.status(400).json({ error: 'Código inválido o vencido' });
+  if (new Date(row.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'Código inválido o vencido' });
+  }
+
+  const newHash = await hashPassword(newPassword);
+  await query(`UPDATE public.usuarios SET password = $1 WHERE id = $2`, [newHash, row.usuario_id]);
+  await query(`UPDATE public.password_reset_tokens SET used = true WHERE id = $1`, [row.id]);
+  await query(`UPDATE public.password_reset_tokens SET used = true WHERE usuario_id = $1 AND id <> $2 AND used = false`, [row.usuario_id, row.id]);
+
+  return res.json({ ok: true });
 });
 
 usuariosRouter.get('/me', async (req, res) => {

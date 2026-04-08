@@ -12,8 +12,21 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
+const corsOrigin = process.env.CORS_ORIGIN || '';
 
-app.use(cors());
+const allowedOrigins = corsOrigin
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (!allowedOrigins.length) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origen no permitido por CORS'));
+  },
+}));
 app.use(express.json({ limit: '15mb' }));
 
 app.get('/api/health', async (_req, res) => {

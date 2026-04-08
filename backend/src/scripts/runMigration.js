@@ -161,6 +161,7 @@ const statements = [
     END
   WHERE estado_entrega IS NULL
      OR estado_entrega = ''
+     OR LOWER(TRIM(COALESCE(estado_entrega, ''))) NOT IN ('pendiente', 'entregado')
      OR entregado IS TRUE
      OR medio_pago IS NULL
      OR TRIM(medio_pago) = ''
@@ -356,6 +357,25 @@ const statements = [
     monto numeric(12,2) NOT NULL,
     created_at timestamp without time zone NOT NULL DEFAULT now()
   );
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
+    id bigserial PRIMARY KEY,
+    usuario_id integer NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    token_hash varchar(64) NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    used boolean NOT NULL DEFAULT false,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_usuario ON public.password_reset_tokens (usuario_id);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_expires ON public.password_reset_tokens (expires_at);
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_password_reset_tokens_hash ON public.password_reset_tokens (token_hash);
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_pagos_venta ON public.pagos (venta_id);
