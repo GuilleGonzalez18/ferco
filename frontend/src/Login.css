@@ -87,6 +87,16 @@
   border: 1px solid #d4deec !important;
 }
 
+.app-version-label {
+  display: block;
+  margin-top: 0.15rem;
+  color: #8f9aab;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+}
+
 .login-forgot-overlay {
   position: fixed;
   inset: 0;
