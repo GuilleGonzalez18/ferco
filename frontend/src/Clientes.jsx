@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './api';
@@ -7,6 +7,7 @@ import { appAlert, appConfirm } from './appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
+import AppTable from './AppTable';
 
 export default function Clientes() {
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -319,6 +320,81 @@ export default function Clientes() {
   const aperturaPartes = splitHora(nuevo.horario_apertura);
   const cierrePartes = splitHora(nuevo.horario_cierre);
 
+  const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
+
+  const clientesColumns = [
+    {
+      key: 'nombre',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+          Nombre {sortMark('nombre')}
+        </button>
+      ),
+      mobileLabel: 'Nombre',
+      render: (c) => c.nombre || '-',
+    },
+    {
+      key: 'rut',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('rut')}>
+          Rut/C.I. {sortMark('rut')}
+        </button>
+      ),
+      mobileLabel: 'Rut/C.I.',
+      render: (c) => c.rut || '-',
+    },
+    {
+      key: 'direccion',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>
+          Dirección {sortMark('direccion')}
+        </button>
+      ),
+      mobileLabel: 'Dirección',
+      render: (c) => c.direccion || '-',
+    },
+    {
+      key: 'telefono',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>
+          Teléfono {sortMark('telefono')}
+        </button>
+      ),
+      mobileLabel: 'Teléfono',
+      render: (c) => c.telefono || '-',
+    },
+    {
+      key: 'correo',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>
+          Mail {sortMark('correo')}
+        </button>
+      ),
+      mobileLabel: 'Mail',
+      render: (c) => c.correo || '-',
+    },
+    {
+      key: 'horario_apertura',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_apertura')}>
+          Apertura {sortMark('horario_apertura')}
+        </button>
+      ),
+      mobileLabel: 'Apertura',
+      render: (c) => c.horario_apertura || '-',
+    },
+    {
+      key: 'horario_cierre',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_cierre')}>
+          Cierre {sortMark('horario_cierre')}
+        </button>
+      ),
+      mobileLabel: 'Cierre',
+      render: (c) => c.horario_cierre || '-',
+    },
+  ];
+
   return (
     <div className="clientes-main">
       <div className="clientes-toolbar">
@@ -370,61 +446,27 @@ export default function Clientes() {
         </div>
       )}
 
-      <ul className="lista-clientes">
-        <li className="header">
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('rut')}>Rut/C.I. {sortBy === 'rut' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('direccion')}>Dirección {sortBy === 'direccion' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('telefono')}>Teléfono {sortBy === 'telefono' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('correo')}>Mail {sortBy === 'correo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_apertura')}>Apertura {sortBy === 'horario_apertura' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          <button type="button" className="sort-header-btn" onClick={() => toggleSort('horario_cierre')}>Cierre {sortBy === 'horario_cierre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-        </li>
-        {clientesOrdenados.length === 0 && <li className="vacio">No hay clientes</li>}
-        {clientesOrdenados.map((c) => {
-          const expanded = clienteExpandidoId === c.id;
-          return (
-            <Fragment key={c.id}>
-              <li
-                className={`cliente-row ${expanded ? 'expanded' : ''}`}
-                onClick={() => setClienteExpandidoId(expanded ? null : c.id)}
-              >
-                <span>{c.nombre}</span>
-                <span>{c.rut}</span>
-                <span>{c.direccion || '-'}</span>
-                <span>{c.telefono || '-'}</span>
-                <span>{c.correo || '-'}</span>
-                <span>{c.horario_apertura || '-'}</span>
-                <span>{c.horario_cierre || '-'}</span>
-              </li>
-              <li className={`cliente-actions-row ${expanded ? 'expanded' : ''}`}>
-                <div className="acciones-cliente-panel">
-                  <button
-                    type="button"
-                    className="edit-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      editarCliente(c);
-                    }}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      eliminarCliente(c.id);
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </li>
-            </Fragment>
-          );
-        })}
-      </ul>
+      <AppTable
+        className="clientes-table"
+        tableClassName="clientes-table-grid"
+        columns={clientesColumns}
+        rows={clientesOrdenados}
+        rowKey="id"
+        emptyMessage="No hay clientes"
+        onRowClick={(c) => setClienteExpandidoId((prev) => (prev === c.id ? null : c.id))}
+        rowClassName={(c) => `cliente-row ${clienteExpandidoId === c.id ? 'expanded' : ''}`}
+        expandedRowId={clienteExpandidoId}
+        renderExpandedRow={(c) => (
+          <div className="acciones-cliente-panel">
+            <button type="button" className="edit-btn" onClick={() => editarCliente(c)}>
+              Editar
+            </button>
+            <button type="button" className="delete-btn" onClick={() => eliminarCliente(c.id)}>
+              Eliminar
+            </button>
+          </div>
+        )}
+      />
 
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
         <div className="side-panel-backdrop" onClick={cerrarPanel} />
