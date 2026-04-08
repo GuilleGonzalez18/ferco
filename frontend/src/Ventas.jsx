@@ -187,22 +187,6 @@ export default function Ventas({ user, productos = [], setProductos }) {
       })
       .filter(Boolean);
 
-    if (itemsReplicados.length > 0) {
-      setCarrito(itemsReplicados);
-    }
-    setClienteId(venta.cliente_id ? String(venta.cliente_id) : '');
-    setFechaEntrega(venta.fecha_entrega ? String(venta.fecha_entrega).slice(0, 10) : '');
-    setObservacion(venta.observacion || '');
-    setDescuentoTotalTipo(
-      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
-        ? venta.descuento_total_tipo
-        : 'ninguno'
-    );
-    setDescuentoTotalValor(
-      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
-        ? String(roundMoney(venta.descuento_total_valor))
-        : ''
-    );
     const pagosVenta = Array.isArray(venta.pagos) ? venta.pagos : [];
     const pagosReplicados = MEDIOS_PAGO.map((medio) => {
       const pago = pagosVenta.find((p) => p?.medio_pago === medio.key);
@@ -212,21 +196,39 @@ export default function Ventas({ user, productos = [], setProductos }) {
         monto: pago ? String(roundMoney(pago.monto)) : '',
       };
     });
-    setPagos(
-      pagosReplicados.some((p) => p.activo)
-        ? pagosReplicados
-        : [
-          { medio_pago: 'efectivo', activo: true, monto: '' },
-          { medio_pago: 'debito', activo: false, monto: '' },
-          { medio_pago: 'credito', activo: false, monto: '' },
-          { medio_pago: 'transferencia', activo: false, monto: '' },
-        ]
-    );
-    setPaso(1);
-    setVentaFinalizada(null);
-    setTicketImpreso(false);
-    setSelectorClienteAbierto(false);
-    setBusquedaCliente('');
+    queueMicrotask(() => {
+      if (itemsReplicados.length > 0) {
+        setCarrito(itemsReplicados);
+      }
+      setClienteId(venta.cliente_id ? String(venta.cliente_id) : '');
+      setFechaEntrega(venta.fecha_entrega ? String(venta.fecha_entrega).slice(0, 10) : '');
+      setObservacion(venta.observacion || '');
+      setDescuentoTotalTipo(
+        venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+          ? venta.descuento_total_tipo
+          : 'ninguno'
+      );
+      setDescuentoTotalValor(
+        venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+          ? String(roundMoney(venta.descuento_total_valor))
+          : ''
+      );
+      setPagos(
+        pagosReplicados.some((p) => p.activo)
+          ? pagosReplicados
+          : [
+            { medio_pago: 'efectivo', activo: true, monto: '' },
+            { medio_pago: 'debito', activo: false, monto: '' },
+            { medio_pago: 'credito', activo: false, monto: '' },
+            { medio_pago: 'transferencia', activo: false, monto: '' },
+          ]
+      );
+      setPaso(1);
+      setVentaFinalizada(null);
+      setTicketImpreso(false);
+      setSelectorClienteAbierto(false);
+      setBusquedaCliente('');
+    });
     sessionStorage.removeItem('ferco_replicar_venta');
   }, [productos]);
 
@@ -866,10 +868,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       {(() => {
                         const picker = getPickerForProduct(p);
                         const unidadesPorEmpaque = getEmpaqueUnits(p);
-                        const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
-                        const unidadesAgregar = picker.cantidad * multiplicador;
                         const stockDisponible = getStockDisponible(p.id);
-                        const stockProyectado = stockDisponible - unidadesAgregar;
                         const precioEmpaque = roundMoney(p.precioEmpaque);
                         return (
                           <>
