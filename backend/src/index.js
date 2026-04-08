@@ -15,16 +15,33 @@ const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const corsOrigin = process.env.CORS_ORIGIN || '';
 
+function normalizeOrigin(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/\/+$/, '');
+}
+
+function wildcardToRegex(pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped.replace(/\*/g, '.*')}$`);
+}
+
 const allowedOrigins = corsOrigin
   .split(',')
-  .map((value) => value.trim())
+  .map((value) => normalizeOrigin(value))
   .filter(Boolean);
 
 app.use(cors({
   origin(origin, callback) {
     if (!origin) return callback(null, true);
     if (!allowedOrigins.length) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    const requestOrigin = normalizeOrigin(origin);
+    const isAllowed = allowedOrigins.some((rule) => {
+      if (!rule.includes('*')) return rule === requestOrigin;
+      return wildcardToRegex(rule).test(requestOrigin);
+    });
+    if (isAllowed) return callback(null, true);
     return callback(new Error('Origen no permitido por CORS'));
   },
 }));
