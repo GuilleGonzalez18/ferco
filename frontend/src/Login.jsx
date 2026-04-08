@@ -134,7 +134,7 @@ export default function Login({ onLogin }) {
             >
               Olvidé mi contraseña
             </button>
-            <small className="app-version-label">v. {APP_VERSION}</small>
+            <small className="app-version-label">{APP_VERSION}</small>
           </>
         ) : (
           <>
