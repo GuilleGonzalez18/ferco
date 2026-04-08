@@ -21,6 +21,15 @@ const statements = [
   CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON public.usuarios (correo);
   `,
   `
+  CREATE TABLE IF NOT EXISTS public.departamentos (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS departamentos_nombre_key ON public.departamentos (nombre);
+  `,
+  `
   CREATE TABLE IF NOT EXISTS public.clientes (
     id serial PRIMARY KEY,
     nombre varchar(180) NOT NULL,
@@ -28,12 +37,37 @@ const statements = [
     direccion text NULL,
     telefono varchar(50) NULL,
     correo varchar(180) NULL,
+    horario_apertura varchar(5) NULL,
+    horario_cierre varchar(5) NULL,
     departamento_id integer NULL,
     barrio_id integer NULL
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_clientes_nombre ON public.clientes (nombre);
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.barrios (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL,
+    departamento_id integer NULL
+  );
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'barrios'
+        AND constraint_name = 'barrios_departamento_id_fkey'
+    ) THEN
+      ALTER TABLE public.barrios
+      ADD CONSTRAINT barrios_departamento_id_fkey
+      FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id) ON DELETE CASCADE;
+    END IF;
+  END $$;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.productos (
@@ -47,11 +81,31 @@ const statements = [
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
     empaque varchar(80) NULL,
-    precio_empaque numeric(12,2) NOT NULL DEFAULT 0
+    precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
+    empaque_id integer NULL
   );
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_productos_nombre ON public.productos (nombre);
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.empaques (
+    id serial PRIMARY KEY,
+    nombre varchar(120) NOT NULL,
+    activo boolean NOT NULL DEFAULT true,
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS empaques_nombre_key ON public.empaques (nombre);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_empaques_nombre ON public.empaques (nombre);
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS productos_ean_unique
+    ON public.productos (ean)
+    WHERE ean IS NOT NULL;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.ventas (
@@ -84,6 +138,15 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_ventas_cancelada ON public.ventas (cancelada);
   `,
   `
+  CREATE INDEX IF NOT EXISTS ix_ventas_fecha_entrega ON public.ventas (fecha_entrega);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_ventas_entregado ON public.ventas (entregado);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_ventas_estado_entrega ON public.ventas (estado_entrega);
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -96,6 +159,90 @@ const statements = [
       ALTER TABLE public.ventas
       ADD CONSTRAINT ventas_cliente_id_fkey
       FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_usuario_id_fkey'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_usuario_id_fkey
+      FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id);
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'clientes'
+        AND constraint_name = 'clientes_departamento_id_fkey'
+    ) THEN
+      ALTER TABLE public.clientes
+      ADD CONSTRAINT clientes_departamento_id_fkey
+      FOREIGN KEY (departamento_id) REFERENCES public.departamentos(id) ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'clientes'
+        AND constraint_name = 'clientes_barrio_id_fkey'
+    ) THEN
+      ALTER TABLE public.clientes
+      ADD CONSTRAINT clientes_barrio_id_fkey
+      FOREIGN KEY (barrio_id) REFERENCES public.barrios(id) ON DELETE SET NULL;
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'productos'
+        AND constraint_name = 'productos_empaque_id_fkey'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_empaque_id_fkey
+      FOREIGN KEY (empaque_id) REFERENCES public.empaques(id);
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_estado_entrega_check'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_estado_entrega_check
+      CHECK (estado_entrega IN ('pendiente', 'entregado'));
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'ventas'
+        AND constraint_name = 'ventas_medio_pago_check'
+    ) THEN
+      ALTER TABLE public.ventas
+      ADD CONSTRAINT ventas_medio_pago_check
+      CHECK (medio_pago IN ('efectivo', 'debito', 'credito', 'transferencia'));
     END IF;
   END $$;
   `,
@@ -194,6 +341,9 @@ const statements = [
   CREATE INDEX IF NOT EXISTS ix_pagos_venta ON public.pagos (venta_id);
   `,
   `
+  CREATE INDEX IF NOT EXISTS ix_pagos_created_at ON public.pagos (created_at DESC);
+  `,
+  `
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -206,6 +356,22 @@ const statements = [
       ALTER TABLE public.pagos
       ADD CONSTRAINT pagos_venta_id_fkey
       FOREIGN KEY (venta_id) REFERENCES public.ventas(id) ON DELETE CASCADE;
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM information_schema.table_constraints
+      WHERE table_schema = 'public'
+        AND table_name = 'pagos'
+        AND constraint_name = 'pagos_medio_pago_check'
+    ) THEN
+      ALTER TABLE public.pagos
+      ADD CONSTRAINT pagos_medio_pago_check
+      CHECK (medio_pago IN ('efectivo', 'debito', 'credito', 'transferencia'));
     END IF;
   END $$;
   `,

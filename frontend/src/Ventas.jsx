@@ -3,6 +3,7 @@ import './Ventas.css';
 import { api } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { appAlert, appConfirm } from './appDialog';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [
@@ -63,23 +64,6 @@ function formatMedioPago(value) {
   if (v === 'debito') return 'Débito';
   if (v === 'transferencia') return 'Transferencia';
   return 'Efectivo';
-}
-
-function normalizeWhatsappPhone(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  let digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  if (digits.startsWith('00')) digits = digits.slice(2);
-  if (digits.startsWith('598')) return digits;
-  if (digits.startsWith('0')) return `598${digits.slice(1)}`;
-  if (digits.length <= 9) return `598${digits}`;
-  return digits;
-}
-
-function isAndroidDevice() {
-  if (typeof navigator === 'undefined') return false;
-  return /android/i.test(String(navigator.userAgent || ''));
 }
 
 export default function Ventas({ user, productos = [], setProductos }) {
@@ -149,6 +133,88 @@ export default function Ventas({ user, productos = [], setProductos }) {
     loadClientes();
   }, []);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem('ferco_replicar_venta');
+    if (!raw) return;
+    let venta = null;
+    try {
+      venta = JSON.parse(raw);
+    } catch {
+      sessionStorage.removeItem('ferco_replicar_venta');
+      return;
+    }
+    if (!venta || typeof venta !== 'object') {
+      sessionStorage.removeItem('ferco_replicar_venta');
+      return;
+    }
+
+    const detalle = Array.isArray(venta.detalle) ? venta.detalle : [];
+    const itemsReplicados = detalle
+      .map((item, idx) => {
+        const productoId = Number(item.producto_id);
+        if (!Number.isFinite(productoId) || productoId <= 0) return null;
+        const producto = productos.find((p) => Number(p.id) === productoId);
+        const unidadesPorEmpaque = getEmpaqueUnits(producto);
+        const cantidad = Math.max(1, Math.floor(toNumber(item.cantidad)));
+        return {
+          id: Date.now() + Math.random() + idx,
+          productoId,
+          nombre: producto?.nombre || item.producto_nombre || `Producto #${productoId}`,
+          unidadesSolicitadas: cantidad,
+          precioUnidad: roundMoney(producto?.venta ?? item.precio_unitario),
+          precioEmpaque: roundMoney(producto?.precioEmpaque ?? 0),
+          unidadesPorEmpaque,
+          tipoEmpaque: String(producto?.tipoEmpaque || 'empaque').trim() || 'empaque',
+          modoVenta: unidadesPorEmpaque > 1 && cantidad % unidadesPorEmpaque === 0 ? 'empaque' : 'unidad',
+          descuentoTipo: 'ninguno',
+          descuentoValor: '',
+        };
+      })
+      .filter(Boolean);
+
+    if (itemsReplicados.length > 0) {
+      setCarrito(itemsReplicados);
+    }
+    setClienteId(venta.cliente_id ? String(venta.cliente_id) : '');
+    setFechaEntrega(venta.fecha_entrega ? String(venta.fecha_entrega).slice(0, 10) : '');
+    setObservacion(venta.observacion || '');
+    setDescuentoTotalTipo(
+      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+        ? venta.descuento_total_tipo
+        : 'ninguno'
+    );
+    setDescuentoTotalValor(
+      venta.descuento_total_tipo === 'porcentaje' || venta.descuento_total_tipo === 'fijo'
+        ? String(roundMoney(venta.descuento_total_valor))
+        : ''
+    );
+    const pagosVenta = Array.isArray(venta.pagos) ? venta.pagos : [];
+    const pagosReplicados = MEDIOS_PAGO.map((medio) => {
+      const pago = pagosVenta.find((p) => p?.medio_pago === medio.key);
+      return {
+        medio_pago: medio.key,
+        activo: Boolean(pago),
+        monto: pago ? String(roundMoney(pago.monto)) : '',
+      };
+    });
+    setPagos(
+      pagosReplicados.some((p) => p.activo)
+        ? pagosReplicados
+        : [
+          { medio_pago: 'efectivo', activo: true, monto: '' },
+          { medio_pago: 'debito', activo: false, monto: '' },
+          { medio_pago: 'credito', activo: false, monto: '' },
+          { medio_pago: 'transferencia', activo: false, monto: '' },
+        ]
+    );
+    setPaso(1);
+    setVentaFinalizada(null);
+    setTicketImpreso(false);
+    setSelectorClienteAbierto(false);
+    setBusquedaCliente('');
+    sessionStorage.removeItem('ferco_replicar_venta');
+  }, [productos]);
+
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     if (!q) return productos;
@@ -170,11 +236,27 @@ export default function Ventas({ user, productos = [], setProductos }) {
     }, {});
   }, [carrito]);
 
+  const stockBasePorProducto = useMemo(() => {
+    return productos.reduce((acc, producto) => {
+      acc[producto.id] = Math.floor(toNumber(producto.stock || 0));
+      return acc;
+    }, {});
+  }, [productos]);
+
+  const stockRestantePorProducto = useMemo(() => {
+    const remaining = {};
+    Object.keys(stockBasePorProducto).forEach((productoId) => {
+      const base = Math.floor(toNumber(stockBasePorProducto[productoId]));
+      const reservado = Math.floor(toNumber(stockReservadoPorProducto[productoId] || 0));
+      remaining[productoId] = base - reservado;
+    });
+    return remaining;
+  }, [stockBasePorProducto, stockReservadoPorProducto]);
+
   const getStockDisponible = (productoId) => {
-    const producto = productos.find((p) => p.id === productoId);
-    const stockBase = Math.floor(toNumber(producto?.stock || 0));
+    const stockBase = Math.floor(toNumber(stockBasePorProducto[productoId] || 0));
     const reservado = Math.floor(toNumber(stockReservadoPorProducto[productoId] || 0));
-    return Math.max(0, stockBase - reservado);
+    return stockBase - reservado;
   };
 
   const getPickerForProduct = (producto) => {
@@ -211,17 +293,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
     const unidadesPorEmpaque = getEmpaqueUnits(producto);
     const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
     const unidadesAgregar = picker.cantidad * multiplicador;
-    const stockDisponible = getStockDisponible(producto.id);
     const precioUnidad = roundMoney(producto.venta);
     const precioEmpaque = roundMoney(producto.precioEmpaque);
     const tipoEmpaque = String(producto.tipoEmpaque || 'empaque').trim() || 'empaque';
+    const modoVenta = picker.modo === 'empaque' ? 'empaque' : 'unidad';
 
-    if (unidadesAgregar > stockDisponible) {
-      window.alert(`Stock insuficiente para ${producto.nombre}. Disponible: ${stockDisponible} unidad(es).`);
-      return;
-    }
-
-    const itemExistente = carrito.find((i) => i.productoId === producto.id);
+    const itemExistente = carrito.find((i) => i.productoId === producto.id && i.modoVenta === modoVenta);
     if (itemExistente) {
       setCarrito((prev) =>
         prev.map((item) =>
@@ -233,6 +310,8 @@ export default function Ventas({ user, productos = [], setProductos }) {
               precioEmpaque,
               unidadesPorEmpaque,
               tipoEmpaque,
+              modoVenta,
+              ean: producto.ean || item.ean || '',
             }
             : item
         )
@@ -246,11 +325,13 @@ export default function Ventas({ user, productos = [], setProductos }) {
         id: Date.now() + Math.random(),
         productoId: producto.id,
         nombre: producto.nombre,
+        ean: producto.ean || '',
         unidadesSolicitadas: unidadesAgregar,
         precioUnidad,
         precioEmpaque,
         unidadesPorEmpaque,
         tipoEmpaque,
+        modoVenta,
         descuentoTipo: 'ninguno',
         descuentoValor: '',
       },
@@ -269,15 +350,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
   };
 
   const updateUnits = (itemId, nextValue) => {
-    const unidades = Math.max(1, Math.floor(toNumber(nextValue)));
     const item = carrito.find((i) => i.id === itemId);
     if (!item) return;
-    const producto = productos.find((p) => p.id === item.productoId);
-    const stockBase = Math.floor(toNumber(producto?.stock || 0));
-    const reservadoOtros = Math.floor(toNumber(stockReservadoPorProducto[item.productoId] || 0)) - toNumber(item.unidadesSolicitadas);
-    const stock = Math.max(0, stockBase - Math.max(0, reservadoOtros));
-    if (unidades > stock) {
-      window.alert(`Stock insuficiente para ${item.nombre}. Disponible: ${stock} unidad(es).`);
+    const packSize = Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)));
+    const ingreso = Math.max(1, Math.floor(toNumber(nextValue)));
+    const unidades = item.modoVenta === 'empaque' ? ingreso * packSize : ingreso;
+    if (unidades <= 0) {
       return;
     }
     updateItem(itemId, { unidadesSolicitadas: unidades });
@@ -420,7 +498,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
   const goNext = () => {
     if (carrito.length === 0) {
-      window.alert('Agrega al menos un producto al carrito.');
+      appAlert('Agrega al menos un producto al carrito.');
       return;
     }
     setPaso(2);
@@ -464,11 +542,11 @@ export default function Ventas({ user, productos = [], setProductos }) {
 
     try {
       const logo = await loadImage('/images/encabezadofacturacion.png');
-      const logoWidth = 120;
-      const logoHeight = 24;
+      const logoWidth = 64;
+      const logoHeight = 12;
       const x = (pageWidth - logoWidth) / 2;
       doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-      cursorY += logoHeight + 6;
+      cursorY += logoHeight + 4;
     } catch {
       cursorY += 2;
     }
@@ -477,23 +555,21 @@ export default function Ventas({ user, productos = [], setProductos }) {
     doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
     cursorY += 6;
 
-    doc.setFontSize(10);
-    doc.text(`Venta: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, 14, cursorY);
-    doc.text(`Fecha: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, 120, cursorY);
-    cursorY += 5;
-    doc.text(`Cliente: ${ventaFinalizada.clienteNombre}`, 14, cursorY);
-    cursorY += 5;
-    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre}`, 14, cursorY);
-    cursorY += 5;
-    doc.text(`Entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, 14, cursorY);
+    const leftX = 14;
+    const rightX = pageWidth / 2 + 4;
+    const lineH = 4.8;
+    doc.setFontSize(9.5);
+    doc.text(`Fecha Emisión: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, leftX, cursorY);
+    doc.text(`Cliente: ${ventaFinalizada.clienteNombre || '-'}`, rightX, cursorY);
+    cursorY += lineH;
+    doc.text(`Número de ticket: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, leftX, cursorY);
+    doc.text(`Número de teléfono: ${ventaFinalizada.clienteTelefono || '-'}`, rightX, cursorY);
+    cursorY += lineH;
+    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
+    doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
+    cursorY += lineH;
+    doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
     cursorY += 6;
-    doc.text(`Medio(s) de pago:`, 14, cursorY);
-    cursorY += 5;
-    (ventaFinalizada.pagos || []).forEach((pago) => {
-      doc.text(`- ${formatMedioPago(pago.medio_pago)}: ${money(pago.monto)}`, 18, cursorY);
-      cursorY += 4;
-    });
-    cursorY += 2;
 
     autoTable(doc, {
       startY: cursorY,
@@ -511,15 +587,30 @@ export default function Ventas({ user, productos = [], setProductos }) {
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
+    const totalsRightX = pageWidth - 14;
+    const pagosLabelX = pageWidth - 52;
+    const pagosValueX = pageWidth - 14;
+    let totalsY = finalY + 8;
     doc.setFontSize(10);
-    doc.text(`Subtotal: ${money(ventaFinalizada.subtotal)}`, 14, finalY + 8);
-    doc.text(`Descuento total: -${money(ventaFinalizada.descuentoGlobal)}`, 14, finalY + 14);
+    doc.text(`Subtotal: ${money(ventaFinalizada.subtotal)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 5;
+    doc.text(`Descuentos: -${money(ventaFinalizada.descuentoGlobal)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 5;
     doc.setFontSize(12);
-    doc.text(`TOTAL: ${money(ventaFinalizada.total)}`, 14, finalY + 22);
+    doc.text(`Total: ${money(ventaFinalizada.total)}`, totalsRightX, totalsY, { align: 'right' });
+    totalsY += 6;
+    doc.setFontSize(10);
+    doc.text('Pagos:', totalsRightX, totalsY, { align: 'right' });
+    totalsY += 4;
+    (ventaFinalizada.pagos || []).forEach((pago) => {
+      doc.text(`- ${formatMedioPago(pago.medio_pago)}:`, pagosLabelX, totalsY, { align: 'right' });
+      doc.text(`${money(pago.monto)}`, pagosValueX, totalsY, { align: 'right' });
+      totalsY += 4;
+    });
 
     if (ventaFinalizada.observacion) {
       doc.setFontSize(9);
-      doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, finalY + 30);
+      doc.text(`Observación: ${ventaFinalizada.observacion}`, 14, totalsY + 2);
     }
 
     const fileName = `ticket-venta-${ventaFinalizada.id || Date.now()}.pdf`;
@@ -529,63 +620,67 @@ export default function Ventas({ user, productos = [], setProductos }) {
   const imprimirTicket = async () => {
     const data = await buildTicketPdf();
     if (!data) return;
+    const blob = data.doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = blobUrl;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      }
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 7000);
+    setTicketImpreso(true);
+  };
+
+  const descargarTicketPdf = async () => {
+    const data = await buildTicketPdf();
+    if (!data) return;
     data.doc.save(data.fileName);
     setTicketImpreso(true);
   };
 
   const enviarTicketWhatsApp = async () => {
     if (!ventaFinalizada) return;
-    const telefonoNormalizado = normalizeWhatsappPhone(ventaFinalizada.clienteTelefono);
-    if (!telefonoNormalizado) {
-      window.alert('El cliente no tiene teléfono válido para WhatsApp.');
-      return;
-    }
-
     const data = await buildTicketPdf();
     if (!data) return;
-
-    const message = `Hola ${ventaFinalizada.clienteNombre}, te enviamos tu ticket de compra #${ventaFinalizada.id || ''}. Total: ${money(ventaFinalizada.total)}.`;
-    const waUrl = `https://wa.me/${telefonoNormalizado}?text=${encodeURIComponent(message)}`;
     const pdfBlob = data.doc.output('blob');
+    const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
+    const shareData = {
+      files: [file],
+      title: `Ticket ${ventaFinalizada.id || ''}`,
+    };
+    const canShareFile = typeof navigator !== 'undefined'
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare(shareData);
 
-    if (isAndroidDevice() && typeof File === 'function' && typeof navigator !== 'undefined' && navigator.share && typeof navigator.canShare === 'function') {
-      const file = new File([pdfBlob], data.fileName, { type: 'application/pdf' });
-      if (navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: `Ticket ${ventaFinalizada.id || ''}`,
-            text: message,
-            files: [file],
-          });
-          setTicketImpreso(true);
-          return;
-        } catch {
-          // fallback below
-        }
+    if (canShareFile) {
+      try {
+        await navigator.share(shareData);
+        setTicketImpreso(true);
+        return;
+      } catch {
+        // fallback below
       }
     }
 
     data.doc.save(data.fileName);
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-    window.alert('Abrimos WhatsApp directo al cliente y descargamos el PDF. Adjunta el archivo desde Descargas y envía.');
+    window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
     setTicketImpreso(true);
-  };
-
-  const enviarTicketEmail = async () => {
-    if (!ventaFinalizada?.id) {
-      window.alert('La venta debe estar registrada para enviarla por email.');
-      return;
-    }
-    const data = await buildTicketPdf();
-    if (!data) return;
-    try {
-      const pdfBase64 = data.doc.output('datauristring').split(',')[1] || '';
-      await api.enviarFacturaEmail(ventaFinalizada.id, pdfBase64, data.fileName);
-      window.alert('Factura enviada por email al cliente.');
-      setTicketImpreso(true);
-    } catch (error) {
-      window.alert(error.message || 'No se pudo enviar la factura por email.');
-    }
   };
 
   const iniciarNuevaVenta = () => {
@@ -597,23 +692,29 @@ export default function Ventas({ user, productos = [], setProductos }) {
   const cerrarVentaFinalDesdeBackdrop = () => {
     if (!ventaFinalizada) return;
     if (!ticketImpreso) {
-      const ok = window.confirm('Aún no imprimiste el ticket. ¿Cerrar igual y comenzar nueva venta?');
-      if (!ok) return;
+      appConfirm('Aún no imprimiste el ticket. ¿Cerrar igual y comenzar nueva venta?', {
+        title: 'Cerrar venta confirmada',
+        confirmText: 'Cerrar igual',
+        cancelText: 'Seguir aquí',
+      }).then((ok) => {
+        if (ok) iniciarNuevaVenta();
+      });
+      return;
     }
     iniciarNuevaVenta();
   };
 
   const confirmarVenta = async () => {
     if (!clienteId || !fechaEntrega) {
-      window.alert('Debes seleccionar cliente y fecha de entrega.');
+      await appAlert('Debes seleccionar cliente y fecha de entrega.');
       return;
     }
     if (pagosConMonto.length === 0) {
-      window.alert('Debes cargar al menos un medio de pago con monto.');
+      await appAlert('Debes cargar al menos un medio de pago con monto.');
       return;
     }
     if (totalPagos !== total) {
-      window.alert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
+      await appAlert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
     if (!setProductos) return;
@@ -622,15 +723,6 @@ export default function Ventas({ user, productos = [], setProductos }) {
       acc[i.productoId] = (acc[i.productoId] || 0) + toNumber(i.unidadesSolicitadas);
       return acc;
     }, {});
-
-    for (const p of productos) {
-      const need = toNumber(demanda[p.id] || 0);
-      const stock = Math.floor(toNumber(p.stock));
-      if (need > stock) {
-        window.alert(`Stock insuficiente para ${p.nombre}.`);
-        return;
-      }
-    }
 
     try {
       const ventaCreada = await api.createVenta({
@@ -646,15 +738,21 @@ export default function Ventas({ user, productos = [], setProductos }) {
            producto_id: item.productoId,
            cantidad: item.unidadesSolicitadas,
            precio_unitario: toNumber(item.precioUnitarioCalculado),
-         })),
-       });
+          })),
+        });
+
+      window.dispatchEvent(
+        new CustomEvent('ferco:stats-refresh', {
+          detail: { source: 'venta-creada', ventaId: ventaCreada?.id ?? null },
+        })
+      );
 
       setProductos(
         productos.map((p) => {
           const need = toNumber(demanda[p.id] || 0);
           if (!need) return p;
           const stock = Math.floor(toNumber(p.stock));
-          return { ...p, stock: String(Math.max(0, stock - need)) };
+          return { ...p, stock: String(stock - need) };
         })
       );
 
@@ -662,6 +760,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
       setVentaFinalizada({
         id: ventaCreada?.id ?? null,
         fecha: new Date().toISOString(),
+        clienteId: Number(clienteId),
         clienteNombre: cliente?.nombre || 'Cliente',
         clienteTelefono: cliente?.telefono || '',
         vendedorNombre: user?.nombre || user?.usuario || 'Vendedor',
@@ -674,12 +773,14 @@ export default function Ventas({ user, productos = [], setProductos }) {
         items: carritoCalculado,
         subtotal,
         descuentoGlobal: descuentoTotalAplicado,
+        descuentoTotalTipo,
+        descuentoTotalValor,
         total,
       });
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
     } catch (error) {
-      window.alert(`No se pudo registrar la venta: ${error.message}`);
+      await appAlert(`No se pudo registrar la venta: ${error.message}`);
     }
   };
 
@@ -738,6 +839,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                       )}
                       <div className="overlay">
                         <h4>{p.nombre}</h4>
+                        <small className="overlay-code">Código: {p.ean || '-'}</small>
                         <span>{money(p.venta)}</span>
                       </div>
                     </div>
@@ -748,7 +850,7 @@ export default function Ventas({ user, productos = [], setProductos }) {
                         const multiplicador = picker.modo === 'empaque' ? unidadesPorEmpaque : 1;
                         const unidadesAgregar = picker.cantidad * multiplicador;
                         const stockDisponible = getStockDisponible(p.id);
-                        const puedeAgregar = stockDisponible >= unidadesAgregar;
+                        const stockProyectado = stockDisponible - unidadesAgregar;
                         const precioEmpaque = roundMoney(p.precioEmpaque);
                         return (
                           <>
@@ -789,7 +891,6 @@ export default function Ventas({ user, productos = [], setProductos }) {
                                 type="button"
                                 className="picker-add-btn"
                                 onClick={() => addToCartFromPicker(p)}
-                                disabled={!puedeAgregar}
                               >
                                 Agregar
                               </button>
@@ -942,15 +1043,26 @@ export default function Ventas({ user, productos = [], setProductos }) {
               <div key={item.id} className="carrito-item">
                 <div>
                   <strong>{item.nombre}</strong>
-                  <p>{item.unidadesSolicitadas} unidad(es)</p>
+                  <p className="carrito-codigo">Código: {item.ean || '-'}</p>
+                  <p className={toNumber(stockRestantePorProducto[item.productoId] || 0) < 0 ? 'unidades-negativas' : ''}>
+                    {item.modoVenta === 'empaque'
+                      ? `${item.unidadesSolicitadas} unidad(es)`
+                      : `${item.unidadesSolicitadas} unidad(es)`}
+                  </p>
                   <div className="unidades-edit">
-                    <label htmlFor={`units-${item.id}`}>Unidades</label>
+                    <label htmlFor={`units-${item.id}`}>
+                      {item.modoVenta === 'empaque' ? (item.tipoEmpaque || 'Empaques') : 'Unidades'}
+                    </label>
                     <input
                       id={`units-${item.id}`}
                       type="number"
                       min="1"
                       step="1"
-                      value={item.unidadesSolicitadas}
+                      value={
+                        item.modoVenta === 'empaque'
+                          ? Math.max(1, Math.floor(toNumber(item.unidadesSolicitadas) / Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)))))
+                          : item.unidadesSolicitadas
+                      }
                       onChange={(e) => updateUnits(item.id, e.target.value)}
                     />
                   </div>
@@ -984,7 +1096,12 @@ export default function Ventas({ user, productos = [], setProductos }) {
                 </div>
                 <div className="carrito-right">
                   <span>{money(item.subtotalBase)}</span>
-                  <small>{formatEmpaqueSplit(item)}</small>
+                  <small>
+                    {item.modoVenta === 'empaque'
+                      ? `${Math.max(1, Math.floor(toNumber(item.unidadesSolicitadas) / Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)))))}
+                         ${item.tipoEmpaque || 'empaque'}(s)`
+                      : formatEmpaqueSplit(item)}
+                  </small>
                   {item.descuentoAplicado > 0 && (
                     <small className="linea-descuento">- {money(item.descuentoAplicado)}</small>
                   )}
@@ -1230,9 +1347,9 @@ export default function Ventas({ user, productos = [], setProductos }) {
               <img src="/whatsapp.svg" alt="" aria-hidden="true" />
               Enviar por WhatsApp
             </button>
-            <button type="button" className="email" onClick={enviarTicketEmail}>
-              <img src="/mail.svg" alt="" aria-hidden="true" />
-              Enviar por email
+            <button type="button" onClick={descargarTicketPdf}>
+              <img src="/pdf.svg" alt="" aria-hidden="true" />
+              PDF
             </button>
             <button type="button" onClick={imprimirTicket}>
               <img src="/print.svg" alt="" aria-hidden="true" />

@@ -8,7 +8,7 @@ export default function MenuVendedor({ user, onNavigate, onLogout }) {
         <button onClick={() => onNavigate('ventas')}>Ventas</button>
         <button onClick={() => onNavigate('productos')}>Productos</button>
         <button onClick={() => onNavigate('clientes')}>Clientes</button>
-        <button onClick={() => onNavigate('compras')}>Compras</button>
+        <button onClick={() => onNavigate('control-stock')}>Control de stock</button>
         <button onClick={() => onNavigate('estadisticas')}>Estadísticas</button>
       </div>
       <button className="cerrar-sesion" onClick={onLogout}>Cerrar sesión</button>

@@ -230,3 +230,23 @@ productosRouter.patch('/:id/stock', async (req, res) => {
   }
   return res.json(result.rows[0]);
 });
+
+productosRouter.get('/:id/movimientos', async (req, res) => {
+  const id = Number(req.params.id);
+  const limitRaw = Number(req.query.limit || 10);
+  const limit = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 10;
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Producto inválido' });
+  }
+
+  const result = await query(
+    `SELECT id, producto_id, producto_nombre, tipo, origen, cantidad,
+            stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre, created_at
+     FROM public.movimientos_stock
+     WHERE producto_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2`,
+    [id, limit]
+  );
+  return res.json(result.rows);
+});

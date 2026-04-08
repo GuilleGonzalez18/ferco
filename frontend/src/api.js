@@ -74,6 +74,13 @@ export const api = {
     request(`/productos/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteProducto: (id) =>
     request(`/productos/${id}`, { method: 'DELETE' }),
+  ajustarStockProducto: (id, stock) =>
+    request(`/productos/${id}/stock`, {
+      method: 'PATCH',
+      body: JSON.stringify({ stock }),
+    }),
+  getMovimientosProducto: (id, limit = 10) =>
+    request(`/productos/${id}/movimientos?limit=${encodeURIComponent(limit)}`),
 
   getClientes: () => request('/clientes'),
   createCliente: (payload) =>
@@ -82,12 +89,28 @@ export const api = {
     request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteCliente: (id) =>
     request(`/clientes/${id}`, { method: 'DELETE' }),
-  getVentas: (fecha) =>
-    request(fecha ? `/ventas?fecha=${encodeURIComponent(fecha)}` : '/ventas'),
-  getEntregasResumen: (periodo, fechaBase) => {
+  getVentas: (filtro) => {
+    if (typeof filtro === 'string') {
+      return request(filtro ? `/ventas?fecha=${encodeURIComponent(filtro)}` : '/ventas');
+    }
     const q = new URLSearchParams();
-    if (periodo) q.set('periodo', periodo);
-    if (fechaBase) q.set('fechaBase', fechaBase);
+    if (filtro?.fecha) q.set('fecha', String(filtro.fecha));
+    if (filtro?.desde) q.set('desde', String(filtro.desde));
+    if (filtro?.hasta) q.set('hasta', String(filtro.hasta));
+    const suffix = q.toString();
+    return request(`/ventas${suffix ? `?${suffix}` : ''}`);
+  },
+  getEntregasResumen: (filtro, fechaBaseLegacy) => {
+    const q = new URLSearchParams();
+    if (filtro && typeof filtro === 'object') {
+      if (filtro.periodo) q.set('periodo', String(filtro.periodo));
+      if (filtro.fechaBase) q.set('fechaBase', String(filtro.fechaBase));
+      if (filtro.desde) q.set('desde', String(filtro.desde));
+      if (filtro.hasta) q.set('hasta', String(filtro.hasta));
+    } else {
+      if (filtro) q.set('periodo', String(filtro));
+      if (fechaBaseLegacy) q.set('fechaBase', String(fechaBaseLegacy));
+    }
     const suffix = q.toString();
     return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
   },
@@ -96,11 +119,6 @@ export const api = {
     request(`/ventas/${id}/entregado`, {
       method: 'PUT',
       body: JSON.stringify({ entregado }),
-    }),
-  enviarFacturaEmail: (id, pdfBase64, fileName) =>
-    request(`/ventas/${id}/enviar-email`, {
-      method: 'POST',
-      body: JSON.stringify({ pdfBase64, fileName }),
     }),
   cancelarVenta: (id) =>
     request(`/ventas/${id}/cancelar`, {
@@ -130,5 +148,12 @@ export const api = {
     if (hasta) q.set('hasta', hasta);
     const suffix = q.toString();
     return request(`/auditoria/movimientos-stock${suffix ? `?${suffix}` : ''}`);
+  },
+  getStockCostoSerie: (desde, hasta) => {
+    const q = new URLSearchParams();
+    if (desde) q.set('desde', desde);
+    if (hasta) q.set('hasta', hasta);
+    const suffix = q.toString();
+    return request(`/auditoria/stock-costo-serie${suffix ? `?${suffix}` : ''}`);
   },
 };

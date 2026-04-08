@@ -4,6 +4,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from './api';
 import { fromApiProducto, toApiProducto } from './productMapper';
+import { appAlert, appConfirm } from './appDialog';
+import { RiFileExcel2Line } from 'react-icons/ri';
+import { PiFilePdfBold } from 'react-icons/pi';
+import { AiFillPrinter } from 'react-icons/ai';
 
 const tiposEmpaque = ['Caja', 'Bolsa', 'Botella', 'Lata', 'Pack', 'Otro'];
 
@@ -20,6 +24,40 @@ function formatMoney(value) {
   return `$${n.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
 }
 
+function formatCatalogUpdatedAt() {
+  return new Date().toLocaleString('es-UY', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isHttpUrl(value) {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function detectImageFormat(url) {
+  const value = String(url || '').toLowerCase();
+  if (value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
+  return 'PNG';
+}
+
 export default function Productos({ user, productos = [], setProductos }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -28,19 +66,12 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [imagenUrlError, setImagenUrlError] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const mostrarOpcionesCatalogo = false;
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const [nuevo, setNuevo] = useState({
     nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
-
-  const isHttpUrl = (value) => {
-    try {
-      const u = new URL(value);
-      return u.protocol === 'http:' || u.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  };
 
   const normalizeImageUrl = (value) => {
     const trimmed = String(value || '').trim();
@@ -88,7 +119,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     e.preventDefault();
     if (!setProductos) return;
     if (imagenUrlError) {
-      window.alert('Corrige la URL de imagen antes de guardar.');
+      await appAlert('Corrige la URL de imagen antes de guardar.');
       return;
     }
 
@@ -105,7 +136,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       setMostrarForm(false);
       setImagenUrlError('');
     } catch (error) {
-      window.alert(`Error guardando producto: ${error.message}`);
+      await appAlert(`Error guardando producto: ${error.message}`);
     }
   };
 
@@ -118,14 +149,18 @@ export default function Productos({ user, productos = [], setProductos }) {
   };
 
   const handleEliminar = async id => {
-    if (window.confirm('¿Seguro que deseas eliminar este producto?')) {
-      try {
-        await api.deleteProducto(id);
-        setProductos(productos.filter(p => p.id !== id));
-        setProductoExpandidoId((prev) => (prev === id ? null : prev));
-      } catch (error) {
-        window.alert(`No se pudo eliminar: ${error.message}`);
-      }
+    const ok = await appConfirm('¿Seguro que deseas eliminar este producto?', {
+      title: 'Eliminar producto',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      await api.deleteProducto(id);
+      setProductos(productos.filter(p => p.id !== id));
+      setProductoExpandidoId((prev) => (prev === id ? null : prev));
+    } catch (error) {
+      await appAlert(`No se pudo eliminar: ${error.message}`);
     }
   };
 
@@ -178,6 +213,363 @@ export default function Productos({ user, productos = [], setProductos }) {
     };
   };
 
+  const exportarExcel = () => {
+    const rowsHtml = sortedProductos.map((p, idx) => {
+      const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
+      const ganancia = esPropietario ? formatMoney(calcularGananciaUnidad(p.costo, p.venta)) : '';
+      return `
+        <tr style="background:${zebra}">
+          <td>${p.nombre || ''}</td>
+          <td>${p.ean || ''}</td>
+          <td style="text-align:center">${p.stock || 0}</td>
+          ${esPropietario ? `<td style="text-align:right">${formatMoney(p.costo)}</td>` : ''}
+          <td style="text-align:right">${formatMoney(p.venta)}</td>
+          <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
+          ${esPropietario ? `<td style="text-align:right">${ganancia}</td>` : ''}
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <html>
+        <head><meta charset="UTF-8" /></head>
+        <body>
+          <table border="1" style="border-collapse:collapse;width:100%">
+            <thead>
+              <tr style="background:#375f8c;color:#fff">
+                <th>Nombre</th>
+                <th>Código</th>
+                <th>Stock</th>
+                ${esPropietario ? '<th>Costo</th>' : ''}
+                <th>Venta</th>
+                <th>Empaque</th>
+                ${esPropietario ? '<th>Ganancia x U</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'productos.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const imprimirProductos = () => {
+    const tableRows = sortedProductos.map((p) => `
+      <tr>
+        <td>${p.nombre || ''}</td>
+        <td>${p.ean || '-'}</td>
+        <td>${p.stock || 0}</td>
+        ${esPropietario ? `<td>${formatMoney(p.costo)}</td>` : ''}
+        <td>${formatMoney(p.venta)}</td>
+        <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
+        ${esPropietario ? `<td>${formatMoney(calcularGananciaUnidad(p.costo, p.venta))}</td>` : ''}
+      </tr>
+    `).join('');
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=980,height=700');
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>Productos</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:16px}
+        h2{color:#375f8c}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}
+        th{background:#375f8c;color:#fff}
+      </style></head>
+      <body>
+        <h2>Lista de productos</h2>
+        <table>
+          <thead><tr>
+            <th>Nombre</th><th>Código</th><th>Stock</th>${esPropietario ? '<th>Costo</th>' : ''}<th>Venta</th><th>Empaque</th>${esPropietario ? '<th>Ganancia x U</th>' : ''}
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </body></html>
+    `);
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const getCatalogItems = () =>
+    sortedProductos.map((p) => ({
+      nombre: p.nombre || '-',
+      codigo: p.ean || '-',
+      unidadPrecio: formatMoney(p.venta),
+      empaqueLabel: `${p.tipoEmpaque || '-'} x ${p.cantidadEmpaque || 0}`,
+      empaquePrecio: formatMoney(p.precioEmpaque || 0),
+      imagen: isHttpUrl(p.imagenPreview) ? p.imagenPreview : '',
+    }));
+
+  const buildCatalogHtml = (items, updatedAt) => `
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>Catálogo de Productos</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 18px; color: #1f2933; }
+          .header { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+          .logo { width: 88px; height: auto; object-fit: contain; }
+          h1 { margin: 0; font-size: 24px; color: #375f8c; }
+          .meta { margin: 3px 0 14px; font-size: 13px; color: #5f7085; }
+          .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+          .card { border: 1px solid #d7e1ef; border-radius: 10px; padding: 10px; break-inside: avoid; }
+          .thumb-wrap { display: flex; justify-content: center; margin-bottom: 8px; }
+          .thumb { width: 100%; height: 96px; object-fit: contain; border: none; border-radius: 0; background: transparent; }
+          .title { font-size: 13px; font-weight: 700; margin-bottom: 4px; min-height: 30px; text-align: center; }
+          .code { font-size: 11px; color: #708094; margin-bottom: 8px; font-weight: 700; text-align: center; }
+          .line { font-size: 12px; margin: 2px 0; text-align: center; }
+          .price { color: #c1121f; font-weight: 800; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img class="logo" src="/images/logo2.png" alt="Ferco" />
+          <div>
+            <h1>Catálogo de Productos</h1>
+            <div class="meta">Actualizado: ${updatedAt}</div>
+          </div>
+        </div>
+        <div class="grid">
+          ${items.map((item) => `
+            <article class="card">
+              <div class="thumb-wrap">
+                ${item.imagen
+                  ? `<img class="thumb" src="${escapeHtml(item.imagen)}" alt="${escapeHtml(item.nombre)}" />`
+                  : `<div class="thumb"></div>`}
+              </div>
+              <div class="title">${escapeHtml(item.nombre)}</div>
+              <div class="code">Código: ${escapeHtml(item.codigo)}</div>
+              <div class="line">Unidad: <span class="price">${escapeHtml(item.unidadPrecio)}</span></div>
+              <div class="line">${escapeHtml(item.empaqueLabel)}: <span class="price">${escapeHtml(item.empaquePrecio)}</span></div>
+            </article>
+          `).join('')}
+        </div>
+      </body>
+    </html>
+  `;
+
+  const imprimirCatalogo = () => {
+    const items = getCatalogItems();
+    const updatedAt = formatCatalogUpdatedAt();
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=1080,height=780');
+    if (!w) return;
+    w.document.write(buildCatalogHtml(items, updatedAt));
+    w.document.close();
+    w.focus();
+    w.print();
+  };
+
+  const exportarCatalogoPDF = async () => {
+    const items = getCatalogItems();
+    const updatedAt = formatCatalogUpdatedAt();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const gap = 3;
+    const cols = 4;
+    const cardW = (pageWidth - margin * 2 - gap * (cols - 1)) / cols;
+    const cardH = 56;
+    let y = 28;
+    let col = 0;
+
+    try {
+      const logo = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = '/images/logo2.png';
+      });
+      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
+    } catch {}
+
+    doc.setFontSize(16);
+    doc.setTextColor(55, 95, 140);
+    doc.text('Catálogo de Productos', 38, 14);
+    doc.setFontSize(10);
+    doc.setTextColor(95, 112, 133);
+    doc.text(`Actualizado: ${updatedAt}`, 38, 20);
+
+    for (const item of items) {
+      const x = margin + col * (cardW + gap);
+      doc.setDrawColor(215, 225, 239);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD');
+
+      const imgX = x + 2;
+      const imgY = y + 2;
+      const imgW = cardW - 4;
+      const imgH = 20;
+
+      if (item.imagen) {
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.crossOrigin = 'anonymous';
+            el.onload = () => resolve(el);
+            el.onerror = reject;
+            el.src = item.imagen;
+          });
+          doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
+        } catch {}
+      }
+
+      doc.setTextColor(31, 41, 51);
+      doc.setFontSize(9);
+      doc.text(item.nombre, x + cardW / 2, y + 27, { align: 'center', maxWidth: cardW - 4 });
+      doc.setFontSize(8);
+      doc.setTextColor(112, 128, 148);
+      doc.text(`Código: ${item.codigo}`, x + cardW / 2, y + 32, { align: 'center' });
+      doc.setTextColor(31, 41, 51);
+      doc.text('Unidad:', x + cardW / 2 - 12, y + 39, { align: 'right' });
+      doc.setTextColor(193, 18, 31);
+      doc.text(item.unidadPrecio, x + cardW / 2 - 10, y + 39, { align: 'left' });
+      doc.setTextColor(31, 41, 51);
+      doc.text(`${item.empaqueLabel}:`, x + cardW / 2 - 12, y + 45, { align: 'right', maxWidth: 22 });
+      doc.setTextColor(193, 18, 31);
+      doc.text(item.empaquePrecio, x + cardW / 2 - 10, y + 45, { align: 'left' });
+
+      col += 1;
+      if (col >= cols) {
+        col = 0;
+        y += cardH + gap;
+      }
+      if (y + cardH > pageHeight - margin && col === 0) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    doc.save('catalogo-productos.pdf');
+  };
+
+  const buildCatalogPdfBlob = async () => {
+    const items = getCatalogItems();
+    const updatedAt = formatCatalogUpdatedAt();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const gap = 3;
+    const cols = 4;
+    const cardW = (pageWidth - margin * 2 - gap * (cols - 1)) / cols;
+    const cardH = 56;
+    let y = 28;
+    let col = 0;
+
+    try {
+      const logo = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = '/images/logo2.png';
+      });
+      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
+    } catch {}
+
+    doc.setFontSize(16);
+    doc.setTextColor(55, 95, 140);
+    doc.text('Catálogo de Productos', 38, 14);
+    doc.setFontSize(10);
+    doc.setTextColor(95, 112, 133);
+    doc.text(`Actualizado: ${updatedAt}`, 38, 20);
+
+    for (const item of items) {
+      const x = margin + col * (cardW + gap);
+      doc.setDrawColor(215, 225, 239);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD');
+
+      const imgX = x + 2;
+      const imgY = y + 2;
+      const imgW = cardW - 4;
+      const imgH = 20;
+
+      if (item.imagen) {
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.crossOrigin = 'anonymous';
+            el.onload = () => resolve(el);
+            el.onerror = reject;
+            el.src = item.imagen;
+          });
+          doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
+        } catch {}
+      }
+
+      doc.setTextColor(31, 41, 51);
+      doc.setFontSize(9);
+      doc.text(item.nombre, x + cardW / 2, y + 27, { align: 'center', maxWidth: cardW - 4 });
+      doc.setFontSize(8);
+      doc.setTextColor(112, 128, 148);
+      doc.text(`Código: ${item.codigo}`, x + cardW / 2, y + 32, { align: 'center' });
+      doc.setTextColor(31, 41, 51);
+      doc.text('Unidad:', x + cardW / 2 - 12, y + 39, { align: 'right' });
+      doc.setTextColor(193, 18, 31);
+      doc.text(item.unidadPrecio, x + cardW / 2 - 10, y + 39, { align: 'left' });
+      doc.setTextColor(31, 41, 51);
+      doc.text(`${item.empaqueLabel}:`, x + cardW / 2 - 12, y + 45, { align: 'right', maxWidth: 22 });
+      doc.setTextColor(193, 18, 31);
+      doc.text(item.empaquePrecio, x + cardW / 2 - 10, y + 45, { align: 'left' });
+
+      col += 1;
+      if (col >= cols) {
+        col = 0;
+        y += cardH + gap;
+      }
+      if (y + cardH > pageHeight - margin && col === 0) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    return doc.output('blob');
+  };
+
+  const compartirCatalogoWhatsApp = async () => {
+    const blob = await buildCatalogPdfBlob();
+    const file = new File([blob], 'catalogo-productos.pdf', { type: 'application/pdf' });
+    const shareData = {
+      files: [file],
+      title: 'Catálogo de Productos',
+    };
+
+    const canShareFile = typeof navigator !== 'undefined'
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare(shareData);
+
+    if (canShareFile) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {}
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = 'catalogo-productos.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
+    await appAlert('Tu navegador no permite adjuntar el PDF automáticamente. Se descargó el archivo y se abrió WhatsApp Web para adjuntarlo manualmente.');
+  };
+
   const productosFiltrados = productos.filter((p) => {
     const texto = busqueda.trim().toLowerCase();
     if (!texto) return true;
@@ -220,6 +612,15 @@ export default function Productos({ user, productos = [], setProductos }) {
           const bg = calcularGananciaUnidad(b.costo, b.venta);
           return (ag - bg) * dir;
         }
+        case 'totalCosto':
+          return ((asNumber(a.stock) * asNumber(a.costo)) - (asNumber(b.stock) * asNumber(b.costo))) * dir;
+        case 'totalVenta':
+          return ((asNumber(a.stock) * asNumber(a.venta)) - (asNumber(b.stock) * asNumber(b.venta))) * dir;
+        case 'totalGanancia': {
+          const aGanancia = asNumber(a.stock) * calcularGananciaUnidad(a.costo, a.venta);
+          const bGanancia = asNumber(b.stock) * calcularGananciaUnidad(b.costo, b.venta);
+          return (aGanancia - bGanancia) * dir;
+        }
         case 'nombre':
         default:
           return asText(a.nombre).localeCompare(asText(b.nombre)) * dir;
@@ -228,6 +629,19 @@ export default function Productos({ user, productos = [], setProductos }) {
 
     return list;
   }, [productosFiltrados, sortBy, sortDir, esPropietario]);
+
+  const totalesInventario = useMemo(() => {
+    return productos.reduce((acc, p) => {
+      const stock = Number(p.stock || 0);
+      const costo = Number(p.costo || 0);
+      const venta = Number(p.venta || 0);
+      const gananciaUnidad = calcularGananciaUnidad(costo, venta);
+      acc.totalCosto += stock * costo;
+      acc.totalVenta += stock * venta;
+      acc.totalGanancia += stock * gananciaUnidad;
+      return acc;
+    }, { totalCosto: 0, totalVenta: 0, totalGanancia: 0 });
+  }, [productos]);
 
   const toggleSort = (column) => {
     if (sortBy === column) {
@@ -284,10 +698,71 @@ export default function Productos({ user, productos = [], setProductos }) {
             <img src="/add.svg" alt="" aria-hidden="true" />
             <span>PRODUCTO</span>
           </button>
-          <button className="exportar-pdf" title="Exportar a PDF" onClick={exportarPDF}>
+          <button className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
             <img src="/print.svg" alt="" aria-hidden="true" />
           </button>
         </div>
+
+        <div className="productos-totales">
+          <div className="productos-total-card">
+            <span>Total Costo</span>
+            <strong>{formatMoney(totalesInventario.totalCosto)}</strong>
+          </div>
+          <div className="productos-total-card">
+            <span>Total Venta</span>
+            <strong>{formatMoney(totalesInventario.totalVenta)}</strong>
+          </div>
+          <div className="productos-total-card">
+            <span>Total Ganancia</span>
+            <strong>{formatMoney(totalesInventario.totalGanancia)}</strong>
+          </div>
+        </div>
+
+        {exportModalOpen && (
+          <div className="export-modal-overlay" role="dialog" aria-modal="true">
+            <div className="export-modal-backdrop" onClick={() => setExportModalOpen(false)} />
+            <div className="export-modal">
+              <h4>Exportar productos</h4>
+              <p>Elige un formato:</p>
+              <div className="export-modal-actions">
+                <button type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
+                  <PiFilePdfBold />
+                  <span>PDF</span>
+                </button>
+                <button type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
+                  <RiFileExcel2Line />
+                  <span>EXCEL</span>
+                </button>
+                <button type="button" onClick={() => { imprimirProductos(); setExportModalOpen(false); }}>
+                  <AiFillPrinter />
+                  <span>Impresora</span>
+                </button>
+              </div>
+              {mostrarOpcionesCatalogo && (
+                <>
+                  <p className="export-modal-section-title">Imprimir como catálogo</p>
+                  <div className="export-modal-actions">
+                    <button type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
+                      <PiFilePdfBold />
+                      <span>Catálogo PDF</span>
+                    </button>
+                    <button type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
+                      <AiFillPrinter />
+                      <span>Catálogo Impresora</span>
+                    </button>
+                    <button type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
+                      <img src="/whatsapp.svg" alt="" aria-hidden="true" />
+                      <span>Compartir por WhatsApp</span>
+                    </button>
+                  </div>
+                </>
+              )}
+              <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
 
         <ul className="lista-productos">
           <li className="header">
@@ -302,6 +777,9 @@ export default function Productos({ user, productos = [], setProductos }) {
             {esPropietario && (
               <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>Ganancia x U {sortBy === 'ganancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
             )}
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalCosto')}>Total Costo {sortBy === 'totalCosto' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalVenta')}>Total Venta {sortBy === 'totalVenta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalGanancia')}>Total Ganancia {sortBy === 'totalGanancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
           </li>
           {sortedProductos.length === 0 && <li className="vacio">No hay productos</li>}
           {sortedProductos.map(p => {
@@ -319,7 +797,10 @@ export default function Productos({ user, productos = [], setProductos }) {
                       <span className="sin-imagen">Sin imagen</span>
                     )}
                   </span>
-                  <span className="campo" data-label="Nombre">{p.nombre}</span>
+                  <span className="campo nombre-cell" data-label="Nombre">
+                    <strong>{p.nombre}</strong>
+                    <small className="producto-codigo">Código: {p.ean || '-'}</small>
+                  </span>
                   <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
                   {esPropietario && <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>}
                   <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>
@@ -332,6 +813,11 @@ export default function Productos({ user, productos = [], setProductos }) {
                       })()}
                     </span>
                   )}
+                  <span className="campo" data-label="Total Costo">{formatMoney((Number(p.stock || 0) * Number(p.costo || 0)))}</span>
+                  <span className="campo" data-label="Total Venta">{formatMoney((Number(p.stock || 0) * Number(p.venta || 0)))}</span>
+                  <span className="campo" data-label="Total Ganancia">
+                    {formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta))}
+                  </span>
                 </li>
                 <li className={`producto-actions-row ${expanded ? 'expanded' : ''}`}>
                   <div className="acciones-producto-panel">

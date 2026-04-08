@@ -47,6 +47,78 @@
   border-color: #2f5279;
 }
 
+.export-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+}
+
+.export-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.34);
+}
+
+.export-modal {
+  position: relative;
+  width: min(420px, calc(100vw - 2rem));
+  margin: 12vh auto 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 42px rgba(20, 30, 45, 0.24);
+  padding: 1rem;
+  z-index: 1;
+}
+
+.export-modal h4 {
+  margin: 0;
+  color: #375f8c;
+}
+
+.export-modal p {
+  margin: 0.45rem 0 0.7rem;
+  color: #5f7085;
+  font-size: 0.86rem;
+}
+
+.export-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.export-modal-actions button,
+.export-modal-close {
+  border: 1px solid #375f8c;
+  border-radius: 8px;
+  background: #375f8c;
+  color: #fff;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.export-modal-actions button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.export-modal-actions button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.export-modal-close {
+  margin-top: 0.65rem;
+  background: #8090a4;
+  border-color: #8090a4;
+  display: block;
+  margin-left: auto;
+}
+
 .cliente-form {
   background: #fff;
   border: none;
@@ -63,6 +135,34 @@
   border-radius: 7px;
   padding: 0.45rem 0.55rem;
   font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+}
+
+.cliente-form select {
+  border: 1px solid #d3dbe8;
+  border-radius: 7px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #1f2933;
+  -webkit-text-fill-color: #1f2933;
+}
+
+.cliente-form select option {
+  color: #1f2933;
+  background: #fff;
+}
+
+.time-selects {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.time-selects span {
+  color: #375f8c;
+  font-weight: 700;
 }
 
 .field-label {
@@ -103,7 +203,7 @@
 
 .lista-clientes li {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1.4fr 1fr 1.2fr;
+  grid-template-columns: 1.2fr 1fr 1.4fr 1fr 1.2fr 0.8fr 0.8fr;
   gap: 0.5rem;
   align-items: center;
   background: #fff;
