@@ -170,7 +170,7 @@ export default function VentasHistorial() {
   };
 
   const normalizarEstadoEntrega = (venta) => {
-    if (Boolean(venta?.cancelada)) return 'cancelado';
+    if (venta?.cancelada) return 'cancelado';
     if (String(venta?.estado_entrega || '').toLowerCase() === 'cancelado') return 'cancelado';
     if (String(venta?.estado_entrega || '').toLowerCase() === 'entregado') return 'entregado';
     return venta?.entregado ? 'entregado' : 'pendiente';

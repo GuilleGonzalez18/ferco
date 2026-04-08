@@ -84,7 +84,9 @@ export default function Productos({ user, productos = [], setProductos }) {
   };
 
   useEffect(() => {
-    loadEmpaques();
+    queueMicrotask(() => {
+      loadEmpaques();
+    });
   }, []);
 
   const normalizeImageUrl = (value) => {
@@ -455,7 +457,9 @@ export default function Productos({ user, productos = [], setProductos }) {
         img.src = '/images/logo2.png';
       });
       doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {}
+    } catch {
+      // noop
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -485,7 +489,9 @@ export default function Productos({ user, productos = [], setProductos }) {
             el.src = item.imagen;
           });
           doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
-        } catch {}
+        } catch {
+          // noop
+        }
       }
 
       doc.setTextColor(31, 41, 51);
@@ -539,7 +545,9 @@ export default function Productos({ user, productos = [], setProductos }) {
         img.src = '/images/logo2.png';
       });
       doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {}
+    } catch {
+      // noop
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -569,7 +577,9 @@ export default function Productos({ user, productos = [], setProductos }) {
             el.src = item.imagen;
           });
           doc.addImage(img, detectImageFormat(item.imagen), imgX + 0.5, imgY + 0.5, imgW - 1, imgH - 1);
-        } catch {}
+        } catch {
+          // noop
+        }
       }
 
       doc.setTextColor(31, 41, 51);
@@ -618,7 +628,9 @@ export default function Productos({ user, productos = [], setProductos }) {
       try {
         await navigator.share(shareData);
         return;
-      } catch {}
+      } catch {
+        // noop
+      }
     }
 
     const blobUrl = URL.createObjectURL(blob);
