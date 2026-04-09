@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
 
+
 export const clientesRouter = Router();
 
 function normalizeHora(value) {
