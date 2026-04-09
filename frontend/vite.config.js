@@ -34,12 +34,26 @@ function getHeadTag() {
   }
 }
 
+function getLatestTag() {
+  try {
+    const tag = execSync('git describe --tags --abbrev=0', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+    return normalizeTag(tag)
+  } catch {
+    return ''
+  }
+}
+
 function resolveVersion() {
   const forced = process.env.VITE_APP_VERSION?.trim()
   if (forced) return forced
 
+  const vercelRef = String(process.env.VERCEL_GIT_COMMIT_REF || '').trim()
+  const vercelRefAsTag = /^v?\d+\.\d+\.\d+([.-].+)?$/.test(vercelRef) ? normalizeTag(vercelRef) : ''
   const envTag = normalizeTag(
     process.env.VERCEL_GIT_COMMIT_TAG
+      || vercelRefAsTag
       || (process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : '')
       || process.env.CI_COMMIT_TAG
   )
@@ -47,6 +61,9 @@ function resolveVersion() {
 
   const headTag = getHeadTag()
   if (headTag) return headTag
+
+  const latestTag = getLatestTag()
+  if (latestTag) return latestTag
 
   const base = String(pkg.version || '0.0.0')
   const branch = process.env.VERCEL_GIT_COMMIT_REF || process.env.GITHUB_REF_NAME || ''

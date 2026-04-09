@@ -1,0 +1,15 @@
+{
+  "name": "ferco-posta-release",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Release automation for ferco-posta",
+  "scripts": {
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^11.0.6",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "semantic-release": "^24.2.7"
+  }
+}
