@@ -10,10 +10,7 @@
 }
 
 .buscar-cliente {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
-  font-size: 0.86rem;
+  width: 100%;
 }
 
 .icon-btn {
@@ -131,19 +128,10 @@
 }
 
 .cliente-form input {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   background: #fff;
-  color: #1f2933;
 }
 
 .cliente-form select {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   background: #fff;
   color: #1f2933;
   -webkit-text-fill-color: #1f2933;

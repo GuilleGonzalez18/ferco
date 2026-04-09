@@ -225,10 +225,8 @@
 
 .unidades-edit input {
   width: 64px;
-  border: 1px solid #d3dbe8;
-  border-radius: 6px;
+  min-height: 34px;
   padding: 0.25rem 0.35rem;
-  font-size: 0.8rem;
 }
 
 .descuentos-item select,
@@ -239,19 +237,13 @@
 .form-entrega select,
 .form-entrega input,
 .form-entrega textarea {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  min-height: 44px;
-  padding: 0.45rem 0.5rem;
-  font-size: 0.82rem;
+  min-height: var(--field-height);
+  font-weight: 400;
 }
 
 .form-entrega input[type="date"],
 .sidebar-entrega input[type="date"] {
-  background: #fff;
-  color: #1f2933;
-  color-scheme: light;
-  cursor: text;
+  min-height: var(--field-height);
 }
 
 .descuento-action-link {
@@ -419,10 +411,7 @@
 
 .cliente-dropdown-head input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.42rem 0.5rem;
-  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .cliente-dropdown-list {
@@ -484,10 +473,7 @@
 
 .cliente-busqueda-wrap input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.42rem 0.5rem;
-  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .cliente-dropdown-list.full {
@@ -976,14 +962,10 @@
 }
 
 .pago-inputs input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.5rem;
-  font-size: 0.8rem;
-  background: #fff;
   color: #55677f;
   -moz-appearance: textfield;
   appearance: textfield;
+  font-weight: 400;
 }
 
 .pago-inputs input::-webkit-outer-spin-button,
@@ -995,7 +977,7 @@
 .pago-inputs input[readonly] {
   background: #eff5ff;
   color: #294e75;
-  font-weight: 700;
+  font-weight: 400;
   cursor: default;
 }
 
@@ -1032,12 +1014,6 @@
   width: 100%;
   resize: vertical;
   min-height: 76px;
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.5rem 0.55rem;
-  font-size: 0.82rem;
-  background: #fff;
-  color: #1f2933;
 }
 
 .ticket-pagos {
@@ -1255,11 +1231,8 @@
 
 .descuento-modal input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   margin-bottom: 0.65rem;
+  font-weight: 400;
 }
 
 .descuento-modal-actions {

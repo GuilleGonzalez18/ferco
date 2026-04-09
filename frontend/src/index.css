@@ -51,6 +51,20 @@
   --weight-semibold: 600;
   --weight-bold: 700;
 
+  --field-height: 42px;
+  --field-radius: 8px;
+  --field-padding-y: 0.45rem;
+  --field-padding-x: 0.58rem;
+  --field-font-size: 0.84rem;
+  --field-font-weight: 500;
+  --field-border: #d3dbe8;
+  --field-bg: #ffffff;
+  --field-color: #1f2933;
+  --field-focus-border: #375f8c;
+  --field-focus-ring: rgba(55, 95, 140, 0.18);
+  --field-disabled-bg: #f2f5fa;
+  --field-disabled-color: #7a8799;
+
   --breakpoint-xs: 320px;
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
@@ -116,6 +130,57 @@ textarea {
   font: inherit;
 }
 
+/* Shared field system for all text-like controls */
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']),
+  select,
+  textarea
+) {
+  min-height: var(--field-height);
+  padding: var(--field-padding-y) var(--field-padding-x);
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  font-size: var(--field-font-size);
+  font-weight: var(--field-font-weight);
+  line-height: 1.25;
+  background: var(--field-bg);
+  color: var(--field-color);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']),
+  select,
+  textarea
+)::placeholder {
+  color: #7a8799;
+}
+
+:where(input[type='date']) {
+  color-scheme: light;
+  cursor: text;
+}
+
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']),
+  select,
+  textarea
+):focus-visible {
+  outline: none;
+  border-color: var(--field-focus-border);
+  box-shadow: 0 0 0 3px var(--field-focus-ring);
+}
+
+:where(
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):not([type='color']),
+  select,
+  textarea
+):disabled {
+  background: var(--field-disabled-bg);
+  color: var(--field-disabled-color);
+  cursor: not-allowed;
+}
+
 button,
 a,
 input,
@@ -125,10 +190,7 @@ textarea {
 }
 
 button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+a:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

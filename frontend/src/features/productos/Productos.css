@@ -56,12 +56,7 @@
 }
 .form-producto input,
 .form-producto select {
-  padding: 0.5rem 0.62rem;
-  border: 1.5px solid #464b50;
-  border-radius: 6px;
-  font-size: 0.82rem;
   background: #f8fbff;
-  color: #222;
 }
 
 .field-label {
@@ -146,17 +141,6 @@
   flex: 1 1 auto;
   max-width: 420px;
   min-width: 0;
-  padding: 0.48rem 0.65rem;
-  border: 1.5px solid #9aa7ba;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  background: #fff;
-  color: #1f2933;
-}
-
-.buscar-producto:focus {
-  outline: 2px solid rgba(55, 95, 140, 0.28);
-  border-color: var(--menu-active);
 }
 
 .productos-totales {
@@ -477,10 +461,7 @@
 }
 
 .empaques-create-row input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.82rem;
+  padding-right: 0.6rem;
 }
 
 .empaques-create-row button {

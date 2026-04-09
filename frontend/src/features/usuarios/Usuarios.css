@@ -17,10 +17,7 @@
 }
 
 .buscar-usuario {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
-  font-size: 0.86rem;
+  width: 100%;
 }
 
 .icon-btn {
@@ -236,10 +233,7 @@
 
 .field-label input,
 .field-label select {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
+  width: 100%;
 }
 
 .usuario-form-actions {

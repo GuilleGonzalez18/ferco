@@ -31,13 +31,6 @@
 
 .login-form input {
   width: 100%;
-  min-height: 44px;
-  padding: 0.68rem 0.82rem;
-  border: 1.5px solid #9ba8ba;
-  border-radius: 9px;
-  font-size: 0.95rem;
-  background: #f9fbfe;
-  color: #1d2b3e;
 }
 
 .login-form button {
@@ -136,13 +129,6 @@
 
 .login-forgot-modal input {
   width: 100%;
-  min-height: 44px;
-  padding: 0.68rem 0.82rem;
-  border: 1.5px solid #9ba8ba;
-  border-radius: 9px;
-  font-size: 0.95rem;
-  background: #f9fbfe;
-  color: #1d2b3e;
 }
 
 .login-forgot-actions {
