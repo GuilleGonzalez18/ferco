@@ -10,18 +10,6 @@
   margin-bottom: 0.75rem;
 }
 
-.ventas-historial-title h3 {
-  margin: 0;
-  color: #375f8c;
-  font-size: 1rem;
-}
-
-.ventas-historial-title p {
-  margin: 0.1rem 0 0;
-  color: #708094;
-  font-size: 0.82rem;
-}
-
 .ventas-fecha-filter {
   display: inline-flex;
   flex-direction: column;
@@ -627,6 +615,10 @@
 
   .ventas-export-btn {
     width: 100%;
+  }
+
+  .ventas-table-grid {
+    min-width: 900px;
   }
 
   .lista-ventas li {

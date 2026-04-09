@@ -212,24 +212,6 @@
   padding: 0;
 }
 
-.clientes-table-grid {
-  min-width: 1080px;
-}
-
-.clientes-table .app-table-row.cliente-row {
-  cursor: pointer;
-}
-
-.clientes-table .app-table-row.cliente-row.expanded {
-  background: #f7fbff;
-}
-
-.clientes-table .app-table-expanded-content {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0.34rem 0.62rem;
-}
-
 .lista-clientes li {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1.4fr 1fr 1.2fr 1.8fr;
@@ -307,40 +289,6 @@
   display: inline-flex;
   gap: 0.35rem;
   justify-content: flex-end;
-}
-
-.clientes-table .acciones-cliente-panel {
-  width: 100%;
-}
-
-.edit-btn {
-  background: #375f8c;
-  color: #fff;
-  border: 1.5px solid #375f8c;
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-}
-
-.edit-btn:hover {
-  background: #2f5279;
-  color: #fff;
-}
-
-.delete-btn {
-  background: #375f8c;
-  color: #fff;
-  border: 1.5px solid #375f8c;
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-}
-
-.delete-btn:hover {
-  background: #2f5279;
-  color: #fff;
 }
 
 .side-panel-overlay {
@@ -422,7 +370,4 @@
     margin-top: -0.4rem;
   }
 
-  .clientes-table-grid {
-    min-width: 700px;
-  }
 }

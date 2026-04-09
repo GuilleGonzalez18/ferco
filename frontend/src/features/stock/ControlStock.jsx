@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CgArrowsExchange } from 'react-icons/cg';
 import { api } from '../../core/api';
 import { appAlert } from '../../shared/lib/appDialog';
 import './ControlStock.css';
@@ -122,7 +121,6 @@ export default function ControlStock({ productos = [], setProductos }) {
   return (
     <div className="control-stock-main">
       <div className="control-stock-head">
-        <h3><CgArrowsExchange /> Control de stock</h3>
         <input
           type="text"
           placeholder="Buscar producto..."

@@ -297,7 +297,6 @@ export default function Auditoria() {
   return (
     <div className="auditoria-main">
       <div className="auditoria-toolbar">
-        <h3>Auditoría y movimientos de stock</h3>
         <div className="auditoria-filtros">
           <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
@@ -367,8 +366,7 @@ export default function Auditoria() {
               </button>
             </div>
             <AppTable
-              className="auditoria-table auditoria-table-stock"
-              tableClassName="auditoria-table-stock-grid"
+              stickyHeader
               columns={movimientosColumns}
               rows={movimientosPaginados}
               rowKey="id"
@@ -457,8 +455,7 @@ export default function Auditoria() {
               </button>
             </div>
             <AppTable
-              className="auditoria-table auditoria-table-eventos"
-              tableClassName="auditoria-table-eventos-grid"
+              stickyHeader
               columns={eventosColumns}
               rows={eventosPaginados}
               rowKey="id"

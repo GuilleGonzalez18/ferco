@@ -270,7 +270,6 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     <div className="usuarios-main">
       {!onlySelf && (
       <div className="usuarios-toolbar">
-        <h3>Usuarios del sistema</h3>
         <input
           type="text"
           className="buscar-usuario"
@@ -309,14 +308,13 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
 
       {!onlySelf && !loading && !error && (
         <AppTable
-          className="usuarios-table"
-          tableClassName="usuarios-table-grid"
+          stickyHeader
           columns={usuariosColumns}
           rows={usuariosOrdenados}
           rowKey="id"
           emptyMessage="No hay usuarios registrados."
           onRowClick={(u) => setUsuarioExpandidoId((prev) => (prev === u.id ? null : u.id))}
-          rowClassName={(u) => `usuario-row ${usuarioExpandidoId === u.id ? 'expanded' : ''}`}
+          rowClassName="usuario-row"
           expandedRowId={usuarioExpandidoId}
           renderExpandedRow={(u) => (
             <div className="usuario-actions show">

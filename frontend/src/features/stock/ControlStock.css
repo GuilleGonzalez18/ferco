@@ -9,14 +9,6 @@
   margin-bottom: 0.7rem;
 }
 
-.control-stock-head h3 {
-  margin: 0;
-  color: #375f8c;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
 .control-stock-head input {
   border: 1px solid #d3dbe8;
   border-radius: 8px;

@@ -9,6 +9,7 @@ import { AiFillPrinter } from 'react-icons/ai';
 import { FaReplyAll } from 'react-icons/fa6';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { formatHorarioCliente } from '../../shared/lib/horarios';
+import AppTable from '../../shared/components/table/AppTable';
 
 function todayISO() {
   const now = new Date();
@@ -787,13 +788,198 @@ export default function VentasHistorial() {
     }
   };
 
+  const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
+
+  const ventasColumns = [
+    {
+      key: 'id',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('id')}>
+          # {sortMark('id')}
+        </button>
+      ),
+      mobileLabel: '#',
+      align: 'right',
+      render: (v) => v.id,
+    },
+    {
+      key: 'fecha',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('fecha')}>
+          Fecha {sortMark('fecha')}
+        </button>
+      ),
+      mobileLabel: 'Fecha',
+      render: (v) => {
+        const estadoEntrega = normalizarEstadoEntrega(v);
+        return (
+          <span className="venta-fecha-cell">
+            <span>{formatDateTime(v.fecha)}</span>
+            <small className={`entrega-badge ${getEntregaEstadoClass(v)}`}>
+              {v.cancelada
+                ? '✕ Cancelada'
+                : (estadoEntrega === 'entregado' ? '✓ Entregada' : `Entrega: ${formatDateOnly(v.fecha_entrega)}`)}
+            </small>
+          </span>
+        );
+      },
+    },
+    {
+      key: 'cliente',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('cliente')}>
+          Cliente {sortMark('cliente')}
+        </button>
+      ),
+      mobileLabel: 'Cliente',
+      render: (v) => v.cliente_nombre || 'Consumidor final',
+    },
+    {
+      key: 'vendedor',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('vendedor')}>
+          Vendedor {sortMark('vendedor')}
+        </button>
+      ),
+      mobileLabel: 'Vendedor',
+      render: (v) => v.usuario_nombre || '-',
+    },
+    {
+      key: 'total',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('total')}>
+          Total {sortMark('total')}
+        </button>
+      ),
+      mobileLabel: 'Total',
+      align: 'right',
+      render: (v) => formatCurrency(v.total),
+    },
+    {
+      key: 'pago',
+      header: 'Pago',
+      mobileLabel: 'Pago',
+      render: (v) => <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>,
+    },
+    {
+      key: 'estado',
+      header: <span className="estado-col-head">Estado</span>,
+      mobileLabel: 'Estado',
+      align: 'center',
+      render: (v) => {
+        const estadoEntrega = normalizarEstadoEntrega(v);
+        return (
+          <span className={`estado-entrega-text estado-col ${
+            estadoEntrega === 'cancelado'
+              ? 'is-cancelado'
+              : (estadoEntrega === 'entregado' ? 'is-entregado' : 'is-pendiente')
+          }`}>
+            {estadoEntrega === 'cancelado'
+              ? 'Cancelado'
+              : (estadoEntrega === 'entregado' ? 'Entregado' : 'Pendiente')}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'entregado',
+      header: <span className="entregado-col-head">Entregado</span>,
+      mobileLabel: 'Entregado',
+      align: 'center',
+      render: (v) => {
+        const estadoEntrega = normalizarEstadoEntrega(v);
+        return (
+          <label className="entregado-check entregado-col" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={estadoEntrega === 'entregado'}
+              disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => toggleEntregado(v.id, e.target.checked)}
+            />
+            <span className={`entregado-pill ${estadoEntrega === 'entregado' ? 'is-on' : 'is-off'}`}>
+              {estadoEntrega === 'entregado' ? 'Si' : 'No'}
+            </span>
+          </label>
+        );
+      },
+    },
+  ];
+
+  const renderExpandedVenta = (v) => {
+    const detalleVenta = detalleByVentaId[v.id] || [];
+
+    return (
+      <div className="venta-detalle-panel">
+        <div className="venta-detalle-actions">
+          <button
+            type="button"
+            className="cancel-btn"
+            onClick={() => cancelarVenta(v.id)}
+            disabled={cancelandoVentaId === v.id || Boolean(v.cancelada)}
+            title="Cancelar venta"
+            aria-label="Cancelar venta"
+          >
+            <span>{v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}</span>
+            <small>Cancelar</small>
+          </button>
+          <button
+            type="button"
+            className="reprint-btn"
+            onClick={() => replicarVenta(v.id)}
+            disabled={printingId === v.id}
+            title="Replicar venta"
+            aria-label="Replicar venta"
+          >
+            <FaReplyAll aria-hidden="true" />
+            <small>Replicar</small>
+          </button>
+          <button
+            type="button"
+            className="reprint-btn"
+            onClick={() => reenviarFactura(v.id)}
+            disabled={printingId === v.id}
+            title="Reenviar factura"
+            aria-label="Reenviar factura"
+          >
+            <img src="/send.svg" alt="" aria-hidden="true" />
+            <small>Reenviar</small>
+          </button>
+          <button
+            type="button"
+            className="reprint-btn"
+            onClick={() => imprimirVenta(v.id)}
+            disabled={printingId === v.id}
+            title="Reimprimir ticket"
+            aria-label="Reimprimir ticket"
+          >
+            <img src="/print.svg" alt="" aria-hidden="true" />
+            <small>Imprimir</small>
+          </button>
+        </div>
+        {loadingDetalleId === v.id ? (
+          <p>Cargando detalle...</p>
+        ) : detalleVenta.length === 0 ? (
+          <p>Sin detalle para esta venta.</p>
+        ) : (
+          <ul className="venta-detalle-list">
+            {detalleVenta.map((item) => (
+              <li key={item.id}>
+                <span>{item.producto_nombre || `Producto #${item.producto_id}`}</span>
+                <span>{item.cantidad} u.</span>
+                <span>{formatCurrency(item.precio_unitario)}</span>
+                <strong>{formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0))}</strong>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
-        <div className="ventas-historial-title">
-          <h3>Ventas realizadas</h3>
-          <p>Listado por fecha</p>
-        </div>
         <label className="ventas-fecha-filter">
           <span>Fecha</span>
           <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
@@ -1025,139 +1211,17 @@ export default function VentasHistorial() {
       {!loading && error && <div className="ventas-msg error">{error}</div>}
 
       {!loading && !error && (
-        <ul className="lista-ventas">
-          <li className="header">
-            <span aria-hidden="true" />
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('id')}># {sortBy === 'id' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('fecha')}>Fecha {sortBy === 'fecha' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('cliente')}>Cliente {sortBy === 'cliente' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('vendedor')}>Vendedor {sortBy === 'vendedor' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('total')}>Total {sortBy === 'total' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <span>Pago</span>
-            <span className="estado-col-head">Estado</span>
-            <span className="entregado-col-head">Entregado</span>
-          </li>
-          {ventasFiltradas.length === 0 && <li className="vacio">No hay ventas para los filtros seleccionados.</li>}
-          {ventasOrdenadas.map((v) => {
-            const expanded = expandedVentaId === v.id;
-            const estadoEntrega = normalizarEstadoEntrega(v);
-            const detalleVenta = detalleByVentaId[v.id] || [];
-            return (
-              <div key={v.id} className="venta-row-wrap">
-                <li className={v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : '')}>
-                  <button
-                    type="button"
-                    className="venta-expand-btn"
-                    onClick={() => toggleDetalleVenta(v.id)}
-                    title={expanded ? 'Ocultar detalle' : 'Ver detalle'}
-                    aria-label={expanded ? 'Ocultar detalle' : 'Ver detalle'}
-                  >
-                    {expanded ? '▼' : '▶'}
-                  </button>
-                  <span>{v.id}</span>
-                  <span className="venta-fecha-cell">
-                    <span>{formatDateTime(v.fecha)}</span>
-                    <small className={`entrega-badge ${getEntregaEstadoClass(v)}`}>
-                      {v.cancelada
-                        ? '✕ Cancelada'
-                        : (estadoEntrega === 'entregado' ? '✓ Entregada' : `Entrega: ${formatDateOnly(v.fecha_entrega)}`)}
-                    </small>
-                  </span>
-                  <span>{v.cliente_nombre || 'Consumidor final'}</span>
-                  <span>{v.usuario_nombre || '-'}</span>
-                  <span>{formatCurrency(v.total)}</span>
-                  <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>
-                  <span className={`estado-entrega-text estado-col ${
-                    estadoEntrega === 'cancelado'
-                      ? 'is-cancelado'
-                      : (estadoEntrega === 'entregado' ? 'is-entregado' : 'is-pendiente')
-                  }`}>
-                    {estadoEntrega === 'cancelado'
-                      ? 'Cancelado'
-                      : (estadoEntrega === 'entregado' ? 'Entregado' : 'Pendiente')}
-                  </span>
-                  <label className="entregado-check entregado-col">
-                    <input
-                      type="checkbox"
-                      checked={estadoEntrega === 'entregado'}
-                      disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
-                      onChange={(e) => toggleEntregado(v.id, e.target.checked)}
-                    />
-                    <span className={`entregado-pill ${estadoEntrega === 'entregado' ? 'is-on' : 'is-off'}`}>
-                      {estadoEntrega === 'entregado' ? 'Sí' : 'No'}
-                    </span>
-                  </label>
-                </li>
-                {expanded && (
-                  <div className="venta-detalle-panel">
-                    <div className="venta-detalle-actions">
-                      <button
-                        type="button"
-                        className="cancel-btn"
-                        onClick={() => cancelarVenta(v.id)}
-                        disabled={cancelandoVentaId === v.id || Boolean(v.cancelada)}
-                        title="Cancelar venta"
-                        aria-label="Cancelar venta"
-                      >
-                        <span>{v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}</span>
-                        <small>Cancelar</small>
-                      </button>
-                      <button
-                        type="button"
-                        className="reprint-btn"
-                        onClick={() => replicarVenta(v.id)}
-                        disabled={printingId === v.id}
-                        title="Replicar venta"
-                        aria-label="Replicar venta"
-                      >
-                        <FaReplyAll aria-hidden="true" />
-                        <small>Replicar</small>
-                      </button>
-                      <button
-                        type="button"
-                        className="reprint-btn"
-                        onClick={() => reenviarFactura(v.id)}
-                        disabled={printingId === v.id}
-                        title="Reenviar factura"
-                        aria-label="Reenviar factura"
-                      >
-                        <img src="/send.svg" alt="" aria-hidden="true" />
-                        <small>Reenviar</small>
-                      </button>
-                      <button
-                        type="button"
-                        className="reprint-btn"
-                        onClick={() => imprimirVenta(v.id)}
-                        disabled={printingId === v.id}
-                        title="Reimprimir ticket"
-                        aria-label="Reimprimir ticket"
-                      >
-                        <img src="/print.svg" alt="" aria-hidden="true" />
-                        <small>Imprimir</small>
-                      </button>
-                    </div>
-                    {loadingDetalleId === v.id ? (
-                      <p>Cargando detalle...</p>
-                    ) : detalleVenta.length === 0 ? (
-                      <p>Sin detalle para esta venta.</p>
-                    ) : (
-                      <ul className="venta-detalle-list">
-                        {detalleVenta.map((item) => (
-                          <li key={item.id}>
-                            <span>{item.producto_nombre || `Producto #${item.producto_id}`}</span>
-                            <span>{item.cantidad} u.</span>
-                            <span>{formatCurrency(item.precio_unitario)}</span>
-                            <strong>{formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0))}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </ul>
+        <AppTable
+          columns={ventasColumns}
+          rows={ventasOrdenadas}
+          rowKey="id"
+          stickyHeader
+          emptyMessage="No hay ventas para los filtros seleccionados."
+          onRowClick={(v) => toggleDetalleVenta(v.id)}
+          rowClassName={(v) => (v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : ''))}
+          expandedRowId={expandedVentaId}
+          renderExpandedRow={(v) => renderExpandedVenta(v)}
+        />
       )}
     </div>
   );

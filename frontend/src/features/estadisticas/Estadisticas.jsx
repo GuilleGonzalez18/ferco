@@ -399,7 +399,6 @@ export default function Estadisticas({ compact = false }) {
   return (
     <div className={`stats-main ${compact ? 'compact' : ''}`}>
       <div className="stats-toolbar">
-        <h3>Estadísticas comerciales</h3>
         {esPropietario && (
           <div className="stats-tabs">
             <button
@@ -721,8 +720,7 @@ export default function Estadisticas({ compact = false }) {
                   <h4>Detalle de ventas por usuario</h4>
                 </div>
                 <AppTable
-                  className="stats-table-unified"
-                  tableClassName="stats-table-grid"
+                  stickyHeader
                   columns={ventasUsuarioColumns}
                   rows={stats?.ventasPorUsuario || []}
                   rowKey={(u) => `${u.usuario_id || 'na'}-${u.usuario_nombre}`}

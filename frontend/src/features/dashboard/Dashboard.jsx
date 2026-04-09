@@ -14,15 +14,15 @@ import { FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from '../../core/version';
 
 const OPCIONES = [
-  { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
-  { key: 'ventas', label: 'Ventas', icon: '/cart.svg' },
-  { key: 'productos', label: 'Productos', icon: '/product.svg' },
-  { key: 'clientes', label: 'Clientes', icon: '/client.svg' },
-  { key: 'usuarios', label: 'Usuarios', icon: '/user.svg' },
-  { key: 'mi-usuario', label: 'Mi usuario', icon: '/user.svg' },
-  { key: 'auditoria', label: 'Auditoría', icon: '/auditory.svg' },
-  { key: 'control-stock', label: 'Control de stock', icon: 'stock-control' },
-  { key: 'estadisticas', label: 'Estadísticas', icon: '/stats.svg' },
+  { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
+  { key: 'ventas', label: 'Ventas', topbarTitle: 'Ventas realizadas', icon: '/cart.svg' },
+  { key: 'productos', label: 'Productos', topbarTitle: 'Lista de productos', icon: '/product.svg' },
+  { key: 'clientes', label: 'Clientes', topbarTitle: 'Lista de clientes', icon: '/client.svg' },
+  { key: 'usuarios', label: 'Usuarios', topbarTitle: 'Usuarios del sistema', icon: '/user.svg' },
+  { key: 'mi-usuario', label: 'Mi usuario', topbarTitle: 'Mi usuario', icon: '/user.svg' },
+  { key: 'auditoria', label: 'Auditoría', topbarTitle: 'Auditoría y movimientos de stock', icon: '/auditory.svg' },
+  { key: 'control-stock', label: 'Control de stock', topbarTitle: 'Control de stock', icon: 'stock-control' },
+  { key: 'estadisticas', label: 'Estadísticas', topbarTitle: 'Estadísticas comerciales', icon: '/stats.svg' },
 ];
 
 function Placeholder({ titulo, icon }) {
@@ -136,7 +136,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         { key: 'promedioVentasMensual', label: 'Promedio ventas al mes', value: avgCount(resumen?.promedioVentasMensual), icon: '/average.svg' },
       ];
 
-  const tituloActual = OPCIONES.find(o => o.key === pantalla)?.label ?? 'Dashboard';
+  const tituloActual = OPCIONES.find((o) => o.key === pantalla)?.topbarTitle ?? 'Dashboard';
   const esPantallaDashboard = !pantalla;
   const contenidoPantalla = useMemo(
     () => {

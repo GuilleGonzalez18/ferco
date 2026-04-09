@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
+import AppTable from '../../shared/components/table/AppTable';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
@@ -757,11 +758,135 @@ export default function Productos({ user, productos = [], setProductos }) {
     [nuevo.imagenPreview]
   );
 
+  const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
+
+  const productosColumns = [
+    {
+      key: 'imagen',
+      header: 'Imagen',
+      mobileLabel: 'Imagen',
+      cellClassName: 'producto-image-cell',
+      render: (p) => (
+        p.imagenPreview ? (
+          <img src={p.imagenPreview} alt={p.nombre} className="producto-thumb" />
+        ) : (
+          <span className="sin-imagen">Sin imagen</span>
+        )
+      ),
+    },
+    {
+      key: 'nombre',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+          Nombre {sortMark('nombre')}
+        </button>
+      ),
+      mobileLabel: 'Nombre',
+      render: (p) => (
+        <span className="nombre-cell">
+          <strong>{p.nombre}</strong>
+          <small className="producto-codigo">Código: {p.ean || '-'}</small>
+        </span>
+      ),
+    },
+    {
+      key: 'stock',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('stock')}>
+          Stock {sortMark('stock')}
+        </button>
+      ),
+      mobileLabel: 'Stock',
+      align: 'right',
+      cellClassName: (p) => `stock-value ${stockState(p.stock)}`,
+      render: (p) => p.stock,
+    },
+    ...(esPropietario
+      ? [{
+          key: 'costo',
+          header: (
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>
+              Costo {sortMark('costo')}
+            </button>
+          ),
+          mobileLabel: 'Costo',
+          align: 'right',
+          render: (p) => formatMoney(p.costo),
+        }]
+      : []),
+    {
+      key: 'venta',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('venta')}>
+          Venta {sortMark('venta')}
+        </button>
+      ),
+      mobileLabel: 'Venta',
+      align: 'right',
+      render: (p) => formatMoney(p.venta),
+    },
+    {
+      key: 'empaque',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('empaque')}>
+          Empaque {sortMark('empaque')}
+        </button>
+      ),
+      mobileLabel: 'Empaque',
+      render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
+    },
+    ...(esPropietario
+      ? [{
+          key: 'ganancia',
+          header: (
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>
+              Ganancia x U {sortMark('ganancia')}
+            </button>
+          ),
+          mobileLabel: 'Ganancia x U',
+          align: 'right',
+          render: (p) => formatMoney(calcularGananciaUnidad(p.costo, p.venta)),
+        }]
+      : []),
+    {
+      key: 'totalCosto',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalCosto')}>
+          Total Costo {sortMark('totalCosto')}
+        </button>
+      ),
+      mobileLabel: 'Total Costo',
+      align: 'right',
+      render: (p) => formatMoney((Number(p.stock || 0) * Number(p.costo || 0))),
+    },
+    {
+      key: 'totalVenta',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalVenta')}>
+          Total Venta {sortMark('totalVenta')}
+        </button>
+      ),
+      mobileLabel: 'Total Venta',
+      align: 'right',
+      render: (p) => formatMoney((Number(p.stock || 0) * Number(p.venta || 0))),
+    },
+    {
+      key: 'totalGanancia',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalGanancia')}>
+          Total Ganancia {sortMark('totalGanancia')}
+        </button>
+      ),
+      mobileLabel: 'Total Ganancia',
+      align: 'right',
+      render: (p) => formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta)),
+    },
+  ];
+
   return (
     <div className="productos-main">
       <div className="productos-right full-width">
         <div className="productos-toolbar">
-          <h3>Lista de productos</h3>
           <input
             type="text"
             className="buscar-producto"
@@ -873,89 +998,40 @@ export default function Productos({ user, productos = [], setProductos }) {
           </div>
         )}
 
-        <ul className="lista-productos">
-          <li className="header">
-            <span>Imagen</span>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('stock')}>Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            {esPropietario && (
-              <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>Costo {sortBy === 'costo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            )}
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('venta')}>Venta {sortBy === 'venta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('empaque')}>Empaque {sortBy === 'empaque' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            {esPropietario && (
-              <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>Ganancia x U {sortBy === 'ganancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            )}
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalCosto')}>Total Costo {sortBy === 'totalCosto' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalVenta')}>Total Venta {sortBy === 'totalVenta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalGanancia')}>Total Ganancia {sortBy === 'totalGanancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          </li>
-          {sortedProductos.length === 0 && <li className="vacio">No hay productos</li>}
-          {sortedProductos.map(p => {
-            const expanded = productoExpandidoId === p.id;
-            return (
-              <Fragment key={p.id}>
-                <li
-                  className={`producto-row ${stockState(p.stock)} ${expanded ? 'expanded' : ''}`}
-                  onClick={() => setProductoExpandidoId(expanded ? null : p.id)}
-                >
-                  <span>
-                    {p.imagenPreview ? (
-                      <img src={p.imagenPreview} alt={p.nombre} className="producto-thumb" />
-                    ) : (
-                      <span className="sin-imagen">Sin imagen</span>
-                    )}
-                  </span>
-                  <span className="campo nombre-cell" data-label="Nombre">
-                    <strong>{p.nombre}</strong>
-                    <small className="producto-codigo">Código: {p.ean || '-'}</small>
-                  </span>
-                  <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
-                  {esPropietario && <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>}
-                  <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>
-                  <span className="campo" data-label="Empaque">{p.tipoEmpaque} x {p.cantidadEmpaque}</span>
-                  {esPropietario && (
-                    <span className="campo" data-label="Ganancia x U">
-                      {(() => {
-                        const ganancia = calcularGananciaUnidad(p.costo, p.venta);
-                        return formatMoney(ganancia);
-                      })()}
-                    </span>
-                  )}
-                  <span className="campo" data-label="Total Costo">{formatMoney((Number(p.stock || 0) * Number(p.costo || 0)))}</span>
-                  <span className="campo" data-label="Total Venta">{formatMoney((Number(p.stock || 0) * Number(p.venta || 0)))}</span>
-                  <span className="campo" data-label="Total Ganancia">
-                    {formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta))}
-                  </span>
-                </li>
-                <li className={`producto-actions-row ${expanded ? 'expanded' : ''}`}>
-                  <div className="acciones-producto-panel">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditar(p);
-                      }}
-                      title="Editar"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEliminar(p.id);
-                      }}
-                      title="Eliminar"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ul>
+        <AppTable
+          columns={productosColumns}
+          rows={sortedProductos}
+          rowKey="id"
+          emptyMessage="No hay productos"
+          stickyHeader
+          onRowClick={(p) => setProductoExpandidoId((prev) => (prev === p.id ? null : p.id))}
+          rowClassName={(p) => `producto-row ${stockState(p.stock)}`}
+          expandedRowId={productoExpandidoId}
+          renderExpandedRow={(p) => (
+            <div className="acciones-producto-panel">
+              <button
+                className="edit-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditar(p);
+                }}
+                title="Editar"
+              >
+                Editar
+              </button>
+              <button
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEliminar(p.id);
+                }}
+                title="Eliminar"
+              >
+                Eliminar
+              </button>
+            </div>
+          )}
+        />
       </div>
 
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>

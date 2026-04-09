@@ -130,11 +130,6 @@
 .productos-right.full-width {
   width: auto;
 }
-.productos-right h3 {
-  color: var(--menu-active);
-  margin-bottom: 0.7rem;
-  font-size: 0.94rem;
-}
 
 .productos-toolbar {
   display: flex;
@@ -144,11 +139,6 @@
   gap: 0.4rem;
   margin-bottom: 0.7rem;
   min-width: 0;
-}
-
-.productos-toolbar h3 {
-  margin: 0;
-  flex: 0 0 auto;
 }
 
 .buscar-producto {
@@ -362,35 +352,6 @@
 .sin-imagen {
   font-size: 0.74rem;
   color: #7d8795;
-}
-.edit-btn {
-  background: #fff;
-  color: var(--menu-active);
-  border: 1.5px solid var(--menu-active);
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  margin-right: 0.3rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.edit-btn:hover {
-  background: var(--menu-active);
-  color: #fff;
-}
-.delete-btn {
-  background: #fff;
-  color: #d32f2f;
-  border: 1.5px solid #d32f2f;
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.delete-btn:hover {
-  background: #d32f2f;
-  color: #fff;
 }
 
 .exportar-pdf {
@@ -650,10 +611,6 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
-  }
-
-  .productos-toolbar h3 {
-    width: 100%;
   }
 
   .buscar-producto {

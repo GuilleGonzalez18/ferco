@@ -514,14 +514,13 @@ export default function Clientes() {
       )}
 
       <AppTable
-        className="clientes-table"
-        tableClassName="clientes-table-grid"
+        stickyHeader
         columns={clientesColumns}
         rows={clientesOrdenados}
         rowKey="id"
         emptyMessage="No hay clientes"
         onRowClick={(c) => setClienteExpandidoId((prev) => (prev === c.id ? null : c.id))}
-        rowClassName={(c) => `cliente-row ${clienteExpandidoId === c.id ? 'expanded' : ''}`}
+        rowClassName="cliente-row"
         expandedRowId={clienteExpandidoId}
         renderExpandedRow={(c) => (
           <div className="acciones-cliente-panel">
