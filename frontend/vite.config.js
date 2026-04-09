@@ -46,6 +46,34 @@ function getLatestTag() {
   }
 }
 
+function getLatestRemoteTag() {
+  try {
+    const out = execSync('git ls-remote --tags origin', { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+    const tags = out
+      .split('\n')
+      .map((line) => (line || '').trim().split(/\s+/)[1])
+      .filter(Boolean)
+      .map((t) => t.replace(/^refs\/tags\//, '').replace(/\^\{\}$/, ''));
+    const semverTags = tags
+      .map(normalizeTag)
+      .filter(Boolean)
+      .filter((t) => /^\d+\.\d+\.\d+([.-].+)?$/.test(t));
+    if (!semverTags.length) return '';
+    semverTags.sort((a, b) => {
+      const pa = a.split(/[.-]/)[0].split('.').map(Number);
+      const pb = b.split(/[.-]/)[0].split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        if ((pa[i] || 0) > (pb[i] || 0)) return -1;
+        if ((pa[i] || 0) < (pb[i] || 0)) return 1;
+      }
+      return 0;
+    });
+    return semverTags[0];
+  } catch {
+    return '';
+  }
+}
+
 function resolveVersion() {
   const forced = process.env.VITE_APP_VERSION?.trim()
   if (forced) return forced
@@ -72,6 +100,15 @@ function resolveVersion() {
 
   const latestTag = getLatestTag()
   if (latestTag) return latestTag
+
+  const latestRemoteTag = getLatestRemoteTag()
+  // Only use the latest remote tag when explicitly allowed or when the build was triggered by a tag
+  const useLatestRemote = String(process.env.VITE_USE_LATEST_REMOTE_TAG || '').toLowerCase() === 'true' || Boolean(
+    process.env.VERCEL_GIT_COMMIT_TAG ||
+    process.env.CI_COMMIT_TAG ||
+    process.env.GITHUB_REF_TYPE === 'tag'
+  );
+  if (latestRemoteTag && useLatestRemote) return latestRemoteTag
 
   const base = String(pkg.version || '0.0.0')
   const branch = process.env.VERCEL_GIT_COMMIT_REF || process.env.GITHUB_REF_NAME || ''
