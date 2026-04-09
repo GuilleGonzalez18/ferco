@@ -8,6 +8,7 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+
 function roundMoney(value) {
   return Math.round(toNumber(value) * 100) / 100;
 }
