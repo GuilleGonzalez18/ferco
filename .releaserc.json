@@ -14,12 +14,15 @@
     "@semantic-release/npm",
 
     [
-      "@semantic-release/git",
-      {
-        "assets": ["package.json"],
-        "message": "chore(release): ${nextRelease.version}"
-      }
+  "@semantic-release/git",
+  {
+    "assets": [
+      "package.json",
+      "frontend/package.json"
     ],
+    "message": "chore(release): ${nextRelease.version}"
+  }
+],
 
     [
       "@semantic-release/github",
