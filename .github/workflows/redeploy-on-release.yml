@@ -1,0 +1,22 @@
+name: Redeploy Vercel on release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK" ]; then
+            echo "Missing VERCEL_DEPLOY_HOOK secret"
+            exit 1
+          fi
+          echo "Triggering Vercel deploy for $VERSION"
+          curl -sS -X POST "$VERCEL_DEPLOY_HOOK" -H "Content-Type: application/json" -d "{\"ref\":\"$VERSION\"}" --fail
+          echo "Triggered"
