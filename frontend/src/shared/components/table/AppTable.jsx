@@ -60,11 +60,9 @@ export default function AppTable({
   const colSpan = emptyColSpan || Math.max(columns.length, 1);
   const computedMinWidth = Math.max(680, columns.length * 120);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (!stickyHeader) {
-      setViewportHeight(null);
-      return;
-    }
+    if (!stickyHeader) return;
 
     const updateHeight = () => {
       const el = wrapRef.current;

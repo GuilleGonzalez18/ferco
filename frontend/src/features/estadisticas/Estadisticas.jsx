@@ -328,12 +328,19 @@ function MiniLineChart({ items, valueKey = 'value', valueFormatter = null, class
     () => items.map((item, idx) => String(item?.key ?? idx)).join('|'),
     [items],
   );
-  const [activePointKeys, setActivePointKeys] = useState(
+
+  const defaultPointKeys = useMemo(
     () => new Set(items.map((item, idx) => String(item?.key ?? idx))),
+    [items, pointKeysSignature],
   );
-  useEffect(() => {
-    setActivePointKeys(new Set(items.map((item, idx) => String(item?.key ?? idx))));
-  }, [items, pointKeysSignature]);
+
+  const [disabledPointKeys, setDisabledPointKeys] = useState(() => new Set());
+
+  const activePointKeys = useMemo(() => {
+    const s = new Set(defaultPointKeys);
+    for (const k of disabledPointKeys) s.delete(k);
+    return s;
+  }, [defaultPointKeys, disabledPointKeys]);
   const formatLabelValue = (value) => (
     valueFormatter ? valueFormatter(value) : Math.round(value).toLocaleString('es-UY')
   );
@@ -420,7 +427,7 @@ function MiniLineChart({ items, valueKey = 'value', valueFormatter = null, class
               r="5"
               className={`mini-line-dot ${activePointKeys.has(p.key) ? 'active' : ''}`}
               onClick={() => {
-                setActivePointKeys((prev) => {
+                setDisabledPointKeys((prev) => {
                   const next = new Set(prev);
                   if (next.has(p.key)) next.delete(p.key);
                   else next.add(p.key);
