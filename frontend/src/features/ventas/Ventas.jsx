@@ -1,10 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
-import { api } from './api';
+import { api } from '../../core/api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { appAlert, appConfirm } from './appDialog';
-import { formatHorarioCliente } from './horarios';
+import { appAlert, appConfirm } from '../../shared/lib/appDialog';
+import { formatHorarioCliente } from '../../shared/lib/horarios';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [

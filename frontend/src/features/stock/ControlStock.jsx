@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CgArrowsExchange } from 'react-icons/cg';
-import { api } from './api';
-import { appAlert } from './appDialog';
+import { api } from '../../core/api';
+import { appAlert } from '../../shared/lib/appDialog';
 import './ControlStock.css';
 
 function toNumber(value) {

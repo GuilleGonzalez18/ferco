@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './Login.css';
-import { api } from './api';
-import { APP_VERSION } from './version';
+import { api } from '../../core/api';
+import { APP_VERSION } from '../../core/version';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');

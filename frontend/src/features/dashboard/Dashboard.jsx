@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Productos from './Productos';
-import Ventas from './Ventas';
-import VentasHistorial from './VentasHistorial';
-import Clientes from './Clientes';
-import Auditoria from './Auditoria';
-import Usuarios from './Usuarios';
-import Estadisticas from './Estadisticas';
-import ControlStock from './ControlStock';
+import Productos from '../productos/Productos';
+import Ventas from '../ventas/Ventas';
+import VentasHistorial from '../ventas/VentasHistorial';
+import Clientes from '../clientes/Clientes';
+import Auditoria from '../auditoria/Auditoria';
+import Usuarios from '../usuarios/Usuarios';
+import Estadisticas from '../estadisticas/Estadisticas';
+import ControlStock from '../stock/ControlStock';
 import './Dashboard.css';
-import { api } from './api';
+import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
 import { FiShoppingCart } from 'react-icons/fi';
-import { APP_VERSION } from './version';
+import { APP_VERSION } from '../../core/version';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', icon: '/newsale.svg' },
