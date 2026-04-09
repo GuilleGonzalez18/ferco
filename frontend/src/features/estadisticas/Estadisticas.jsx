@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import './Estadisticas.css';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
+import AppButton from '../../shared/components/button/AppButton';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
@@ -399,28 +402,27 @@ export default function Estadisticas({ compact = false }) {
   return (
     <div className={`stats-main ${compact ? 'compact' : ''}`}>
       <div className="stats-toolbar">
-        <h3>Estadísticas comerciales</h3>
         {esPropietario && (
           <div className="stats-tabs">
-            <button
+            <AppButton
               type="button"
               className={`stats-tab-btn ${ownerTab === 'empresa' ? 'active' : ''}`}
               onClick={() => setOwnerTab('empresa')}
             >
               Empresa
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
               className={`stats-tab-btn ${ownerTab === 'personal' ? 'active' : ''}`}
               onClick={() => setOwnerTab('personal')}
             >
               Personal
-            </button>
+            </AppButton>
           </div>
         )}
           <div className="stats-filters">
             {esPropietario && (
-              <select
+              <AppSelect
                 className="stats-user-select"
                 value={ownerUsuarioId}
                 onChange={(e) => {
@@ -435,7 +437,7 @@ export default function Estadisticas({ compact = false }) {
                 {usuariosFiltro.map((u) => (
                   <option key={u.id} value={u.id}>{u.label}</option>
                 ))}
-              </select>
+              </AppSelect>
             )}
             <div className="stats-quick-ranges">
             {[
@@ -448,7 +450,7 @@ export default function Estadisticas({ compact = false }) {
               { key: '30', label: '30 días', get: () => getQuickRange(30) },
               { key: '90', label: '90 días', get: () => getQuickRange(90) },
             ].map((preset) => (
-              <button
+              <AppButton
                 key={preset.key}
                 type="button"
                 className={`quick-range-btn ${quickRange === preset.key ? 'active' : ''}`}
@@ -462,10 +464,10 @@ export default function Estadisticas({ compact = false }) {
                 disabled={loading}
               >
                 {preset.label}
-              </button>
+              </AppButton>
             ))}
           </div>
-          <input
+          <AppInput
             type="date"
             value={desde}
             onChange={(e) => {
@@ -473,7 +475,7 @@ export default function Estadisticas({ compact = false }) {
               setDesde(e.target.value);
             }}
           />
-          <input
+          <AppInput
             type="date"
             value={hasta}
             onChange={(e) => {
@@ -481,7 +483,7 @@ export default function Estadisticas({ compact = false }) {
               setHasta(e.target.value);
             }}
           />
-          <button
+          <AppButton
             type="button"
             className="stats-refresh-btn"
             onClick={() => {
@@ -490,8 +492,8 @@ export default function Estadisticas({ compact = false }) {
             disabled={loading}
           >
             {loading ? 'Actualizando...' : 'Filtrar'}
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="stats-refresh-btn secondary"
             onClick={() => {
@@ -503,7 +505,7 @@ export default function Estadisticas({ compact = false }) {
             disabled={loading}
           >
             Limpiar
-          </button>
+          </AppButton>
         </div>
       </div>
       <p className="stats-range-pill">{rangeLabel(stats?.desde || desde, stats?.hasta || hasta)}</p>
@@ -625,7 +627,7 @@ export default function Estadisticas({ compact = false }) {
                         { key: 'month-compare', label: 'Mes pasado vs este', get: getLastMonthVsCurrentRange },
                         { key: 'year-12', label: 'Año pasado (12 meses)', get: getLast12MonthsRange },
                       ].map((preset) => (
-                        <button
+                        <AppButton
                           key={preset.key}
                           type="button"
                           className={`quick-range-btn ${stockQuickRange === preset.key ? 'active' : ''}`}
@@ -639,10 +641,10 @@ export default function Estadisticas({ compact = false }) {
                           disabled={stockLoading}
                         >
                           {preset.label}
-                        </button>
+                        </AppButton>
                       ))}
                     </div>
-                    <input
+                    <AppInput
                       type="date"
                       value={stockDesde}
                       onChange={(e) => {
@@ -650,7 +652,7 @@ export default function Estadisticas({ compact = false }) {
                         setStockDesde(e.target.value);
                       }}
                     />
-                    <input
+                    <AppInput
                       type="date"
                       value={stockHasta}
                       onChange={(e) => {
@@ -658,15 +660,15 @@ export default function Estadisticas({ compact = false }) {
                         setStockHasta(e.target.value);
                       }}
                     />
-                    <button
+                    <AppButton
                       type="button"
                       className="stats-refresh-btn"
                       onClick={() => loadStockSerie(stockDesde, stockHasta)}
                       disabled={stockLoading}
                     >
                       {stockLoading ? 'Actualizando...' : 'Filtrar'}
-                    </button>
-                    <button
+                    </AppButton>
+                    <AppButton
                       type="button"
                       className="stats-refresh-btn secondary"
                       onClick={() => {
@@ -679,7 +681,7 @@ export default function Estadisticas({ compact = false }) {
                       disabled={stockLoading}
                     >
                       Reiniciar
-                    </button>
+                    </AppButton>
                   </div>
                 </div>
                 <p className="stats-chart-range">{rangeLabel(stockSerieRange.desde, stockSerieRange.hasta)}</p>
@@ -721,8 +723,7 @@ export default function Estadisticas({ compact = false }) {
                   <h4>Detalle de ventas por usuario</h4>
                 </div>
                 <AppTable
-                  className="stats-table-unified"
-                  tableClassName="stats-table-grid"
+                  stickyHeader
                   columns={ventasUsuarioColumns}
                   rows={stats?.ventasPorUsuario || []}
                   rowKey={(u) => `${u.usuario_id || 'na'}-${u.usuario_nombre}`}
@@ -751,3 +752,5 @@ export default function Estadisticas({ compact = false }) {
     </div>
   );
 }
+
+

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import './Login.css';
 import { api } from '../../core/api';
 import { APP_VERSION } from '../../core/version';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppButton from '../../shared/components/button/AppButton';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -85,14 +87,14 @@ export default function Login({ onLogin }) {
             className="login-logo"
           />
           <h2>Iniciar sesión</h2>
-        <input
+        <AppInput
           type="email"
           placeholder="Correo electrónico"
           value={email}
           onChange={e => setEmail(e.target.value)}
         />
         {mode === 'login' && (
-          <input
+          <AppInput
             type="password"
             placeholder="Contraseña"
             value={password}
@@ -101,13 +103,13 @@ export default function Login({ onLogin }) {
         )}
         {mode === 'reset' && (
           <>
-            <input
+            <AppInput
               type="text"
                 placeholder="Código de 6 dígitos"
                 value={resetToken}
                 onChange={e => setResetToken(e.target.value)}
               />
-            <input
+            <AppInput
               type="password"
               placeholder="Nueva contraseña (mínimo 8)"
               value={newPassword}
@@ -119,8 +121,8 @@ export default function Login({ onLogin }) {
         {message && <div className="ok-message">{message}</div>}
         {mode === 'login' ? (
           <>
-            <button type="submit">Entrar</button>
-            <button
+            <AppButton type="submit">Entrar</AppButton>
+            <AppButton
               type="button"
               className="login-link-btn"
               onClick={() => {
@@ -133,13 +135,13 @@ export default function Login({ onLogin }) {
               }}
             >
               Olvidé mi contraseña
-            </button>
+            </AppButton>
             <small className="app-version-label">{APP_VERSION}</small>
           </>
         ) : (
           <>
-            <button type="button" onClick={handleResetPassword}>Restablecer contraseña</button>
-            <button
+            <AppButton type="button" onClick={handleResetPassword}>Restablecer contraseña</AppButton>
+            <AppButton
               type="button"
               className="login-link-btn"
               onClick={() => {
@@ -148,7 +150,7 @@ export default function Login({ onLogin }) {
               }}
             >
               Volver a iniciar sesión
-            </button>
+            </AppButton>
           </>
         )}
       </form>
@@ -159,7 +161,7 @@ export default function Login({ onLogin }) {
           <div className="login-forgot-modal">
             <h4>Recuperar contraseña</h4>
             <p>Ingrese su correo electronico para enviar</p>
-            <input
+            <AppInput
               type="email"
               placeholder="Correo electrónico"
               value={forgotEmail}
@@ -168,7 +170,7 @@ export default function Login({ onLogin }) {
             {forgotError && <div className="error">{forgotError}</div>}
             {forgotMessage && <div className="ok-message">{forgotMessage}</div>}
             <div className="login-forgot-actions">
-              <button
+              <AppButton
                 type="button"
                 className="login-link-btn"
                 onClick={() => {
@@ -178,10 +180,10 @@ export default function Login({ onLogin }) {
                 }}
               >
                 Cancelar
-              </button>
-              <button type="button" onClick={handleForgotPassword}>
+              </AppButton>
+              <AppButton type="button" onClick={handleForgotPassword}>
                 Enviar código
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
@@ -189,3 +191,5 @@ export default function Login({ onLogin }) {
     </div>
   );
 }
+
+

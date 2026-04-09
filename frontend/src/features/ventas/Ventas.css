@@ -225,10 +225,8 @@
 
 .unidades-edit input {
   width: 64px;
-  border: 1px solid #d3dbe8;
-  border-radius: 6px;
+  min-height: 34px;
   padding: 0.25rem 0.35rem;
-  font-size: 0.8rem;
 }
 
 .descuentos-item select,
@@ -239,19 +237,13 @@
 .form-entrega select,
 .form-entrega input,
 .form-entrega textarea {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  min-height: 44px;
-  padding: 0.45rem 0.5rem;
-  font-size: 0.82rem;
+  min-height: var(--field-height);
+  font-weight: 400;
 }
 
 .form-entrega input[type="date"],
 .sidebar-entrega input[type="date"] {
-  background: #fff;
-  color: #1f2933;
-  color-scheme: light;
-  cursor: text;
+  min-height: var(--field-height);
 }
 
 .descuento-action-link {
@@ -419,10 +411,7 @@
 
 .cliente-dropdown-head input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.42rem 0.5rem;
-  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .cliente-dropdown-list {
@@ -484,10 +473,7 @@
 
 .cliente-busqueda-wrap input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.42rem 0.5rem;
-  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .cliente-dropdown-list.full {
@@ -822,6 +808,7 @@
 .picker-qty {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.22rem;
 }
 
@@ -830,27 +817,37 @@
   border-radius: 6px;
   background: #fff;
   color: #375f8c;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   font-size: 0.92rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
-.picker-qty input {
+.picker-qty-input {
   width: 54px;
+  min-width: 54px;
+  height: 30px;
+  min-height: 30px;
   border: 1px solid #d3dbe8;
   border-radius: 6px;
-  padding: 0.24rem 0.34rem;
+  padding: 0;
   text-align: center;
   font-size: 0.78rem;
+  line-height: 30px;
   appearance: textfield;
   -moz-appearance: textfield;
 }
 
-.picker-qty input::-webkit-outer-spin-button,
-.picker-qty input::-webkit-inner-spin-button {
+.picker-qty-input::-webkit-outer-spin-button,
+.picker-qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -976,14 +973,10 @@
 }
 
 .pago-inputs input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.5rem;
-  font-size: 0.8rem;
-  background: #fff;
   color: #55677f;
   -moz-appearance: textfield;
   appearance: textfield;
+  font-weight: 400;
 }
 
 .pago-inputs input::-webkit-outer-spin-button,
@@ -995,7 +988,7 @@
 .pago-inputs input[readonly] {
   background: #eff5ff;
   color: #294e75;
-  font-weight: 700;
+  font-weight: 400;
   cursor: default;
 }
 
@@ -1032,12 +1025,6 @@
   width: 100%;
   resize: vertical;
   min-height: 76px;
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.5rem 0.55rem;
-  font-size: 0.82rem;
-  background: #fff;
-  color: #1f2933;
 }
 
 .ticket-pagos {
@@ -1255,11 +1242,8 @@
 
 .descuento-modal input {
   width: 100%;
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   margin-bottom: 0.65rem;
+  font-weight: 400;
 }
 
 .descuento-modal-actions {

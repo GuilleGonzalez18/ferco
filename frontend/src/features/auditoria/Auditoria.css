@@ -10,11 +10,6 @@
   margin-bottom: 0.75rem;
 }
 
-.auditoria-toolbar h3 {
-  margin: 0;
-  color: #375f8c;
-}
-
 .auditoria-filtros {
   display: flex;
   gap: 0.45rem;
@@ -23,12 +18,7 @@
 
 .auditoria-filtros select,
 .auditoria-filtros input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.84rem;
-  background: #fff;
-  color: #1f2933;
+  min-height: var(--field-height);
 }
 
 .auditoria-filtros input {
@@ -37,8 +27,6 @@
 
 .auditoria-filtros input[type='date'] {
   min-width: 160px;
-  color-scheme: light;
-  cursor: text;
 }
 
 .audit-btn {
@@ -111,12 +99,7 @@
 
 .auditoria-card-filtros select,
 .auditoria-card-filtros input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
-  background: #fff;
-  color: #1f2933;
+  min-height: var(--field-height);
 }
 
 .auditoria-card-filtros input {

@@ -8,7 +8,10 @@ import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
 import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
+import AppButton from '../../shared/components/button/AppButton';
 
 export default function Clientes() {
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -465,14 +468,14 @@ export default function Clientes() {
   return (
     <div className="clientes-main">
       <div className="clientes-toolbar">
-        <input
+        <AppInput
           type="text"
           className="buscar-cliente"
           placeholder="Buscar por nombre o RUT/C.I."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <button
+        <AppButton
           type="button"
           className="icon-btn"
           title="Agregar cliente"
@@ -480,10 +483,10 @@ export default function Clientes() {
         >
           <img src="/add.svg" alt="" aria-hidden="true" />
           <span>CLIENTE</span>
-        </button>
-        <button type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
+        </AppButton>
+        <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
           <img src="/print.svg" alt="" aria-hidden="true" />
-        </button>
+        </AppButton>
       </div>
 
       {exportModalOpen && (
@@ -493,39 +496,38 @@ export default function Clientes() {
             <h4>Exportar clientes</h4>
             <p>Elige un formato:</p>
             <div className="export-modal-actions">
-              <button type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
+              <AppButton type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
                 <PiFilePdfBold />
                 <span>PDF</span>
-              </button>
-              <button type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
+              </AppButton>
+              <AppButton type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
                 <RiFileExcel2Line />
                 <span>EXCEL</span>
-              </button>
-              <button type="button" onClick={() => { imprimirClientes(); setExportModalOpen(false); }}>
+              </AppButton>
+              <AppButton type="button" onClick={() => { imprimirClientes(); setExportModalOpen(false); }}>
                 <AiFillPrinter />
                 <span>Impresora</span>
-              </button>
+              </AppButton>
             </div>
-            <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+            <AppButton type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
               Cerrar
-            </button>
+            </AppButton>
           </div>
         </div>
       )}
 
       <AppTable
-        className="clientes-table"
-        tableClassName="clientes-table-grid"
+        stickyHeader
         columns={clientesColumns}
         rows={clientesOrdenados}
         rowKey="id"
         emptyMessage="No hay clientes"
         onRowClick={(c) => setClienteExpandidoId((prev) => (prev === c.id ? null : c.id))}
-        rowClassName={(c) => `cliente-row ${clienteExpandidoId === c.id ? 'expanded' : ''}`}
+        rowClassName="cliente-row"
         expandedRowId={clienteExpandidoId}
         renderExpandedRow={(c) => (
           <div className="acciones-cliente-panel">
-            <button
+            <AppButton
               type="button"
               className="edit-btn"
               onClick={(e) => {
@@ -534,8 +536,8 @@ export default function Clientes() {
               }}
             >
               Editar
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
               className="delete-btn"
               onClick={(e) => {
@@ -544,7 +546,7 @@ export default function Clientes() {
               }}
             >
               Eliminar
-            </button>
+            </AppButton>
           </div>
         )}
       />
@@ -558,60 +560,60 @@ export default function Clientes() {
           </div>
           <form className="cliente-form" onSubmit={guardarCliente}>
             <label className="field-label">Nombre
-              <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
+              <AppInput name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
             </label>
             <label className="field-label">RUT / C.I.
-              <input name="rut" value={nuevo.rut} onChange={handleChange} placeholder="Rut/C.I." required />
+              <AppInput name="rut" value={nuevo.rut} onChange={handleChange} placeholder="Rut/C.I." required />
             </label>
             <label className="field-label">Dirección
-              <input name="direccion" value={nuevo.direccion} onChange={handleChange} placeholder="Dirección" />
+              <AppInput name="direccion" value={nuevo.direccion} onChange={handleChange} placeholder="Dirección" />
             </label>
             <label className="field-label">Teléfono
-              <input name="telefono" value={nuevo.telefono} onChange={handleChange} placeholder="Teléfono" />
+              <AppInput name="telefono" value={nuevo.telefono} onChange={handleChange} placeholder="Teléfono" />
             </label>
             <label className="field-label">Mail
-              <input name="correo" value={nuevo.correo} onChange={handleChange} placeholder="Mail" type="email" />
+              <AppInput name="correo" value={nuevo.correo} onChange={handleChange} placeholder="Mail" type="email" />
             </label>
             <label className="field-label">Horario apertura
               <div className="time-selects">
-                <select
+                <AppSelect
                   value={aperturaPartes.h}
                   onChange={(e) => setHorarioPart('horario_apertura', 'h', e.target.value)}
                 >
                   <option value="">Hora</option>
                   {HORAS.map((h) => <option key={`ap-h-${h}`} value={h}>{h}</option>)}
-                </select>
+                </AppSelect>
                 <span>:</span>
-                <select
+                <AppSelect
                   value={aperturaPartes.m}
                   onChange={(e) => setHorarioPart('horario_apertura', 'm', e.target.value)}
                 >
                   <option value="">Min</option>
                   {MINUTOS.map((m) => <option key={`ap-m-${m}`} value={m}>{m}</option>)}
-                </select>
+                </AppSelect>
               </div>
             </label>
             <label className="field-label">Horario cierre
               <div className="time-selects">
-                <select
+                <AppSelect
                   value={cierrePartes.h}
                   onChange={(e) => setHorarioPart('horario_cierre', 'h', e.target.value)}
                 >
                   <option value="">Hora</option>
                   {HORAS.map((h) => <option key={`ci-h-${h}`} value={h}>{h}</option>)}
-                </select>
+                </AppSelect>
                 <span>:</span>
-                <select
+                <AppSelect
                   value={cierrePartes.m}
                   onChange={(e) => setHorarioPart('horario_cierre', 'm', e.target.value)}
                 >
                   <option value="">Min</option>
                   {MINUTOS.map((m) => <option key={`ci-m-${m}`} value={m}>{m}</option>)}
-                </select>
+                </AppSelect>
               </div>
             </label>
             <label className="field-label field-checkbox-inline">
-              <input
+              <AppInput
                 type="checkbox"
                 checked={Boolean(nuevo.tiene_reapertura)}
                 onChange={(e) => handleReaperturaChange(e.target.checked)}
@@ -622,47 +624,47 @@ export default function Clientes() {
               <>
                 <label className="field-label">Horario reapertura
                   <div className="time-selects">
-                    <select
+                    <AppSelect
                       value={reaperturaPartes.h}
                       onChange={(e) => setHorarioPart('horario_reapertura', 'h', e.target.value)}
                     >
                       <option value="">Hora</option>
                       {HORAS.map((h) => <option key={`ra-h-${h}`} value={h}>{h}</option>)}
-                    </select>
+                    </AppSelect>
                     <span>:</span>
-                    <select
+                    <AppSelect
                       value={reaperturaPartes.m}
                       onChange={(e) => setHorarioPart('horario_reapertura', 'm', e.target.value)}
                     >
                       <option value="">Min</option>
                       {MINUTOS.map((m) => <option key={`ra-m-${m}`} value={m}>{m}</option>)}
-                    </select>
+                    </AppSelect>
                   </div>
                 </label>
                 <label className="field-label">Cierre reapertura
                   <div className="time-selects">
-                    <select
+                    <AppSelect
                       value={cierreReaperturaPartes.h}
                       onChange={(e) => setHorarioPart('horario_cierre_reapertura', 'h', e.target.value)}
                     >
                       <option value="">Hora</option>
                       {HORAS.map((h) => <option key={`rc-h-${h}`} value={h}>{h}</option>)}
-                    </select>
+                    </AppSelect>
                     <span>:</span>
-                    <select
+                    <AppSelect
                       value={cierreReaperturaPartes.m}
                       onChange={(e) => setHorarioPart('horario_cierre_reapertura', 'm', e.target.value)}
                     >
                       <option value="">Min</option>
                       {MINUTOS.map((m) => <option key={`rc-m-${m}`} value={m}>{m}</option>)}
-                    </select>
+                    </AppSelect>
                   </div>
                 </label>
               </>
             )}
             <div className="cliente-form-actions">
-              <button type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</button>
-              <button type="button" onClick={cerrarPanel}>Cancelar</button>
+              <AppButton type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="button" onClick={cerrarPanel}>Cancelar</AppButton>
             </div>
           </form>
         </aside>
@@ -670,3 +672,5 @@ export default function Clientes() {
     </div>
   );
 }
+
+

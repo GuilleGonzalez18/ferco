@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import './AppTable.css';
 
 function getValue(row, column, rowIndex) {
@@ -53,11 +53,50 @@ export default function AppTable({
   renderExpandedRow,
   headerRowClassName = '',
   emptyColSpan,
+  stickyHeader = false,
 }) {
+  const wrapRef = useRef(null);
+  const [viewportHeight, setViewportHeight] = useState(null);
   const colSpan = emptyColSpan || Math.max(columns.length, 1);
+  const computedMinWidth = Math.max(680, columns.length * 120);
+
+  useEffect(() => {
+    if (!stickyHeader) {
+      setViewportHeight(null);
+      return;
+    }
+
+    const updateHeight = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const { top } = el.getBoundingClientRect();
+      const bottomGap = 16;
+      const available = Math.floor(window.innerHeight - top - bottomGap);
+      setViewportHeight(Math.max(220, available));
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [stickyHeader, columns.length, rows.length]);
+
+  const wrapperStyle = {
+    '--app-table-min-width': `${computedMinWidth}px`,
+  };
+
+  if (stickyHeader && viewportHeight !== null) {
+    wrapperStyle['--app-table-max-height'] = `${viewportHeight}px`;
+  }
 
   return (
-    <div className={`app-table-wrap ${className}`.trim()}>
+    <div
+      ref={wrapRef}
+      className={`app-table-wrap ${stickyHeader ? 'is-sticky-header' : ''} ${className}`.trim()}
+      style={wrapperStyle}
+    >
       <table className={`app-table ${tableClassName}`.trim()}>
         <thead>
           <tr className={headerRowClassName}>
@@ -89,7 +128,7 @@ export default function AppTable({
             return (
               <Fragment key={key}>
                 <tr
-                  className={`app-table-row ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
+                  className={`app-table-row ${isExpanded ? 'is-expanded' : ''} ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
                   onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
                 >
                   {columns.map((column) => {

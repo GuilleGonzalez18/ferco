@@ -4,6 +4,9 @@ import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
+import AppButton from '../../shared/components/button/AppButton';
 
 const PAGE_SIZE = 10;
 
@@ -297,14 +300,13 @@ export default function Auditoria() {
   return (
     <div className="auditoria-main">
       <div className="auditoria-toolbar">
-        <h3>Auditoría y movimientos de stock</h3>
         <div className="auditoria-filtros">
-          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-          <button type="button" className="audit-btn" onClick={() => loadAuditoria(desde, hasta)}>
+          <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          <AppButton type="button" className="audit-btn" onClick={() => loadAuditoria(desde, hasta)}>
             Filtrar
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="audit-btn secondary"
             onClick={() => {
@@ -314,7 +316,7 @@ export default function Auditoria() {
             }}
           >
             Limpiar
-          </button>
+          </AppButton>
         </div>
       </div>
 
@@ -326,33 +328,33 @@ export default function Auditoria() {
           <section className="auditoria-card">
             <div className="auditoria-card-head">
               <h4>Movimientos de stock</h4>
-              <button type="button" className="audit-btn" onClick={exportarStockPDF}>PDF stock</button>
+              <AppButton type="button" className="audit-btn" onClick={exportarStockPDF}>PDF stock</AppButton>
             </div>
             <div className="auditoria-card-filtros">
-              <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+              <AppSelect value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
                 <option value="todos">Tipo: todos</option>
                 <option value="entrada">Tipo: entrada</option>
                 <option value="salida">Tipo: salida</option>
-              </select>
-              <select value={filtroOrigenMov} onChange={(e) => setFiltroOrigenMov(e.target.value)}>
+              </AppSelect>
+              <AppSelect value={filtroOrigenMov} onChange={(e) => setFiltroOrigenMov(e.target.value)}>
                 <option value="todos">Origen: todos</option>
                 {opcionesOrigenMov.map((origen) => (
                   <option key={origen} value={origen}>{origen}</option>
                 ))}
-              </select>
-              <select value={filtroUsuarioMov} onChange={(e) => setFiltroUsuarioMov(e.target.value)}>
+              </AppSelect>
+              <AppSelect value={filtroUsuarioMov} onChange={(e) => setFiltroUsuarioMov(e.target.value)}>
                 <option value="todos">Usuario: todos</option>
                 {opcionesUsuarioMov.map((usuario) => (
                   <option key={usuario} value={usuario}>{usuario}</option>
                 ))}
-              </select>
-              <input
+              </AppSelect>
+              <AppInput
                 type="text"
                 placeholder="Buscar por producto o detalle..."
                 value={filtroTextoMov}
                 onChange={(e) => setFiltroTextoMov(e.target.value)}
               />
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => {
@@ -364,11 +366,10 @@ export default function Auditoria() {
                 }}
               >
                 Limpiar filtros
-              </button>
+              </AppButton>
             </div>
             <AppTable
-              className="auditoria-table auditoria-table-stock"
-              tableClassName="auditoria-table-stock-grid"
+              stickyHeader
               columns={movimientosColumns}
               rows={movimientosPaginados}
               rowKey="id"
@@ -376,7 +377,7 @@ export default function Auditoria() {
             />
             <div className="auditoria-pager">
               <span className="auditoria-range">{movimientosRange}</span>
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setMovimientosPage(1)}
@@ -385,8 +386,8 @@ export default function Auditoria() {
                 aria-label="Primera página"
               >
                 ⏮
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setMovimientosPage((p) => Math.max(1, p - 1))}
@@ -395,9 +396,9 @@ export default function Auditoria() {
                 aria-label="Página anterior"
               >
                 ◀
-              </button>
+              </AppButton>
               <span>Página {movimientosPage} de {totalMovimientosPages}</span>
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setMovimientosPage((p) => Math.min(totalMovimientosPages, p + 1))}
@@ -406,8 +407,8 @@ export default function Auditoria() {
                 aria-label="Página siguiente"
               >
                 ▶
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setMovimientosPage(totalMovimientosPages)}
@@ -416,7 +417,7 @@ export default function Auditoria() {
                 aria-label="Última página"
               >
                 ⏭
-              </button>
+              </AppButton>
             </div>
           </section>
 
@@ -425,25 +426,25 @@ export default function Auditoria() {
               <h4>Eventos de auditoría (altas, ediciones y eliminaciones)</h4>
             </div>
             <div className="auditoria-card-filtros">
-              <select value={filtroAccionEvento} onChange={(e) => setFiltroAccionEvento(e.target.value)}>
+              <AppSelect value={filtroAccionEvento} onChange={(e) => setFiltroAccionEvento(e.target.value)}>
                 <option value="todos">Acción: todas</option>
                 {opcionesAccionEvento.map((accion) => (
                   <option key={accion} value={accion}>{accion}</option>
                 ))}
-              </select>
-              <select value={filtroUsuarioEvento} onChange={(e) => setFiltroUsuarioEvento(e.target.value)}>
+              </AppSelect>
+              <AppSelect value={filtroUsuarioEvento} onChange={(e) => setFiltroUsuarioEvento(e.target.value)}>
                 <option value="todos">Usuario: todos</option>
                 {opcionesUsuarioEvento.map((usuario) => (
                   <option key={usuario} value={usuario}>{usuario}</option>
                 ))}
-              </select>
-              <input
+              </AppSelect>
+              <AppInput
                 type="text"
                 placeholder="Buscar por entidad, acción o detalle..."
                 value={filtroTextoEvento}
                 onChange={(e) => setFiltroTextoEvento(e.target.value)}
               />
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => {
@@ -454,11 +455,10 @@ export default function Auditoria() {
                 }}
               >
                 Limpiar filtros
-              </button>
+              </AppButton>
             </div>
             <AppTable
-              className="auditoria-table auditoria-table-eventos"
-              tableClassName="auditoria-table-eventos-grid"
+              stickyHeader
               columns={eventosColumns}
               rows={eventosPaginados}
               rowKey="id"
@@ -466,7 +466,7 @@ export default function Auditoria() {
             />
             <div className="auditoria-pager">
               <span className="auditoria-range">{eventosRange}</span>
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setEventosPage(1)}
@@ -475,8 +475,8 @@ export default function Auditoria() {
                 aria-label="Primera página"
               >
                 ⏮
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setEventosPage((p) => Math.max(1, p - 1))}
@@ -485,9 +485,9 @@ export default function Auditoria() {
                 aria-label="Página anterior"
               >
                 ◀
-              </button>
+              </AppButton>
               <span>Página {eventosPage} de {totalEventosPages}</span>
-              <button
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setEventosPage((p) => Math.min(totalEventosPages, p + 1))}
@@ -496,8 +496,8 @@ export default function Auditoria() {
                 aria-label="Página siguiente"
               >
                 ▶
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="audit-btn secondary"
                 onClick={() => setEventosPage(totalEventosPages)}
@@ -506,7 +506,7 @@ export default function Auditoria() {
                 aria-label="Última página"
               >
                 ⏭
-              </button>
+              </AppButton>
             </div>
           </section>
         </>
@@ -514,3 +514,5 @@ export default function Auditoria() {
     </div>
   );
 }
+
+

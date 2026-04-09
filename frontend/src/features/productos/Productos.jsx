@@ -1,13 +1,17 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
+import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
+import AppButton from '../../shared/components/button/AppButton';
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -757,28 +761,152 @@ export default function Productos({ user, productos = [], setProductos }) {
     [nuevo.imagenPreview]
   );
 
+  const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
+
+  const productosColumns = [
+    {
+      key: 'imagen',
+      header: 'Imagen',
+      mobileLabel: 'Imagen',
+      cellClassName: 'producto-image-cell',
+      render: (p) => (
+        p.imagenPreview ? (
+          <img src={p.imagenPreview} alt={p.nombre} className="producto-thumb" />
+        ) : (
+          <span className="sin-imagen">Sin imagen</span>
+        )
+      ),
+    },
+    {
+      key: 'nombre',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+          Nombre {sortMark('nombre')}
+        </button>
+      ),
+      mobileLabel: 'Nombre',
+      render: (p) => (
+        <span className="nombre-cell">
+          <strong>{p.nombre}</strong>
+          <small className="producto-codigo">Código: {p.ean || '-'}</small>
+        </span>
+      ),
+    },
+    {
+      key: 'stock',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('stock')}>
+          Stock {sortMark('stock')}
+        </button>
+      ),
+      mobileLabel: 'Stock',
+      align: 'right',
+      cellClassName: (p) => `stock-value ${stockState(p.stock)}`,
+      render: (p) => p.stock,
+    },
+    ...(esPropietario
+      ? [{
+          key: 'costo',
+          header: (
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>
+              Costo {sortMark('costo')}
+            </button>
+          ),
+          mobileLabel: 'Costo',
+          align: 'right',
+          render: (p) => formatMoney(p.costo),
+        }]
+      : []),
+    {
+      key: 'venta',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('venta')}>
+          Venta {sortMark('venta')}
+        </button>
+      ),
+      mobileLabel: 'Venta',
+      align: 'right',
+      render: (p) => formatMoney(p.venta),
+    },
+    {
+      key: 'empaque',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('empaque')}>
+          Empaque {sortMark('empaque')}
+        </button>
+      ),
+      mobileLabel: 'Empaque',
+      render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
+    },
+    ...(esPropietario
+      ? [{
+          key: 'ganancia',
+          header: (
+            <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>
+              Ganancia x U {sortMark('ganancia')}
+            </button>
+          ),
+          mobileLabel: 'Ganancia x U',
+          align: 'right',
+          render: (p) => formatMoney(calcularGananciaUnidad(p.costo, p.venta)),
+        }]
+      : []),
+    {
+      key: 'totalCosto',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalCosto')}>
+          Total Costo {sortMark('totalCosto')}
+        </button>
+      ),
+      mobileLabel: 'Total Costo',
+      align: 'right',
+      render: (p) => formatMoney((Number(p.stock || 0) * Number(p.costo || 0))),
+    },
+    {
+      key: 'totalVenta',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalVenta')}>
+          Total Venta {sortMark('totalVenta')}
+        </button>
+      ),
+      mobileLabel: 'Total Venta',
+      align: 'right',
+      render: (p) => formatMoney((Number(p.stock || 0) * Number(p.venta || 0))),
+    },
+    {
+      key: 'totalGanancia',
+      header: (
+        <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalGanancia')}>
+          Total Ganancia {sortMark('totalGanancia')}
+        </button>
+      ),
+      mobileLabel: 'Total Ganancia',
+      align: 'right',
+      render: (p) => formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta)),
+    },
+  ];
+
   return (
     <div className="productos-main">
       <div className="productos-right full-width">
         <div className="productos-toolbar">
-          <h3>Lista de productos</h3>
-          <input
+          <AppInput
             type="text"
             className="buscar-producto"
             placeholder="Buscar por nombre, codigo, categoria..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          <button className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
+          <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
             <img src="/add.svg" alt="" aria-hidden="true" />
             <span>PRODUCTO</span>
-          </button>
-          <button className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
+          </AppButton>
+          <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
             <span>EMPAQUES</span>
-          </button>
-          <button className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
+          </AppButton>
+          <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
             <img src="/print.svg" alt="" aria-hidden="true" />
-          </button>
+          </AppButton>
         </div>
 
         <div className="productos-totales">
@@ -803,41 +931,41 @@ export default function Productos({ user, productos = [], setProductos }) {
               <h4>Exportar productos</h4>
               <p>Elige un formato:</p>
               <div className="export-modal-actions">
-                <button type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
+                <AppButton type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
                   <PiFilePdfBold />
                   <span>PDF</span>
-                </button>
-                <button type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
+                </AppButton>
+                <AppButton type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
                   <RiFileExcel2Line />
                   <span>EXCEL</span>
-                </button>
-                <button type="button" onClick={() => { imprimirProductos(); setExportModalOpen(false); }}>
+                </AppButton>
+                <AppButton type="button" onClick={() => { imprimirProductos(); setExportModalOpen(false); }}>
                   <AiFillPrinter />
                   <span>Impresora</span>
-                </button>
+                </AppButton>
               </div>
               {mostrarOpcionesCatalogo && (
                 <>
                   <p className="export-modal-section-title">Imprimir como catálogo</p>
                   <div className="export-modal-actions">
-                    <button type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
+                    <AppButton type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
                       <PiFilePdfBold />
                       <span>Catálogo PDF</span>
-                    </button>
-                    <button type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
+                    </AppButton>
+                    <AppButton type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
                       <AiFillPrinter />
                       <span>Catálogo Impresora</span>
-                    </button>
-                    <button type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
+                    </AppButton>
+                    <AppButton type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
                       <img src="/whatsapp.svg" alt="" aria-hidden="true" />
                       <span>Compartir por WhatsApp</span>
-                    </button>
+                    </AppButton>
                   </div>
                 </>
               )}
-              <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+              <AppButton type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
                 Cerrar
-              </button>
+              </AppButton>
             </div>
           </div>
         )}
@@ -849,113 +977,64 @@ export default function Productos({ user, productos = [], setProductos }) {
               <h4>Gestionar empaques</h4>
               <p>Agrega y administra los tipos de empaque.</p>
               <div className="empaques-create-row">
-                <input
+                <AppInput
                   type="text"
                   value={nuevoEmpaqueNombre}
                   onChange={(e) => setNuevoEmpaqueNombre(e.target.value)}
                   placeholder="Nuevo empaque"
                 />
-                <button type="button" onClick={crearEmpaque}>Agregar</button>
+                <AppButton type="button" onClick={crearEmpaque}>Agregar</AppButton>
               </div>
               <div className="empaques-list">
                 {empaques.map((e) => (
                   <div key={e.id} className="empaque-item">
                     <span>{e.nombre}</span>
-                    <button type="button" onClick={() => eliminarEmpaque(e)}>Eliminar</button>
+                    <AppButton type="button" onClick={() => eliminarEmpaque(e)}>Eliminar</AppButton>
                   </div>
                 ))}
                 {!empaques.length && <p className="empaque-empty">No hay empaques cargados.</p>}
               </div>
-              <button type="button" className="export-modal-close" onClick={() => setEmpaquesModalOpen(false)}>
+              <AppButton type="button" className="export-modal-close" onClick={() => setEmpaquesModalOpen(false)}>
                 Cerrar
-              </button>
+              </AppButton>
             </div>
           </div>
         )}
 
-        <ul className="lista-productos">
-          <li className="header">
-            <span>Imagen</span>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>Nombre {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('stock')}>Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            {esPropietario && (
-              <button type="button" className="sort-header-btn" onClick={() => toggleSort('costo')}>Costo {sortBy === 'costo' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            )}
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('venta')}>Venta {sortBy === 'venta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('empaque')}>Empaque {sortBy === 'empaque' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            {esPropietario && (
-              <button type="button" className="sort-header-btn" onClick={() => toggleSort('ganancia')}>Ganancia x U {sortBy === 'ganancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            )}
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalCosto')}>Total Costo {sortBy === 'totalCosto' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalVenta')}>Total Venta {sortBy === 'totalVenta' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('totalGanancia')}>Total Ganancia {sortBy === 'totalGanancia' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</button>
-          </li>
-          {sortedProductos.length === 0 && <li className="vacio">No hay productos</li>}
-          {sortedProductos.map(p => {
-            const expanded = productoExpandidoId === p.id;
-            return (
-              <Fragment key={p.id}>
-                <li
-                  className={`producto-row ${stockState(p.stock)} ${expanded ? 'expanded' : ''}`}
-                  onClick={() => setProductoExpandidoId(expanded ? null : p.id)}
-                >
-                  <span>
-                    {p.imagenPreview ? (
-                      <img src={p.imagenPreview} alt={p.nombre} className="producto-thumb" />
-                    ) : (
-                      <span className="sin-imagen">Sin imagen</span>
-                    )}
-                  </span>
-                  <span className="campo nombre-cell" data-label="Nombre">
-                    <strong>{p.nombre}</strong>
-                    <small className="producto-codigo">Código: {p.ean || '-'}</small>
-                  </span>
-                  <span className={`campo stock-value ${stockState(p.stock)}`} data-label="Stock">{p.stock}</span>
-                  {esPropietario && <span className="campo" data-label="Costo">{formatMoney(p.costo)}</span>}
-                  <span className="campo" data-label="Venta">{formatMoney(p.venta)}</span>
-                  <span className="campo" data-label="Empaque">{p.tipoEmpaque} x {p.cantidadEmpaque}</span>
-                  {esPropietario && (
-                    <span className="campo" data-label="Ganancia x U">
-                      {(() => {
-                        const ganancia = calcularGananciaUnidad(p.costo, p.venta);
-                        return formatMoney(ganancia);
-                      })()}
-                    </span>
-                  )}
-                  <span className="campo" data-label="Total Costo">{formatMoney((Number(p.stock || 0) * Number(p.costo || 0)))}</span>
-                  <span className="campo" data-label="Total Venta">{formatMoney((Number(p.stock || 0) * Number(p.venta || 0)))}</span>
-                  <span className="campo" data-label="Total Ganancia">
-                    {formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta))}
-                  </span>
-                </li>
-                <li className={`producto-actions-row ${expanded ? 'expanded' : ''}`}>
-                  <div className="acciones-producto-panel">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditar(p);
-                      }}
-                      title="Editar"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEliminar(p.id);
-                      }}
-                      title="Eliminar"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ul>
+        <AppTable
+          columns={productosColumns}
+          rows={sortedProductos}
+          rowKey="id"
+          emptyMessage="No hay productos"
+          stickyHeader
+          onRowClick={(p) => setProductoExpandidoId((prev) => (prev === p.id ? null : p.id))}
+          rowClassName={(p) => `producto-row ${stockState(p.stock)}`}
+          expandedRowId={productoExpandidoId}
+          renderExpandedRow={(p) => (
+            <div className="acciones-producto-panel">
+              <AppButton
+                className="edit-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditar(p);
+                }}
+                title="Editar"
+              >
+                Editar
+              </AppButton>
+              <AppButton
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEliminar(p.id);
+                }}
+                title="Eliminar"
+              >
+                Eliminar
+              </AppButton>
+            </div>
+          )}
+        />
       </div>
 
       <div className={`side-panel-overlay ${mostrarForm ? 'open' : ''}`} aria-hidden={!mostrarForm}>
@@ -967,34 +1046,34 @@ export default function Productos({ user, productos = [], setProductos }) {
           </div>
           <form className="form-producto" onSubmit={handleSubmit}>
             <label className="field-label">Nombre del producto
-              <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
+              <AppInput name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
             </label>
             <label className="field-label">Stock
-              <input name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
+              <AppInput name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
             </label>
             <label className="field-label">EAN / Código
-              <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
+              <AppInput name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
             </label>
             <label className="field-label">Tipo de empaque
-              <select name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
+              <AppSelect name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
                 <option value="">Seleccionar empaque</option>
                 {empaques.map((e) => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
-              </select>
+              </AppSelect>
             </label>
             <label className="field-label">Cantidad por empaque
-              <input name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
+              <AppInput name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio de costo
-              <input name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
+              <AppInput name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio de venta
-              <input name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
+              <AppInput name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio por empaque
-              <input name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
+              <AppInput name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
             </label>
             <label className="field-label">URL de imagen
-              <input
+              <AppInput
                 name="imagenUrl"
                 value={nuevo.imagenPreview || ''}
                 onChange={handleChange}
@@ -1009,11 +1088,11 @@ export default function Productos({ user, productos = [], setProductos }) {
               </div>
             )}
             <label className="field-label">Archivo de imagen
-              <input name="imagen" type="file" accept="image/*" onChange={handleChange} />
+              <AppInput name="imagen" type="file" accept="image/*" onChange={handleChange} />
             </label>
             <div className="form-actions">
-              <button type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</button>
-              <button type="button" onClick={cerrarPanel}>Cancelar</button>
+              <AppButton type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="button" onClick={cerrarPanel}>Cancelar</AppButton>
             </div>
           </form>
         </aside>
@@ -1021,3 +1100,5 @@ export default function Productos({ user, productos = [], setProductos }) {
     </div>
   );
 }
+
+

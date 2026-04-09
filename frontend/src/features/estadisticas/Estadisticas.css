@@ -12,10 +12,6 @@
   gap: 0.5rem;
 }
 
-.stats-main.compact .stats-toolbar h3 {
-  font-size: 0.9rem;
-}
-
 .stats-main.compact .stats-refresh-btn {
   padding: 0.32rem 0.58rem;
   font-size: 0.74rem;
@@ -28,11 +24,6 @@
 .stats-main.compact .quick-range-btn {
   padding: 0.24rem 0.45rem;
   font-size: 0.68rem;
-}
-
-.stats-main.compact .stats-filters input[type='date'] {
-  padding: 0.28rem 0.42rem;
-  font-size: 0.72rem;
 }
 
 .stats-main.compact .stats-range-pill {
@@ -136,12 +127,6 @@
   flex-wrap: wrap;
 }
 
-.stats-toolbar h3 {
-  margin: 0;
-  color: #375f8c;
-  font-size: 1rem;
-}
-
 .stats-refresh-btn {
   border: 1px solid #375f8c;
   border-radius: 8px;
@@ -201,29 +186,15 @@
 }
 
 .stats-filters input[type='date'] {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.8rem;
-  background: #fff;
-  color: #1f2933;
-  color-scheme: light;
-  cursor: text;
+  min-height: var(--field-height);
 }
 
 .stats-user-select {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.8rem;
-  background: #fff;
-  color: #2a4464;
   min-width: 190px;
 }
 
 .stats-main.compact .stats-user-select {
-  padding: 0.28rem 0.42rem;
-  font-size: 0.72rem;
+  min-height: 34px;
   min-width: 150px;
 }
 
@@ -379,13 +350,7 @@
 }
 
 .stock-chart-filters input[type='date'] {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.76rem;
-  background: #fff;
-  color: #1f2933;
-  color-scheme: light;
+  min-height: var(--field-height);
 }
 
 .stats-chart-range {

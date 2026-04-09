@@ -10,45 +10,30 @@
   margin-bottom: 0.75rem;
 }
 
-.ventas-historial-title h3 {
-  margin: 0;
-  color: #375f8c;
-  font-size: 1rem;
-}
-
-.ventas-historial-title p {
-  margin: 0.1rem 0 0;
-  color: #708094;
-  font-size: 0.82rem;
-}
-
 .ventas-fecha-filter {
   display: inline-flex;
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.8rem;
   color: #375f8c;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .ventas-fecha-filter input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.48rem 0.56rem;
-  font-size: 0.84rem;
-  background: #ffffff;
-  color: #1f2933;
-  color-scheme: light;
-  cursor: text;
+  min-height: var(--field-height);
+  font-weight: 400;
 }
 
 .ventas-fecha-filter select {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.48rem 0.56rem;
-  font-size: 0.84rem;
-  color: #1f2933;
-  background: #fff;
+  min-height: var(--field-height);
+  font-weight: 400;
+}
+
+.ventas-fecha-filter input[type='date']::-webkit-datetime-edit,
+.ventas-fecha-filter input[type='date']::-webkit-datetime-edit-year-field,
+.ventas-fecha-filter input[type='date']::-webkit-datetime-edit-month-field,
+.ventas-fecha-filter input[type='date']::-webkit-datetime-edit-day-field {
+  font-weight: 400;
 }
 
 .ventas-export-group {
@@ -627,6 +612,10 @@
 
   .ventas-export-btn {
     width: 100%;
+  }
+
+  .ventas-table-grid {
+    min-width: 900px;
   }
 
   .lista-ventas li {

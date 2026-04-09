@@ -10,10 +10,7 @@
 }
 
 .buscar-cliente {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
-  font-size: 0.86rem;
+  width: 100%;
 }
 
 .icon-btn {
@@ -131,19 +128,10 @@
 }
 
 .cliente-form input {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   background: #fff;
-  color: #1f2933;
 }
 
 .cliente-form select {
-  border: 1px solid #d3dbe8;
-  border-radius: 7px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.82rem;
   background: #fff;
   color: #1f2933;
   -webkit-text-fill-color: #1f2933;
@@ -210,24 +198,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.clientes-table-grid {
-  min-width: 1080px;
-}
-
-.clientes-table .app-table-row.cliente-row {
-  cursor: pointer;
-}
-
-.clientes-table .app-table-row.cliente-row.expanded {
-  background: #f7fbff;
-}
-
-.clientes-table .app-table-expanded-content {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0.34rem 0.62rem;
 }
 
 .lista-clientes li {
@@ -309,40 +279,6 @@
   justify-content: flex-end;
 }
 
-.clientes-table .acciones-cliente-panel {
-  width: 100%;
-}
-
-.edit-btn {
-  background: #375f8c;
-  color: #fff;
-  border: 1.5px solid #375f8c;
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-}
-
-.edit-btn:hover {
-  background: #2f5279;
-  color: #fff;
-}
-
-.delete-btn {
-  background: #375f8c;
-  color: #fff;
-  border: 1.5px solid #375f8c;
-  border-radius: 5px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.86rem;
-  cursor: pointer;
-}
-
-.delete-btn:hover {
-  background: #2f5279;
-  color: #fff;
-}
-
 .side-panel-overlay {
   position: fixed;
   inset: 0;
@@ -422,7 +358,4 @@
     margin-top: -0.4rem;
   }
 
-  .clientes-table-grid {
-    min-width: 700px;
-  }
 }

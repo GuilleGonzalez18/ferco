@@ -1,5 +1,9 @@
 .control-stock-main {
   padding: 1rem 1.1rem 1.3rem;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .control-stock-head {
@@ -9,19 +13,7 @@
   margin-bottom: 0.7rem;
 }
 
-.control-stock-head h3 {
-  margin: 0;
-  color: #375f8c;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
 .control-stock-head input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.84rem;
   min-width: 260px;
 }
 
@@ -29,6 +21,8 @@
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   gap: 0.8rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .control-stock-list,
@@ -39,19 +33,40 @@
   padding: 0.65rem;
 }
 
-.stock-table-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px;
-  gap: 0.4rem;
-  margin-bottom: 0.4rem;
+.control-stock-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.control-stock-table-wrap {
+  border: 1px solid #e4ebf4;
+  height: 100%;
+}
+
+.control-stock-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.control-stock-table th:first-child,
+.control-stock-table td:first-child {
+  width: auto;
+}
+
+.control-stock-table th:last-child,
+.control-stock-table td:last-child {
+  width: 110px;
 }
 
 .sort-header-btn {
   border: none;
-  background: #eef4fb;
+  background: transparent;
   color: #375f8c;
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
+  border-radius: 0;
+  padding: 0;
   text-align: left;
   font-size: 0.78rem;
   font-weight: 700;
@@ -62,30 +77,12 @@
   text-align: center;
 }
 
-.stock-table-row {
-  width: 100%;
-  border: 1px solid #dce5f1;
-  border-radius: 8px;
-  background: #fff;
-  padding: 0.45rem 0.55rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px;
-  gap: 0.4rem;
-  align-items: center;
-  cursor: pointer;
-  margin-bottom: 0.38rem;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
-}
-
-.stock-table-row:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(55, 95, 140, 0.12);
-}
-
-.stock-table-row .stock-item-left {
+.stock-item-left {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   min-width: 0;
+  width: 100%;
 }
 
 .stock-item-image {
@@ -112,6 +109,7 @@
   gap: 0.05rem;
   align-items: flex-start;
   min-width: 0;
+  overflow: hidden;
 }
 
 .stock-item-info strong {
@@ -120,6 +118,9 @@
   font-weight: 700;
   line-height: 1.1;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stock-item-info small {
@@ -129,13 +130,8 @@
   line-height: 1.1;
 }
 
-.stock-table-row.active {
-  border-color: #375f8c;
-  background: #eef4fb;
-}
-
 .stock-item-qty {
-  min-width: 36px;
+  min-width: 42px;
   text-align: center;
   color: #1f4266;
   font-size: 0.96rem;
@@ -178,9 +174,7 @@
 }
 
 .stock-cantidad input {
-  border: 1px solid #d3dbe8;
-  border-radius: 8px;
-  padding: 0.42rem 0.55rem;
+  min-height: var(--field-height);
 }
 
 .stock-history-btn {
