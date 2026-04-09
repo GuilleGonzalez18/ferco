@@ -60,6 +60,13 @@ function resolveVersion() {
   )
   if (envTag) return envTag
 
+  // Ensure tags are available in CI shallow checkouts (Vercel/Actions)
+  try {
+    execSync('git fetch --tags --prune --quiet', { stdio: ['ignore', 'ignore', 'ignore'] })
+  } catch {
+    // ignore fetch errors
+  }
+
   const headTag = getHeadTag()
   if (headTag) return headTag
 
@@ -75,9 +82,11 @@ function resolveVersion() {
 }
 
 // https://vite.dev/config/
+const resolvedAppVersion = resolveVersion();
+console.log(`[build] APP_VERSION=${resolvedAppVersion}`);
 export default defineConfig({
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(resolveVersion()),
+    __APP_VERSION__: JSON.stringify(resolvedAppVersion),
   },
 })
