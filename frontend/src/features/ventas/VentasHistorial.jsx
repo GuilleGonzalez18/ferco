@@ -10,6 +10,9 @@ import { FaReplyAll } from 'react-icons/fa6';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { formatHorarioCliente } from '../../shared/lib/horarios';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
+import AppButton from '../../shared/components/button/AppButton';
 
 function todayISO() {
   const now = new Date();
@@ -890,7 +893,7 @@ export default function VentasHistorial() {
         const estadoEntrega = normalizarEstadoEntrega(v);
         return (
           <label className="entregado-check entregado-col" onClick={(e) => e.stopPropagation()}>
-            <input
+            <AppInput
               type="checkbox"
               checked={estadoEntrega === 'entregado'}
               disabled={updatingEntregaId === v.id || Boolean(v.cancelada)}
@@ -912,7 +915,7 @@ export default function VentasHistorial() {
     return (
       <div className="venta-detalle-panel">
         <div className="venta-detalle-actions">
-          <button
+          <AppButton
             type="button"
             className="cancel-btn"
             onClick={() => cancelarVenta(v.id)}
@@ -922,8 +925,8 @@ export default function VentasHistorial() {
           >
             <span>{v.cancelada ? '✕' : (cancelandoVentaId === v.id ? '…' : '✕')}</span>
             <small>Cancelar</small>
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="reprint-btn"
             onClick={() => replicarVenta(v.id)}
@@ -933,8 +936,8 @@ export default function VentasHistorial() {
           >
             <FaReplyAll aria-hidden="true" />
             <small>Replicar</small>
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="reprint-btn"
             onClick={() => reenviarFactura(v.id)}
@@ -944,8 +947,8 @@ export default function VentasHistorial() {
           >
             <img src="/send.svg" alt="" aria-hidden="true" />
             <small>Reenviar</small>
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="reprint-btn"
             onClick={() => imprimirVenta(v.id)}
@@ -955,7 +958,7 @@ export default function VentasHistorial() {
           >
             <img src="/print.svg" alt="" aria-hidden="true" />
             <small>Imprimir</small>
-          </button>
+          </AppButton>
         </div>
         {loadingDetalleId === v.id ? (
           <p>Cargando detalle...</p>
@@ -982,19 +985,19 @@ export default function VentasHistorial() {
       <div className="ventas-historial-toolbar">
         <label className="ventas-fecha-filter">
           <span>Fecha</span>
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          <AppInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
         </label>
         <label className="ventas-fecha-filter">
           <span>Estado</span>
-          <select value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+          <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
             <option value="todos">Todos</option>
             <option value="pendiente">Pendientes</option>
             <option value="entregado">Entregadas</option>
             <option value="canceladas">Canceladas</option>
-          </select>
+          </AppSelect>
         </label>
         <div className="ventas-export-group">
-          <button
+          <AppButton
             type="button"
             className="ventas-export-btn"
             onClick={() => setModalTicketsOpen(true)}
@@ -1002,8 +1005,8 @@ export default function VentasHistorial() {
           >
             <AiFillPrinter />
             {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega'}
-          </button>
-          <button
+          </AppButton>
+          <AppButton
             type="button"
             className="ventas-export-btn"
             onClick={() => {
@@ -1015,7 +1018,7 @@ export default function VentasHistorial() {
             disabled={exportingEntregas}
           >
             {exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}
-          </button>
+          </AppButton>
         </div>
       </div>
 
@@ -1029,7 +1032,7 @@ export default function VentasHistorial() {
               Para cada día de entrega, se respeta el orden en que se creó la venta (más antigua primero).
             </p>
             <div className="tickets-presets-row">
-              <button
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1040,8 +1043,8 @@ export default function VentasHistorial() {
                 disabled={printingBatch}
               >
                 Hoy
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1052,8 +1055,8 @@ export default function VentasHistorial() {
                 disabled={printingBatch}
               >
                 Mañana
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1064,8 +1067,8 @@ export default function VentasHistorial() {
                 disabled={printingBatch}
               >
                 Esta semana
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1076,36 +1079,36 @@ export default function VentasHistorial() {
                 disabled={printingBatch}
               >
                 Este mes
-              </button>
+              </AppButton>
             </div>
             <div className="tickets-range-row">
               <label className="ventas-fecha-filter">
                 <span>Desde</span>
-                <input type="date" value={ticketsDesde} onChange={(e) => setTicketsDesde(e.target.value)} />
+                <AppInput type="date" value={ticketsDesde} onChange={(e) => setTicketsDesde(e.target.value)} />
               </label>
               <label className="ventas-fecha-filter">
                 <span>Hasta</span>
-                <input type="date" value={ticketsHasta} onChange={(e) => setTicketsHasta(e.target.value)} />
+                <AppInput type="date" value={ticketsHasta} onChange={(e) => setTicketsHasta(e.target.value)} />
               </label>
             </div>
             <div className="export-modal-actions">
-              <button type="button" onClick={() => processTicketsQueue('pdf')} disabled={printingBatch}>
+              <AppButton type="button" onClick={() => processTicketsQueue('pdf')} disabled={printingBatch}>
                 <PiFilePdfBold />
                 <span>Descargar PDF (uno por uno)</span>
-              </button>
-              <button type="button" onClick={() => processTicketsQueue('printer')} disabled={printingBatch}>
+              </AppButton>
+              <AppButton type="button" onClick={() => processTicketsQueue('printer')} disabled={printingBatch}>
                 <AiFillPrinter />
                 <span>Enviar a impresora (uno por uno)</span>
-              </button>
+              </AppButton>
             </div>
-            <button
+            <AppButton
               type="button"
               className="export-modal-close"
               onClick={() => setModalTicketsOpen(false)}
               disabled={printingBatch}
             >
               Cerrar
-            </button>
+            </AppButton>
           </div>
         </div>
       )}
@@ -1117,7 +1120,7 @@ export default function VentasHistorial() {
             <h4>Planilla de entregas</h4>
             <p>Elige rango y formato.</p>
             <div className="tickets-presets-row">
-              <button
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1128,8 +1131,8 @@ export default function VentasHistorial() {
                 disabled={exportingEntregas}
               >
                 Hoy
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1140,8 +1143,8 @@ export default function VentasHistorial() {
                 disabled={exportingEntregas}
               >
                 Mañana
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1152,8 +1155,8 @@ export default function VentasHistorial() {
                 disabled={exportingEntregas}
               >
                 Esta semana
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 className="ticket-preset-btn"
                 onClick={() => {
@@ -1164,40 +1167,40 @@ export default function VentasHistorial() {
                 disabled={exportingEntregas}
               >
                 Este mes
-              </button>
+              </AppButton>
             </div>
             <div className="tickets-range-row">
               <label className="ventas-fecha-filter">
                 <span>Desde</span>
-                <input type="date" value={entregasDesde} onChange={(e) => setEntregasDesde(e.target.value)} />
+                <AppInput type="date" value={entregasDesde} onChange={(e) => setEntregasDesde(e.target.value)} />
               </label>
               <label className="ventas-fecha-filter">
                 <span>Hasta</span>
-                <input type="date" value={entregasHasta} onChange={(e) => setEntregasHasta(e.target.value)} />
+                <AppInput type="date" value={entregasHasta} onChange={(e) => setEntregasHasta(e.target.value)} />
               </label>
             </div>
             <div className="export-modal-actions">
-              <button type="button" onClick={exportarEntregasPDF} disabled={exportingEntregas}>
+              <AppButton type="button" onClick={exportarEntregasPDF} disabled={exportingEntregas}>
                 <PiFilePdfBold />
                 <span>PDF</span>
-              </button>
-              <button type="button" onClick={exportarEntregasExcel} disabled={exportingEntregas}>
+              </AppButton>
+              <AppButton type="button" onClick={exportarEntregasExcel} disabled={exportingEntregas}>
                 <RiFileExcel2Line />
                 <span>EXCEL</span>
-              </button>
-              <button type="button" onClick={imprimirEntregas} disabled={exportingEntregas}>
+              </AppButton>
+              <AppButton type="button" onClick={imprimirEntregas} disabled={exportingEntregas}>
                 <AiFillPrinter />
                 <span>Impresora</span>
-              </button>
+              </AppButton>
             </div>
-            <button
+            <AppButton
               type="button"
               className="export-modal-close"
               onClick={() => setModalExportOpen(false)}
               disabled={exportingEntregas}
             >
               Cerrar
-            </button>
+            </AppButton>
           </div>
         </div>
       )}
@@ -1226,3 +1229,5 @@ export default function VentasHistorial() {
     </div>
   );
 }
+
+

@@ -3,6 +3,9 @@ import { api } from '../../core/api';
 import './Usuarios.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
+import AppButton from '../../shared/components/button/AppButton';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -270,7 +273,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     <div className="usuarios-main">
       {!onlySelf && (
       <div className="usuarios-toolbar">
-        <input
+        <AppInput
           type="text"
           className="buscar-usuario"
           placeholder="Buscar usuario..."
@@ -278,7 +281,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           onChange={(e) => setBusqueda(e.target.value)}
         />
         {esPropietario && (
-          <button
+          <AppButton
             type="button"
             className="icon-btn"
             onClick={() => {
@@ -298,7 +301,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           >
             <img src="/add.svg" alt="" aria-hidden="true" />
             <span>USUARIO</span>
-          </button>
+          </AppButton>
         )}
       </div>
       )}
@@ -319,10 +322,10 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           renderExpandedRow={(u) => (
             <div className="usuario-actions show">
               {(esPropietario || Number(u.id) === currentUserId) && (
-                <button type="button" className="edit-btn" onClick={() => editarUsuario(u)}>Editar</button>
+                <AppButton type="button" className="edit-btn" onClick={() => editarUsuario(u)}>Editar</AppButton>
               )}
               {esPropietario && Number(u.id) !== currentUserId && (
-                <button type="button" className="delete-btn" onClick={() => eliminarUsuario(u.id)}>Eliminar</button>
+                <AppButton type="button" className="delete-btn" onClick={() => eliminarUsuario(u.id)}>Eliminar</AppButton>
               )}
             </div>
           )}
@@ -338,19 +341,19 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           </div>
           <form className="usuario-form" onSubmit={guardarUsuario}>
             <label className="field-label">Nombre
-              <input name="nombre" value={nuevo.nombre} onChange={handleChange} />
+              <AppInput name="nombre" value={nuevo.nombre} onChange={handleChange} />
             </label>
             <label className="field-label">Apellido
-              <input name="apellido" value={nuevo.apellido} onChange={handleChange} />
+              <AppInput name="apellido" value={nuevo.apellido} onChange={handleChange} />
             </label>
             <label className="field-label">Usuario
-              <input name="username" value={nuevo.username} onChange={handleChange} required />
+              <AppInput name="username" value={nuevo.username} onChange={handleChange} required />
             </label>
             <label className="field-label">Correo
-              <input name="correo" type="email" value={nuevo.correo} onChange={handleChange} required />
+              <AppInput name="correo" type="email" value={nuevo.correo} onChange={handleChange} required />
             </label>
             <label className="field-label">Contraseña
-              <input
+              <AppInput
                 name="password"
                 type="password"
                 value={nuevo.password}
@@ -360,20 +363,20 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
               />
             </label>
             <label className="field-label">Tipo
-              <select name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>
+              <AppSelect name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>
                 <option value="vendedor">Vendedor</option>
                 <option value="propietario">Propietario</option>
-              </select>
+              </AppSelect>
             </label>
             <label className="field-label">Teléfono
-              <input name="telefono" value={nuevo.telefono} onChange={handleChange} />
+              <AppInput name="telefono" value={nuevo.telefono} onChange={handleChange} />
             </label>
             <label className="field-label">Dirección
-              <input name="direccion" value={nuevo.direccion} onChange={handleChange} />
+              <AppInput name="direccion" value={nuevo.direccion} onChange={handleChange} />
             </label>
             <div className="usuario-form-actions">
-              <button type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</button>
-              <button type="button" onClick={() => setMostrarForm(false)}>Cancelar</button>
+              <AppButton type="submit">{editandoId ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="button" onClick={() => setMostrarForm(false)}>Cancelar</AppButton>
             </div>
           </form>
         </aside>
@@ -381,3 +384,5 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     </div>
   );
 }
+
+

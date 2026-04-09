@@ -5,6 +5,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { formatHorarioCliente } from '../../shared/lib/horarios';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
+import AppTextarea from '../../shared/components/fields/AppTextarea';
+import AppButton from '../../shared/components/button/AppButton';
 
 const PASOS = ['Productos y carrito', 'Pago y preventa'];
 const MEDIOS_PAGO = [
@@ -129,8 +133,9 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
             >
               -
             </button>
-            <input
+            <AppInput
               type="number"
+              className="picker-qty-input"
               min="1"
               step="1"
               value={pickerCantidad}
@@ -144,13 +149,13 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
               +
             </button>
           </div>
-          <button
+          <AppButton
             type="button"
             className="picker-add-btn"
             onClick={() => onAddToCart(producto, pickerModo, pickerCantidad)}
           >
             Agregar
-          </button>
+          </AppButton>
         </div>
       </div>
     </article>
@@ -949,13 +954,13 @@ export default function Ventas({
                 {/* {pasosHeader} */}
                 <div className="catalogo-top">
                   <h3>Buscar</h3>
-                  <input
+                  <AppInput
                     type="text"
                     placeholder="Buscar por nombre o código..."
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                   />
-                  <button
+                  <AppButton
                     type="button"
                     className="vista-toggle"
                     onClick={() => setVistaProductos((v) => (v === 'grid' ? 'list' : 'grid'))}
@@ -965,7 +970,7 @@ export default function Ventas({
                       src={vistaProductos === 'grid' ? '/list-view.svg' : '/grid-view.svg'}
                       alt={vistaProductos === 'grid' ? 'Vista lista' : 'Vista cuadrícula'}
                     />
-                  </button>
+                  </AppButton>
                 </div>
               </div>
 
@@ -990,7 +995,7 @@ export default function Ventas({
                         const row = pagos.find((p) => p.medio_pago === method.key);
                         const activo = Boolean(row?.activo);
                         return (
-                          <button
+                          <AppButton
                             key={method.key}
                             type="button"
                             className={`pago-card ${activo ? 'active' : ''}`}
@@ -1002,7 +1007,7 @@ export default function Ventas({
                           >
                             <img src={method.icon} alt="" aria-hidden="true" />
                             <span>{method.label}</span>
-                          </button>
+                          </AppButton>
                         );
                       })}
                     </div>
@@ -1010,7 +1015,7 @@ export default function Ventas({
                       {pagosActivos.map((pago) => (
                         <label key={`monto-${pago.medio_pago}`}>
                           <span>{formatMedioPago(pago.medio_pago)}</span>
-                          <input
+                          <AppInput
                             type="number"
                             min="0"
                             step="0.01"
@@ -1038,7 +1043,7 @@ export default function Ventas({
                     </div>
                     <label className="observacion-venta">
                       <span>Observación</span>
-                      <textarea
+                      <AppTextarea
                         value={observacion}
                         onChange={(e) => setObservacion(e.target.value)}
                         placeholder="Observación (opcional)"
@@ -1097,17 +1102,17 @@ export default function Ventas({
         <aside className={`ventas-carrito ${carritoDrawerOpen ? 'mobile-open' : ''}`}>
           <div className="ventas-carrito-mobile-head">
             <h3>Carrito</h3>
-            <button
+            <AppButton
               type="button"
               className="ventas-carrito-close"
               onClick={closeCarritoDrawer}
               aria-label="Cerrar carrito"
             >
               ✕
-            </button>
+            </AppButton>
           </div>
           <div className="cliente-cabecera">
-            <button
+            <AppButton
               type="button"
               className="cliente-toggle"
               onClick={() => {
@@ -1118,12 +1123,12 @@ export default function Ventas({
               {clienteId
                 ? `Cliente: ${clientes.find((c) => String(c.id) === String(clienteId))?.nombre || 'Seleccionado'}`
                 : 'Agregar cliente'}
-            </button>
+            </AppButton>
           </div>
           <div className="sidebar-entrega">
             <label>
               Fecha de entrega
-              <input
+              <AppInput
                 type="date"
                 min={todayISODate()}
                 value={fechaEntrega}
@@ -1149,7 +1154,7 @@ export default function Ventas({
                     <label htmlFor={`units-${item.id}`}>
                       {item.modoVenta === 'empaque' ? (item.tipoEmpaque || 'Empaques') : 'Unidades'}
                     </label>
-                    <input
+                    <AppInput
                       id={`units-${item.id}`}
                       type="number"
                       min="1"
@@ -1164,13 +1169,13 @@ export default function Ventas({
                   </div>
                   <div className="descuentos-item">
                     {item.descuentoTipo === 'ninguno' ? (
-                      <button
+                      <AppButton
                         type="button"
                         className="descuento-action-link"
                         onClick={() => openDiscountModal(item)}
                       >
                         Dar descuento
-                      </button>
+                      </AppButton>
                     ) : (
                       <>
                         <span className="descuento-aplicado">
@@ -1179,13 +1184,13 @@ export default function Ventas({
                             ? `${toNumber(item.descuentoValor)}%`
                             : money(item.descuentoValor)}
                         </span>
-                        <button
+                        <AppButton
                           type="button"
                           className="descuento-action-link"
                           onClick={() => removeItemDiscount(item.id)}
                         >
                           Eliminar descuento
-                        </button>
+                        </AppButton>
                       </>
                     )}
                   </div>
@@ -1201,7 +1206,7 @@ export default function Ventas({
                   {item.descuentoAplicado > 0 && (
                     <small className="linea-descuento">- {money(item.descuentoAplicado)}</small>
                   )}
-                  <button type="button" onClick={() => removeItem(item.id)}>✕</button>
+                  <AppButton type="button" onClick={() => removeItem(item.id)}>✕</AppButton>
                 </div>
               </div>
             ))}
@@ -1214,13 +1219,13 @@ export default function Ventas({
               <p className="resumen-descuento">Descuento ítems: -{money(descuentoItemsTotal)}</p>
               <div className="descuento-global">
                 {descuentoTotalTipo === 'ninguno' ? (
-                  <button
+                  <AppButton
                     type="button"
                     className="descuento-action-link"
                     onClick={openGlobalDiscountModal}
                   >
                     Dar descuento total
-                  </button>
+                  </AppButton>
                 ) : (
                   <>
                     <span className="descuento-aplicado">
@@ -1229,13 +1234,13 @@ export default function Ventas({
                         ? `${toNumber(descuentoTotalValor)}%`
                         : money(descuentoTotalValor)}
                     </span>
-                    <button
+                    <AppButton
                       type="button"
                       className="descuento-action-link"
                       onClick={removeGlobalDiscount}
                     >
                       Eliminar descuento
-                    </button>
+                    </AppButton>
                   </>
                 )}
               </div>
@@ -1243,11 +1248,11 @@ export default function Ventas({
             </div>
             <div className="ventas-footer">
               {paso === 1 ? (
-                <button type="button" onClick={goNext}>Siguiente</button>
+                <AppButton type="button" onClick={goNext}>Siguiente</AppButton>
               ) : (
                 <>
-                  <button type="button" className="secundario" onClick={goBack}>Atrás</button>
-                  <button type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</button>
+                  <AppButton type="button" className="secundario" onClick={goBack}>Atrás</AppButton>
+                  <AppButton type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</AppButton>
                 </>
               )}
             </div>
@@ -1256,7 +1261,7 @@ export default function Ventas({
       </div>
 
       {totalUnidadesCarrito > 0 && !carritoDrawerOpen && (
-        <button
+        <AppButton
           type="button"
           className="carrito-fab"
           onClick={toggleCarritoDrawer}
@@ -1265,7 +1270,7 @@ export default function Ventas({
         >
           <img src="/cart.svg" alt="" aria-hidden="true" />
           <span className="carrito-fab-count">{totalUnidadesCarrito}</span>
-        </button>
+        </AppButton>
       )}
 
       <div
@@ -1276,16 +1281,16 @@ export default function Ventas({
         <div className="cliente-drawer" ref={clienteDropdownRef}>
           <div className="cliente-dropdown-head">
             <h4>Seleccionar cliente</h4>
-            <button
+            <AppButton
               type="button"
               className="cliente-cerrar"
               onClick={() => setSelectorClienteAbierto(false)}
             >
               ✕
-            </button>
+            </AppButton>
           </div>
           <div className="cliente-busqueda-wrap">
-            <input
+            <AppInput
               type="text"
               placeholder="Buscar cliente..."
               value={busquedaCliente}
@@ -1297,7 +1302,7 @@ export default function Ventas({
               <p className="cliente-sin-resultados">Sin resultados</p>
             )}
             {clientesFiltrados.map((c) => (
-              <button
+              <AppButton
                 key={c.id}
                 type="button"
                 className={`cliente-opcion ${String(clienteId) === String(c.id) ? 'active' : ''}`}
@@ -1308,7 +1313,7 @@ export default function Ventas({
                 }}
               >
                 {c.nombre}
-              </button>
+              </AppButton>
             ))}
           </div>
         </div>
@@ -1323,22 +1328,22 @@ export default function Ventas({
           <h4>Aplicar descuento</h4>
           <p>Selecciona el tipo de descuento para este producto.</p>
           <div className="descuento-modal-tipos">
-            <button
+            <AppButton
               type="button"
               className={descuentoItemModal.tipo === 'porcentaje' ? 'active' : ''}
               onClick={() => setDescuentoItemModal((prev) => ({ ...prev, tipo: 'porcentaje' }))}
             >
               Porcentual (%)
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
               className={descuentoItemModal.tipo === 'fijo' ? 'active' : ''}
               onClick={() => setDescuentoItemModal((prev) => ({ ...prev, tipo: 'fijo' }))}
             >
               Fijo ($)
-            </button>
+            </AppButton>
           </div>
-          <input
+          <AppInput
             type="number"
             min="0"
             step="0.01"
@@ -1347,12 +1352,12 @@ export default function Ventas({
             placeholder={descuentoItemModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
           />
           <div className="descuento-modal-actions">
-            <button type="button" className="secundario" onClick={closeDiscountModal}>
+            <AppButton type="button" className="secundario" onClick={closeDiscountModal}>
               Cancelar
-            </button>
-            <button type="button" onClick={applyItemDiscount}>
+            </AppButton>
+            <AppButton type="button" onClick={applyItemDiscount}>
               Aplicar
-            </button>
+            </AppButton>
           </div>
         </div>
       </div>
@@ -1366,22 +1371,22 @@ export default function Ventas({
           <h4>Aplicar descuento total</h4>
           <p>Selecciona el tipo de descuento para toda la venta.</p>
           <div className="descuento-modal-tipos">
-            <button
+            <AppButton
               type="button"
               className={descuentoGlobalModal.tipo === 'porcentaje' ? 'active' : ''}
               onClick={() => setDescuentoGlobalModal((prev) => ({ ...prev, tipo: 'porcentaje' }))}
             >
               Porcentual (%)
-            </button>
-            <button
+            </AppButton>
+            <AppButton
               type="button"
               className={descuentoGlobalModal.tipo === 'fijo' ? 'active' : ''}
               onClick={() => setDescuentoGlobalModal((prev) => ({ ...prev, tipo: 'fijo' }))}
             >
               Fijo ($)
-            </button>
+            </AppButton>
           </div>
-          <input
+          <AppInput
             type="number"
             min="0"
             step="0.01"
@@ -1390,12 +1395,12 @@ export default function Ventas({
             placeholder={descuentoGlobalModal.tipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
           />
           <div className="descuento-modal-actions">
-            <button type="button" className="secundario" onClick={closeGlobalDiscountModal}>
+            <AppButton type="button" className="secundario" onClick={closeGlobalDiscountModal}>
               Cancelar
-            </button>
-            <button type="button" onClick={applyGlobalDiscount}>
+            </AppButton>
+            <AppButton type="button" onClick={applyGlobalDiscount}>
               Aplicar
-            </button>
+            </AppButton>
           </div>
         </div>
       </div>
@@ -1451,25 +1456,27 @@ export default function Ventas({
             </>
           )}
           <div className="venta-final-actions">
-            <button type="button" className="secundario" onClick={iniciarNuevaVenta}>
+            <AppButton type="button" className="secundario" onClick={iniciarNuevaVenta}>
               <img src="/newsale.svg" alt="" aria-hidden="true" />
               Nueva venta
-            </button>
-            <button type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
+            </AppButton>
+            <AppButton type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
               <img src="/whatsapp.svg" alt="" aria-hidden="true" />
               Enviar por WhatsApp
-            </button>
-            <button type="button" onClick={descargarTicketPdf}>
+            </AppButton>
+            <AppButton type="button" onClick={descargarTicketPdf}>
               <img src="/pdf.svg" alt="" aria-hidden="true" />
               PDF
-            </button>
-            <button type="button" onClick={imprimirTicket}>
+            </AppButton>
+            <AppButton type="button" onClick={imprimirTicket}>
               <img src="/print.svg" alt="" aria-hidden="true" />
               Imprimir ticket
-            </button>
+            </AppButton>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+

@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import { appAlert } from '../../shared/lib/appDialog';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppTable from '../../shared/components/table/AppTable';
 import './ControlStock.css';
+import AppButton from '../../shared/components/button/AppButton';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -43,18 +46,59 @@ export default function ControlStock({ productos = [], setProductos }) {
     return sorted;
   }, [productos, busqueda, sortBy, sortDir]);
 
-  const toggleSort = (field) => {
+  const toggleSort = useCallback((field) => {
     if (sortBy === field) {
       setSortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
       return;
     }
     setSortBy(field);
     setSortDir('asc');
-  };
+  }, [sortBy]);
 
   const productoActivo = useMemo(
     () => productos.find((p) => Number(p.id) === Number(productoIdActivo)) || null,
     [productos, productoIdActivo]
+  );
+
+  const stockColumns = useMemo(
+    () => [
+      {
+        key: 'nombre',
+        header: (
+          <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
+            Producto {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+          </button>
+        ),
+        mobileLabel: 'Producto',
+        cellClassName: 'stock-product-cell',
+        render: (p) => (
+          <span className="stock-item-left">
+            {p.imagenPreview ? (
+              <img src={p.imagenPreview} alt={p.nombre} className="stock-item-image" />
+            ) : (
+              <span className="stock-item-image stock-item-image-placeholder">Sin imagen</span>
+            )}
+            <span className="stock-item-info">
+              <strong>{p.nombre}</strong>
+              <small>Código: {p.ean || '-'}</small>
+            </span>
+          </span>
+        ),
+      },
+      {
+        key: 'stock',
+        header: (
+          <button type="button" className="sort-header-btn stock-col-right" onClick={() => toggleSort('stock')}>
+            Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+          </button>
+        ),
+        mobileLabel: 'Stock',
+        align: 'right',
+        cellClassName: 'stock-qty-cell',
+        render: (p) => <strong className="stock-item-qty">{Math.floor(toNumber(p.stock))}</strong>,
+      },
+    ],
+    [sortBy, sortDir, toggleSort]
   );
 
   const ajustarStock = async (modo) => {
@@ -121,7 +165,7 @@ export default function ControlStock({ productos = [], setProductos }) {
   return (
     <div className="control-stock-main">
       <div className="control-stock-head">
-        <input
+        <AppInput
           type="text"
           placeholder="Buscar producto..."
           value={busqueda}
@@ -131,36 +175,17 @@ export default function ControlStock({ productos = [], setProductos }) {
 
       <div className="control-stock-layout">
         <section className="control-stock-list">
-          <div className="stock-table-head">
-            <button type="button" className="sort-header-btn" onClick={() => toggleSort('nombre')}>
-              Producto {sortBy === 'nombre' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-            </button>
-            <button type="button" className="sort-header-btn stock-col-right" onClick={() => toggleSort('stock')}>
-              Stock {sortBy === 'stock' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-            </button>
-          </div>
-          {productosFiltrados.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`stock-table-row ${Number(productoIdActivo) === Number(p.id) ? 'active' : ''}`}
-              onClick={() => setProductoIdActivo(p.id)}
-            >
-              <span className="stock-item-left">
-                {p.imagenPreview ? (
-                  <img src={p.imagenPreview} alt={p.nombre} className="stock-item-image" />
-                ) : (
-                  <span className="stock-item-image stock-item-image-placeholder">Sin imagen</span>
-                )}
-                <span className="stock-item-info">
-                  <strong>{p.nombre}</strong>
-                  <small>Código: {p.ean || '-'}</small>
-                </span>
-              </span>
-              <strong className="stock-item-qty">{Math.floor(toNumber(p.stock))}</strong>
-            </button>
-          ))}
-          {productosFiltrados.length === 0 && <p className="stock-empty">Sin productos para mostrar.</p>}
+          <AppTable
+            columns={stockColumns}
+            rows={productosFiltrados}
+            rowKey="id"
+            className="control-stock-table-wrap"
+            tableClassName="control-stock-table"
+            emptyMessage="Sin productos para mostrar."
+            stickyHeader
+            expandedRowId={productoIdActivo}
+            onRowClick={(p) => setProductoIdActivo(p.id)}
+          />
         </section>
 
         <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''}`}>
@@ -171,7 +196,7 @@ export default function ControlStock({ productos = [], setProductos }) {
               <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
               <label className="stock-cantidad">
                 Cantidad
-                <input
+                <AppInput
                   type="number"
                   min="0"
                   step="1"
@@ -180,14 +205,14 @@ export default function ControlStock({ productos = [], setProductos }) {
                 />
               </label>
               <div className="stock-actions">
-                <button type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</button>
-                <button type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</button>
-                <button type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</button>
+                <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
+                <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
+                <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
               </div>
               <div className="stock-history-row">
-                <button type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
+                <AppButton type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
                   Historial de stock
-                </button>
+                </AppButton>
               </div>
             </>
           )}
@@ -212,11 +237,13 @@ export default function ControlStock({ productos = [], setProductos }) {
                 ))}
               </ul>
             )}
-            <button type="button" onClick={cerrarHistorial}>Cerrar</button>
+            <AppButton type="button" onClick={cerrarHistorial}>Cerrar</AppButton>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+
 

@@ -6,9 +6,12 @@ import { api } from '../../core/api';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
+import AppInput from '../../shared/components/fields/AppInput';
+import AppSelect from '../../shared/components/fields/AppSelect';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
+import AppButton from '../../shared/components/button/AppButton';
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -887,23 +890,23 @@ export default function Productos({ user, productos = [], setProductos }) {
     <div className="productos-main">
       <div className="productos-right full-width">
         <div className="productos-toolbar">
-          <input
+          <AppInput
             type="text"
             className="buscar-producto"
             placeholder="Buscar por nombre, codigo, categoria..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          <button className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
+          <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
             <img src="/add.svg" alt="" aria-hidden="true" />
             <span>PRODUCTO</span>
-          </button>
-          <button className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
+          </AppButton>
+          <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
             <span>EMPAQUES</span>
-          </button>
-          <button className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
+          </AppButton>
+          <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
             <img src="/print.svg" alt="" aria-hidden="true" />
-          </button>
+          </AppButton>
         </div>
 
         <div className="productos-totales">
@@ -928,41 +931,41 @@ export default function Productos({ user, productos = [], setProductos }) {
               <h4>Exportar productos</h4>
               <p>Elige un formato:</p>
               <div className="export-modal-actions">
-                <button type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
+                <AppButton type="button" onClick={() => { exportarPDF(); setExportModalOpen(false); }}>
                   <PiFilePdfBold />
                   <span>PDF</span>
-                </button>
-                <button type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
+                </AppButton>
+                <AppButton type="button" onClick={() => { exportarExcel(); setExportModalOpen(false); }}>
                   <RiFileExcel2Line />
                   <span>EXCEL</span>
-                </button>
-                <button type="button" onClick={() => { imprimirProductos(); setExportModalOpen(false); }}>
+                </AppButton>
+                <AppButton type="button" onClick={() => { imprimirProductos(); setExportModalOpen(false); }}>
                   <AiFillPrinter />
                   <span>Impresora</span>
-                </button>
+                </AppButton>
               </div>
               {mostrarOpcionesCatalogo && (
                 <>
                   <p className="export-modal-section-title">Imprimir como catálogo</p>
                   <div className="export-modal-actions">
-                    <button type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
+                    <AppButton type="button" onClick={async () => { await exportarCatalogoPDF(); setExportModalOpen(false); }}>
                       <PiFilePdfBold />
                       <span>Catálogo PDF</span>
-                    </button>
-                    <button type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
+                    </AppButton>
+                    <AppButton type="button" onClick={() => { imprimirCatalogo(); setExportModalOpen(false); }}>
                       <AiFillPrinter />
                       <span>Catálogo Impresora</span>
-                    </button>
-                    <button type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
+                    </AppButton>
+                    <AppButton type="button" onClick={async () => { await compartirCatalogoWhatsApp(); setExportModalOpen(false); }}>
                       <img src="/whatsapp.svg" alt="" aria-hidden="true" />
                       <span>Compartir por WhatsApp</span>
-                    </button>
+                    </AppButton>
                   </div>
                 </>
               )}
-              <button type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
+              <AppButton type="button" className="export-modal-close" onClick={() => setExportModalOpen(false)}>
                 Cerrar
-              </button>
+              </AppButton>
             </div>
           </div>
         )}
@@ -974,26 +977,26 @@ export default function Productos({ user, productos = [], setProductos }) {
               <h4>Gestionar empaques</h4>
               <p>Agrega y administra los tipos de empaque.</p>
               <div className="empaques-create-row">
-                <input
+                <AppInput
                   type="text"
                   value={nuevoEmpaqueNombre}
                   onChange={(e) => setNuevoEmpaqueNombre(e.target.value)}
                   placeholder="Nuevo empaque"
                 />
-                <button type="button" onClick={crearEmpaque}>Agregar</button>
+                <AppButton type="button" onClick={crearEmpaque}>Agregar</AppButton>
               </div>
               <div className="empaques-list">
                 {empaques.map((e) => (
                   <div key={e.id} className="empaque-item">
                     <span>{e.nombre}</span>
-                    <button type="button" onClick={() => eliminarEmpaque(e)}>Eliminar</button>
+                    <AppButton type="button" onClick={() => eliminarEmpaque(e)}>Eliminar</AppButton>
                   </div>
                 ))}
                 {!empaques.length && <p className="empaque-empty">No hay empaques cargados.</p>}
               </div>
-              <button type="button" className="export-modal-close" onClick={() => setEmpaquesModalOpen(false)}>
+              <AppButton type="button" className="export-modal-close" onClick={() => setEmpaquesModalOpen(false)}>
                 Cerrar
-              </button>
+              </AppButton>
             </div>
           </div>
         )}
@@ -1009,7 +1012,7 @@ export default function Productos({ user, productos = [], setProductos }) {
           expandedRowId={productoExpandidoId}
           renderExpandedRow={(p) => (
             <div className="acciones-producto-panel">
-              <button
+              <AppButton
                 className="edit-btn"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1018,8 +1021,8 @@ export default function Productos({ user, productos = [], setProductos }) {
                 title="Editar"
               >
                 Editar
-              </button>
-              <button
+              </AppButton>
+              <AppButton
                 className="delete-btn"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1028,7 +1031,7 @@ export default function Productos({ user, productos = [], setProductos }) {
                 title="Eliminar"
               >
                 Eliminar
-              </button>
+              </AppButton>
             </div>
           )}
         />
@@ -1043,34 +1046,34 @@ export default function Productos({ user, productos = [], setProductos }) {
           </div>
           <form className="form-producto" onSubmit={handleSubmit}>
             <label className="field-label">Nombre del producto
-              <input name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
+              <AppInput name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
             </label>
             <label className="field-label">Stock
-              <input name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
+              <AppInput name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
             </label>
             <label className="field-label">EAN / Código
-              <input name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
+              <AppInput name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />
             </label>
             <label className="field-label">Tipo de empaque
-              <select name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
+              <AppSelect name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
                 <option value="">Seleccionar empaque</option>
                 {empaques.map((e) => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
-              </select>
+              </AppSelect>
             </label>
             <label className="field-label">Cantidad por empaque
-              <input name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
+              <AppInput name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio de costo
-              <input name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
+              <AppInput name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio de venta
-              <input name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
+              <AppInput name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio por empaque
-              <input name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
+              <AppInput name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
             </label>
             <label className="field-label">URL de imagen
-              <input
+              <AppInput
                 name="imagenUrl"
                 value={nuevo.imagenPreview || ''}
                 onChange={handleChange}
@@ -1085,11 +1088,11 @@ export default function Productos({ user, productos = [], setProductos }) {
               </div>
             )}
             <label className="field-label">Archivo de imagen
-              <input name="imagen" type="file" accept="image/*" onChange={handleChange} />
+              <AppInput name="imagen" type="file" accept="image/*" onChange={handleChange} />
             </label>
             <div className="form-actions">
-              <button type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</button>
-              <button type="button" onClick={cerrarPanel}>Cancelar</button>
+              <AppButton type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="button" onClick={cerrarPanel}>Cancelar</AppButton>
             </div>
           </form>
         </aside>
@@ -1097,3 +1100,5 @@ export default function Productos({ user, productos = [], setProductos }) {
     </div>
   );
 }
+
+

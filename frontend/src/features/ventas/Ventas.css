@@ -808,6 +808,7 @@
 .picker-qty {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.22rem;
 }
 
@@ -816,27 +817,37 @@
   border-radius: 6px;
   background: #fff;
   color: #375f8c;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   font-size: 0.92rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
-.picker-qty input {
+.picker-qty-input {
   width: 54px;
+  min-width: 54px;
+  height: 30px;
+  min-height: 30px;
   border: 1px solid #d3dbe8;
   border-radius: 6px;
-  padding: 0.24rem 0.34rem;
+  padding: 0;
   text-align: center;
   font-size: 0.78rem;
+  line-height: 30px;
   appearance: textfield;
   -moz-appearance: textfield;
 }
 
-.picker-qty input::-webkit-outer-spin-button,
-.picker-qty input::-webkit-inner-spin-button {
+.picker-qty-input::-webkit-outer-spin-button,
+.picker-qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }

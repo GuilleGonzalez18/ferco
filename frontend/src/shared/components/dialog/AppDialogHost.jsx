@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { resolveAppDialog, subscribeAppDialogs } from '../../lib/appDialog';
 import './AppDialogHost.css';
+import AppButton from '../button/AppButton';
 
 export default function AppDialogHost() {
   const [dialog, setDialog] = useState(null);
@@ -87,13 +88,13 @@ export default function AppDialogHost() {
         <p id={descriptionId}>{dialog.message}</p>
         <div className="app-dialog-actions">
           {dialog.type === 'confirm' && (
-            <button type="button" className="secundario" onClick={() => close(false)}>
+            <AppButton type="button" className="secundario" onClick={() => close(false)}>
               {dialog.cancelText}
-            </button>
+            </AppButton>
           )}
-          <button type="button" onClick={() => close(true)}>
+          <AppButton type="button" onClick={() => close(true)}>
             {dialog.confirmText}
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>

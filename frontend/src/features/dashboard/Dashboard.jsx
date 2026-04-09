@@ -12,6 +12,7 @@ import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
 import { FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from '../../core/version';
+import AppButton from '../../shared/components/button/AppButton';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
@@ -220,10 +221,10 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             </button>
           ))}
         </nav>
-        <button type="button" className="dashboard-logout" onClick={handleLogout}>
+        <AppButton type="button" tone="danger" className="dashboard-logout" onClick={handleLogout}>
           <img src="/logout.svg" alt="" className="logout-icon-img" aria-hidden="true" />
           Cerrar sesión
-        </button>
+        </AppButton>
         <small className="dashboard-version-label">v. {APP_VERSION}</small>
       </aside>
 
