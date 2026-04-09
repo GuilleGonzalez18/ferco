@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { resolveAppDialog, subscribeAppDialogs } from './appDialog';
+import { resolveAppDialog, subscribeAppDialogs } from '../../lib/appDialog';
 import './AppDialogHost.css';
 
 export default function AppDialogHost() {

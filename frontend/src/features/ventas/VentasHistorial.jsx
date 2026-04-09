@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from './api';
+import { api } from '../../core/api';
 import './VentasHistorial.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -7,8 +7,8 @@ import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import { FaReplyAll } from 'react-icons/fa6';
-import { appAlert, appConfirm } from './appDialog';
-import { formatHorarioCliente } from './horarios';
+import { appAlert, appConfirm } from '../../shared/lib/appDialog';
+import { formatHorarioCliente } from '../../shared/lib/horarios';
 
 function todayISO() {
   const now = new Date();

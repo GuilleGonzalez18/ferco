@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { api } from './api';
+import { api } from '../../core/api';
 import './Clientes.css';
-import { appAlert, appConfirm } from './appDialog';
+import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
-import AppTable from './AppTable';
-import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from './horarios';
+import AppTable from '../../shared/components/table/AppTable';
+import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
 
 export default function Clientes() {
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));

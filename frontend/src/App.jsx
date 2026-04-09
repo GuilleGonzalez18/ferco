@@ -1,11 +1,11 @@
 
 import { useEffect, useState } from 'react';
-import Login from './Login';
-import Dashboard from './Dashboard';
-import AppDialogHost from './AppDialogHost';
+import Login from './features/auth/Login';
+import Dashboard from './features/dashboard/Dashboard';
+import AppDialogHost from './shared/components/dialog/AppDialogHost';
 import './App.css';
-import { api } from './api';
-import { fromApiProducto } from './productMapper';
+import { api } from './core/api';
+import { fromApiProducto } from './shared/lib/productMapper';
 
 function App() {
   const [user, setUser] = useState(null);

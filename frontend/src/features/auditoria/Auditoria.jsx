@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from './api';
+import { api } from '../../core/api';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import AppTable from './AppTable';
+import AppTable from '../../shared/components/table/AppTable';
 
 const PAGE_SIZE = 10;
 

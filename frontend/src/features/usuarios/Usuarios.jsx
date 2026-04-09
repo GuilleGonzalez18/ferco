@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from './api';
+import { api } from '../../core/api';
 import './Usuarios.css';
-import { appAlert, appConfirm } from './appDialog';
-import AppTable from './AppTable';
+import { appAlert, appConfirm } from '../../shared/lib/appDialog';
+import AppTable from '../../shared/components/table/AppTable';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);

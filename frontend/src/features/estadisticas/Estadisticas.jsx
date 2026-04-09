@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from './api';
+import { api } from '../../core/api';
 import './Estadisticas.css';
-import AppTable from './AppTable';
+import AppTable from '../../shared/components/table/AppTable';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
