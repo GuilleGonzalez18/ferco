@@ -1,0 +1,195 @@
+.app-table-wrap {
+  width: 100%;
+  border: 1px solid #e4ebf4;
+  border-radius: 10px;
+  background: #fff;
+  overflow: auto;
+}
+
+.app-table {
+  width: 100%;
+  min-width: var(--app-table-min-width, 680px);
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  color: #1f2933;
+}
+
+.app-table thead th {
+  background: #eaf0fa;
+  color: #375f8c;
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 1px solid #d7e1ef;
+}
+
+.app-table-wrap.is-sticky-header {
+  max-height: var(--app-table-max-height, calc(100vh - 280px));
+}
+
+.app-table-wrap.is-sticky-header .app-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.app-table th,
+.app-table td {
+  padding: 0.52rem 0.64rem;
+  vertical-align: middle;
+}
+
+.app-table tbody td {
+  border-bottom: 1px solid #edf2f9;
+}
+
+.app-table-row.is-clickable {
+  cursor: pointer;
+}
+
+.app-table-row:hover {
+  background: #f7faff;
+}
+
+.app-table-row.is-expanded {
+  background: #e6eef9;
+}
+
+.app-table-row.is-expanded:hover {
+  background: #dde8f6;
+}
+
+.app-table .is-center {
+  text-align: center;
+}
+
+.app-table .is-right {
+  text-align: right;
+}
+
+.app-table-empty-cell {
+  text-align: center;
+  color: #7d8797;
+  padding: 0.8rem !important;
+}
+
+.app-table-expanded-cell {
+  padding: 0 !important;
+  border-bottom: 1px solid #e5ecf7;
+}
+
+.app-table-expanded-content {
+  padding: 0.46rem 0.62rem;
+  background: #f8fbff;
+}
+
+.app-table-expanded-content .acciones-cliente-panel,
+.app-table-expanded-content .acciones-producto-panel,
+.app-table-expanded-content .usuario-actions.show {
+  width: 100%;
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.app-table-expanded-content .usuario-actions {
+  position: static;
+  transform: none;
+}
+
+.app-table-row.producto-row.stock-low {
+  background: #ffecad;
+}
+
+.app-table-row.producto-row.stock-zero {
+  background: #f6c4c4;
+}
+
+.app-table-row.producto-row.stock-low.is-expanded {
+  background: #ffe29a;
+}
+
+.app-table-row.producto-row.stock-zero.is-expanded {
+  background: #f1b4b4;
+}
+
+.app-table-row.venta-row-entregada {
+  background: #e4f6ea;
+}
+
+.app-table-row.venta-row-cancelada {
+  background: #fff3f3;
+}
+
+.app-table-row.venta-row-entregada.is-expanded {
+  background: #d4eedf;
+}
+
+.app-table-row.venta-row-cancelada.is-expanded {
+  background: #f7dede;
+}
+
+.app-table .producto-image-cell {
+  width: 56px;
+}
+
+.app-table .nombre-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.app-table-expanded-content .edit-btn,
+.app-table-expanded-content .delete-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 0.32rem 0.58rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.app-table-expanded-content .edit-btn {
+  background: #375f8c;
+}
+
+.app-table-expanded-content .edit-btn:hover {
+  background: #2f5279;
+}
+
+.app-table-expanded-content .delete-btn {
+  background: #c73b3b;
+}
+
+.app-table-expanded-content .delete-btn:hover {
+  background: #a93131;
+}
+
+.app-table-header-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #375f8c;
+  font-weight: 700;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-table-header-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 920px) {
+  .app-table {
+    min-width: 620px;
+    font-size: 0.78rem;
+  }
+
+  .app-table th,
+  .app-table td {
+    padding: 0.46rem 0.55rem;
+  }
+}
