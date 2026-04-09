@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import './Estadisticas.css';
 import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { FaFileExcel } from 'react-icons/fa6';
+import { BsFiletypePng } from 'react-icons/bs';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
@@ -52,6 +54,106 @@ function rangeLabel(desde, hasta) {
   if (desde) return `Mostrando desde ${formatUyDate(desde)}`;
   if (hasta) return `Mostrando hasta ${formatUyDate(hasta)}`;
   return 'Mostrando todo el período disponible';
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function exportHtmlTableToExcel({ filename, title, headers, rows }) {
+  const headHtml = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
+  const bodyHtml = rows.map((row, idx) => {
+    const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
+    const cells = row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('');
+    return `<tr style="background:${zebra}">${cells}</tr>`;
+  }).join('');
+  const html = `
+    <html><head><meta charset="UTF-8" /></head><body>
+      <h3 style="color:#375f8c;margin:0 0 10px">${escapeHtml(title)}</h3>
+      <table border="1" style="border-collapse:collapse;width:100%">
+        <thead>
+          <tr style="background:#375f8c;color:#fff">${headHtml}</tr>
+        </thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </body></html>
+  `;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportSvgAsPng(svgElement, filename) {
+  if (!svgElement) return;
+  const clone = svgElement.cloneNode(true);
+  const sourceNodes = svgElement.querySelectorAll('*');
+  const cloneNodes = clone.querySelectorAll('*');
+  sourceNodes.forEach((node, idx) => {
+    const cloneNode = cloneNodes[idx];
+    if (!cloneNode) return;
+    const cs = window.getComputedStyle(node);
+    const styleText = [
+      `fill:${cs.fill}`,
+      `stroke:${cs.stroke}`,
+      `stroke-width:${cs.strokeWidth}`,
+      `stroke-linecap:${cs.strokeLinecap}`,
+      `stroke-linejoin:${cs.strokeLinejoin}`,
+      `opacity:${cs.opacity}`,
+      `font-size:${cs.fontSize}`,
+      `font-weight:${cs.fontWeight}`,
+      `font-family:${cs.fontFamily}`,
+      `paint-order:${cs.paintOrder}`,
+      `dominant-baseline:${cs.dominantBaseline}`,
+    ].join(';');
+    cloneNode.setAttribute('style', styleText);
+  });
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  const serializer = new XMLSerializer();
+  const svgText = serializer.serializeToString(clone);
+  const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const viewBox = svgElement.viewBox?.baseVal;
+    const width = Math.max(1, Math.round(viewBox?.width || svgElement.clientWidth || 1000));
+    const height = Math.max(1, Math.round(viewBox?.height || svgElement.clientHeight || 220));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      URL.revokeObjectURL(svgUrl);
+      return;
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    URL.revokeObjectURL(svgUrl);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const pngUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = pngUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(pngUrl);
+    }, 'image/png');
+  };
+  img.src = svgUrl;
 }
 
 function toIsoDate(date) {
@@ -191,7 +293,170 @@ function MiniBars({ items, valueKey = 'value', showValues = false, valueFormatte
   );
 }
 
+function MiniLineChart({ items, valueKey = 'value', valueFormatter = null, className = '', showPointValues = true }) {
+  const width = 1000;
+  const height = 220;
+  const paddingLeft = 34;
+  const paddingRight = 22;
+  const paddingTop = 18;
+  const paddingBottom = 62;
+  const innerWidth = width - paddingLeft - paddingRight;
+  const innerHeight = height - paddingTop - paddingBottom;
+  const max = Math.max(...items.map((it) => Number(it[valueKey] || 0)), 1);
+  let usedWidth = innerWidth;
+  if (items.length <= 2) usedWidth = innerWidth * 0.55;
+  else if (items.length === 3) usedWidth = innerWidth * 0.72;
+  const startX = paddingLeft + (innerWidth - usedWidth) / 2;
+  const stepX = items.length > 1 ? usedWidth / (items.length - 1) : 0;
+
+  const points = items.map((item, idx) => {
+    const value = Number(item[valueKey] || 0);
+    const ratio = max <= 0 ? 0 : value / max;
+    const x = startX + stepX * idx;
+    const y = paddingTop + (innerHeight - ratio * innerHeight);
+    return { key: String(item?.key ?? idx), label: item.label, subLabel: item.subLabel || '', value, x, y };
+  });
+
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const firstX = points[0]?.x ?? paddingLeft;
+  const lastX = points[points.length - 1]?.x ?? (paddingLeft + innerWidth);
+  const area = points.length
+    ? `${firstX},${paddingTop + innerHeight} ${polyline} ${lastX},${paddingTop + innerHeight}`
+    : '';
+  const gridSteps = 4;
+  const pointKeysSignature = useMemo(
+    () => items.map((item, idx) => String(item?.key ?? idx)).join('|'),
+    [items],
+  );
+  const [activePointKeys, setActivePointKeys] = useState(
+    () => new Set(items.map((item, idx) => String(item?.key ?? idx))),
+  );
+  useEffect(() => {
+    setActivePointKeys(new Set(items.map((item, idx) => String(item?.key ?? idx))));
+  }, [items, pointKeysSignature]);
+  const formatLabelValue = (value) => (
+    valueFormatter ? valueFormatter(value) : Math.round(value).toLocaleString('es-UY')
+  );
+
+  return (
+    <div className={`mini-line-chart ${className}`.trim()}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="mini-line-svg" preserveAspectRatio="none" role="img" aria-label="Gráfico lineal">
+        <defs>
+          <linearGradient id="miniLineAreaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(63, 123, 182, 0.30)" />
+            <stop offset="100%" stopColor="rgba(63, 123, 182, 0.02)" />
+          </linearGradient>
+        </defs>
+        {[...Array(gridSteps + 1)].map((_, i) => {
+          const y = paddingTop + (innerHeight / gridSteps) * i;
+          return (
+            <line
+              key={`grid-${i}`}
+              x1={paddingLeft}
+              y1={y}
+              x2={width - paddingRight}
+              y2={y}
+              className="mini-line-grid"
+            />
+          );
+        })}
+        <line
+          x1={paddingLeft}
+          y1={paddingTop + innerHeight}
+          x2={width - paddingRight}
+          y2={paddingTop + innerHeight}
+          className="mini-line-axis"
+        />
+        {points.length > 1 && <polygon points={area} className="mini-line-area" />}
+        {points.length > 1 && <polyline points={polyline} className="mini-line-path" />}
+        {points.length === 1 && (
+          <line
+            x1={paddingLeft}
+            y1={points[0]?.y ?? paddingTop + innerHeight}
+            x2={width - paddingRight}
+            y2={points[0]?.y ?? paddingTop + innerHeight}
+            className="mini-line-path"
+          />
+        )}
+        {points.map((p) => (
+          <g key={`dot-${p.key}`}>
+            {showPointValues && activePointKeys.has(p.key) && (() => {
+              const textValue = formatLabelValue(p.value);
+              const labelChars = Math.max(textValue.length, 4);
+              const labelWidth = Math.max(44, Math.min(170, labelChars * 6.7 + 14));
+              const labelHeight = 18;
+              const bubbleCenterX = Math.max(
+                paddingLeft + (labelWidth / 2) + 2,
+                Math.min(width - paddingRight - (labelWidth / 2) - 2, p.x),
+              );
+              const placeAbove = p.y - 14 >= paddingTop + 2;
+              const bubbleY = placeAbove ? p.y - 24 : p.y + 8;
+              const textY = bubbleY + 12.2;
+              return (
+                <g className={`mini-line-point-pill ${placeAbove ? 'above' : 'below'}`}>
+                  <rect
+                    x={bubbleCenterX - (labelWidth / 2)}
+                    y={bubbleY}
+                    width={labelWidth}
+                    height={labelHeight}
+                    rx="9"
+                    ry="9"
+                    className="mini-line-point-pill-bg"
+                  />
+                  <text
+                    x={bubbleCenterX}
+                    y={textY}
+                    textAnchor="middle"
+                    className="mini-line-point-value"
+                  >
+                    {textValue}
+                  </text>
+                </g>
+              );
+            })()}
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r="5"
+              className={`mini-line-dot ${activePointKeys.has(p.key) ? 'active' : ''}`}
+              onClick={() => {
+                setActivePointKeys((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(p.key)) next.delete(p.key);
+                  else next.add(p.key);
+                  return next;
+                });
+              }}
+              style={{ cursor: 'pointer' }}
+            />
+            <title>{`${p.label}: ${valueFormatter ? valueFormatter(p.value) : Math.round(p.value).toLocaleString('es-UY')}`}</title>
+          </g>
+        ))}
+        {points.map((p) => (
+          <g key={`axis-${p.key}`}>
+            <text
+              x={p.x}
+              y={height - 30}
+              textAnchor={p.x === firstX ? 'start' : p.x === lastX ? 'end' : 'middle'}
+              className="mini-line-axis-label"
+            >
+              <tspan x={p.x}>{p.label}</tspan>
+              {p.subLabel ? (
+                <tspan x={p.x} dy="12" className="mini-line-axis-sublabel">
+                  {p.subLabel}
+                </tspan>
+              ) : null}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 export default function Estadisticas({ compact = false }) {
+  const stockChartSvgRef = useRef(null);
+  const ventasUsuarioChartSvgRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
@@ -205,6 +470,7 @@ export default function Estadisticas({ compact = false }) {
   const [stockHasta, setStockHasta] = useState('');
   const [stockQuickRange, setStockQuickRange] = useState('month-compare');
   const [stockSerie, setStockSerie] = useState([]);
+  const [ventasUsuarioStockChart, setVentasUsuarioStockChart] = useState([]);
   const [stockSerieRange, setStockSerieRange] = useState({ desde: '', hasta: '' });
   const [ownerTab, setOwnerTab] = useState('empresa');
   const [ownerUsuarioId, setOwnerUsuarioId] = useState('');
@@ -242,11 +508,22 @@ export default function Estadisticas({ compact = false }) {
     setStockLoading(true);
     setStockError('');
     try {
-      const data = await api.getStockCostoSerie(nextDesde, nextHasta);
+      const [data, resumen] = await Promise.all([
+        api.getStockCostoSerie(nextDesde, nextHasta),
+        api.getEstadisticasResumen(nextDesde, nextHasta, ownerUsuarioId),
+      ]);
       const serie = Array.isArray(data?.serie) ? data.serie : [];
       setStockSerie(serie.map((row) => ({
         fecha: String(row.fecha || '').slice(0, 10),
         total: Math.round(Number(row.total_costo || 0)),
+      })));
+      const ventasRows = (resumen?.ventasPorUsuario || []).slice(0, 8);
+      setVentasUsuarioStockChart(ventasRows.map((u, idx) => ({
+        key: `${u.usuario_id || idx}-${u.usuario_nombre}`,
+        label: u.usuario_nombre || 'N/A',
+        subLabel: `${qty(u.cantidad_ventas || 0)} ventas`,
+        salesCount: Number(u.cantidad_ventas || 0),
+        value: Math.round(Number(u.total_vendido || 0)),
       })));
       setStockSerieRange({
         desde: String(data?.desde || nextDesde || ''),
@@ -254,6 +531,7 @@ export default function Estadisticas({ compact = false }) {
       });
     } catch {
       setStockSerie([]);
+      setVentasUsuarioStockChart([]);
       setStockSerieRange({ desde: nextDesde || '', hasta: nextHasta || '' });
       setStockError('No se pudo cargar el gráfico de costo de stock.');
     } finally {
@@ -268,6 +546,15 @@ export default function Estadisticas({ compact = false }) {
     setStockHasta(initialStockRange.hasta);
     loadStockSerie(initialStockRange.desde, initialStockRange.hasta);
   }, []);
+
+  useEffect(() => {
+    const onStatsRefresh = () => {
+      loadStats(desde, hasta, ownerUsuarioId);
+      loadStockSerie(stockDesde, stockHasta);
+    };
+    window.addEventListener('ferco:stats-refresh', onStatsRefresh);
+    return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
+  }, [desde, hasta, ownerUsuarioId, stockDesde, stockHasta]);
 
   useEffect(() => {
     const loadUsuarios = async () => {
@@ -304,15 +591,6 @@ export default function Estadisticas({ compact = false }) {
   const topUsuario = useMemo(() => {
     const rows = stats?.ventasPorUsuario || [];
     return rows.length ? rows[0] : null;
-  }, [stats]);
-
-  const ventasUsuarioChart = useMemo(() => {
-    const rows = (stats?.ventasPorUsuario || []).slice(0, 8);
-    return rows.map((u, idx) => ({
-      key: `${u.usuario_id || idx}-${u.usuario_nombre}`,
-      label: u.usuario_nombre || 'N/A',
-      value: Math.round(Number(u.total_vendido || 0)),
-    }));
   }, [stats]);
 
   const ventasUltimos7DiasChart = useMemo(() => {
@@ -375,6 +653,43 @@ export default function Estadisticas({ compact = false }) {
       return { ...item, variation, variationExact, barColor: colors[idx % colors.length] };
     })
   ), [stockCostoChart]);
+
+  const exportarGraficaStockExcel = () => {
+    if (!stockChartWithVariation.length) return;
+    exportHtmlTableToExcel({
+      filename: 'grafico-costo-stock.xls',
+      title: `Costo total de stock (histórico) - ${rangeLabel(stockSerieRange.desde, stockSerieRange.hasta)}`,
+      headers: ['Período', 'Costo total'],
+      rows: stockChartWithVariation.map((item) => [
+        item.label,
+        moneyFull(item.value),
+      ]),
+    });
+  };
+
+  const exportarGraficaVentasUsuarioExcel = () => {
+    if (!ventasUsuarioStockChart.length) return;
+    exportHtmlTableToExcel({
+      filename: 'grafico-ventas-por-usuario.xls',
+      title: `Ventas por usuario - ${rangeLabel(stockSerieRange.desde, stockSerieRange.hasta)}`,
+      headers: ['Usuario', 'Cantidad ventas', 'Total vendido'],
+      rows: ventasUsuarioStockChart.map((item) => [
+        item.label,
+        qty(item.salesCount || 0),
+        moneyFull(item.value),
+      ]),
+    });
+  };
+
+  const exportarGraficaStockPng = () => {
+    const svg = stockChartSvgRef.current?.querySelector('svg');
+    exportSvgAsPng(svg, 'grafico-costo-stock.png');
+  };
+
+  const exportarGraficaVentasUsuarioPng = () => {
+    const svg = ventasUsuarioChartSvgRef.current?.querySelector('svg');
+    exportSvgAsPng(svg, 'grafico-ventas-por-usuario.png');
+  };
 
   const ventasUsuarioColumns = useMemo(() => ([
     {
@@ -682,6 +997,24 @@ export default function Estadisticas({ compact = false }) {
                     >
                       Reiniciar
                     </AppButton>
+                    <AppButton
+                      type="button"
+                      className="stats-refresh-btn secondary chart-export-btn"
+                      onClick={exportarGraficaStockExcel}
+                      disabled={stockLoading || !stockChartWithVariation.length}
+                    >
+                      <FaFileExcel aria-hidden="true" />
+                      <span>Excel</span>
+                    </AppButton>
+                    <AppButton
+                      type="button"
+                      className="stats-refresh-btn secondary chart-export-btn"
+                      onClick={exportarGraficaStockPng}
+                      disabled={stockLoading || !stockChartWithVariation.length}
+                    >
+                      <BsFiletypePng aria-hidden="true" />
+                      <span>PNG</span>
+                    </AppButton>
                   </div>
                 </div>
                 <p className="stats-chart-range">{rangeLabel(stockSerieRange.desde, stockSerieRange.hasta)}</p>
@@ -691,26 +1024,49 @@ export default function Estadisticas({ compact = false }) {
                 {stockLoading && <div className="stats-msg">Cargando gráfico...</div>}
                 {!stockLoading && stockError && <div className="stats-msg error">{stockError}</div>}
                 {!stockLoading && !stockError && stockChartWithVariation.length ? (
-                  <MiniBars
-                    items={stockChartWithVariation}
-                    valueKey="value"
-                    showValues
-                    valueFormatter={(v) => moneyFull(v)}
-                    className="stock-bars stock-bars-variant"
-                  />
+                  <div ref={stockChartSvgRef}>
+                    <MiniLineChart
+                      items={stockChartWithVariation}
+                      valueKey="value"
+                      valueFormatter={(v) => moneyFull(v)}
+                      className="stock-line-chart"
+                    />
+                  </div>
                 ) : null}
                 {!stockLoading && !stockError && !stockChartWithVariation.length && (
                   <div className="stats-msg">Sin datos para mostrar.</div>
                 )}
               </section>
 
-              <section className="stats-charts-grid">
+              <section className="stats-charts-grid stats-charts-grid-single">
                 <article className="stats-table-card chart-card">
-                  <div className="stats-table-head">
+                  <div className="stats-table-head stock-card-head">
                     <h4>Mini gráfico: ventas por usuario</h4>
+                    <div className="chart-export-actions">
+                      <AppButton
+                        type="button"
+                        className="stats-refresh-btn secondary chart-export-btn"
+                        onClick={exportarGraficaVentasUsuarioExcel}
+                        disabled={stockLoading || !ventasUsuarioStockChart.length}
+                      >
+                        <FaFileExcel aria-hidden="true" />
+                        <span>Excel</span>
+                      </AppButton>
+                      <AppButton
+                        type="button"
+                        className="stats-refresh-btn secondary chart-export-btn"
+                        onClick={exportarGraficaVentasUsuarioPng}
+                        disabled={stockLoading || !ventasUsuarioStockChart.length}
+                      >
+                        <BsFiletypePng aria-hidden="true" />
+                        <span>PNG</span>
+                      </AppButton>
+                    </div>
                   </div>
-                  {ventasUsuarioChart.length ? (
-                    <MiniBars items={ventasUsuarioChart} valueKey="value" />
+                  {ventasUsuarioStockChart.length ? (
+                    <div ref={ventasUsuarioChartSvgRef}>
+                      <MiniLineChart items={ventasUsuarioStockChart} valueKey="value" valueFormatter={(v) => moneyFull(v)} />
+                    </div>
                   ) : (
                     <div className="stats-msg">Sin datos para mostrar.</div>
                   )}
