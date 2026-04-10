@@ -4,6 +4,13 @@ import react from '@vitejs/plugin-react'
 import pkg from '../package.json'
 import { execSync } from 'node:child_process'
 
+let version='dev';
+try {
+  version = execSync('git describe --tags --abbrev=0').toString().trim();
+} catch (e) {
+  console.warn('No se pudo obtener versión desde git');
+}
+
 function normalizeTag(tag) {
   const clean = String(tag || '').trim()
   if (!clean) return ''
@@ -123,7 +130,7 @@ const resolvedAppVersion = resolveVersion();
 console.log(`[build] APP_VERSION=${resolvedAppVersion}`);
 export default defineConfig({
   plugins: [react()],
-  define: {
-     __APP_VERSION__: JSON.stringify(pkg.version)
-  },
+define: {
+  __APP_VERSION__: JSON.stringify(resolvedAppVersion)
+},
 })
