@@ -897,16 +897,18 @@ export default function Productos({ user, productos = [], setProductos }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
-            <img src="/add.svg" alt="" aria-hidden="true" />
-            <span>PRODUCTO</span>
-          </AppButton>
-          <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
-            <span>EMPAQUES</span>
-          </AppButton>
-          <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
-            <img src="/print.svg" alt="" aria-hidden="true" />
-          </AppButton>
+          <div className="productos-toolbar-actions">
+            <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
+              <img src="/add.svg" alt="" aria-hidden="true" />
+              <span>PRODUCTO</span>
+            </AppButton>
+            <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
+              <span>EMPAQUES</span>
+            </AppButton>
+            <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
+              <img src="/print.svg" alt="" aria-hidden="true" />
+            </AppButton>
+          </div>
         </div>
 
         <div className="productos-totales">

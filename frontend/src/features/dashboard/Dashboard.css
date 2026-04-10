@@ -317,6 +317,26 @@ body.dashboard-scroll-lock {
   height: 15px;
 }
 
+.dashboard-topbar-action.ventas-carrito-btn {
+  position: relative;
+}
+
+.ventas-carrito-count {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d32f2f;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.3rem;
+  line-height: 1;
+}
+
 @media (min-width: 1101px) {
   .dashboard-topbar-action.ventas-carrito-btn {
     display: none;
@@ -704,6 +724,17 @@ body.dashboard-scroll-lock {
 
   .dashboard-topbar-action span {
     display: none;
+  }
+
+  .dashboard-topbar-action .ventas-carrito-count {
+    display: inline-flex;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.62rem;
+    border-width: 1px;
   }
 
   .dashboard-welcome {

@@ -143,6 +143,13 @@
   min-width: 0;
 }
 
+.productos-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
 .productos-totales {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -599,6 +606,12 @@
     max-width: none;
     flex-basis: 100%;
     box-sizing: border-box;
+  }
+
+  .productos-toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 
   .productos-totales {
