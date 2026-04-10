@@ -38,7 +38,9 @@ jobs:
       # 5. leer versión final desde package.json
       - name: Get released version
         id: version
-        run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       # 6. Deploy a Vercel
       - name: Deploy to Vercel (Production)

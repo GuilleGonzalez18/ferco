@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import pkg from '../package.json'
 import { execSync } from 'node:child_process'
 
+const version = import.meta.env.VITE_APP_VERSION;
 
 function normalizeTag(tag) {
   const clean = String(tag || '').trim()
