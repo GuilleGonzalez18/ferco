@@ -91,7 +91,7 @@ function resolveVersion() {
 
   // Ensure tags are available in CI shallow checkouts (Vercel/Actions)
   try {
-    execSync('git fetch --tags --prune --quiet', { stdio: ['ignore', 'ignore', 'ignore'] })
+    execSync('git fetch --tags --force --depth=1', { stdio: 'ignore' })
   } catch {
     // ignore fetch errors
   }
@@ -99,8 +99,10 @@ function resolveVersion() {
   const headTag = getHeadTag()
   if (headTag) return headTag
 
+  if (!process.env.CI) {
   const latestTag = getLatestTag()
   if (latestTag) return latestTag
+}
 
   const latestRemoteTag = getLatestRemoteTag()
   // Only use the latest remote tag when explicitly allowed or when the build was triggered by a tag
@@ -128,3 +130,8 @@ define: {
   __APP_VERSION__: JSON.stringify(resolvedAppVersion)
 },
 })
+
+console.log("CI:", process.env.CI)
+console.log("HEAD TAG:", getHeadTag())
+console.log("LATEST TAG:", getLatestTag())
+console.log("REMOTE TAG:", getLatestRemoteTag())
