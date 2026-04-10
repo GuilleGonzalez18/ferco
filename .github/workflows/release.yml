@@ -13,30 +13,54 @@ jobs:
       contents: write
 
     steps:
+      # 1. Checkout completo
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 🔥 importante para tags
+          fetch-depth: 0
 
+      # 2. Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install deps
+      # 3. deps
+      - name: Install dependencies
         run: npm ci
 
+      # 4. semantic-release
       - name: Run semantic-release
-        id: release
-        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
 
-      # 🚀 Deploy SOLO si hubo release
+      # 5. versión desde tag
+      - name: Get version from git tag
+        id: version
+        run: |
+          VERSION=$(git describe --tags --abbrev=0)
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      # 🔍 Debug
+      - name: Debug version
+        run: echo "VERSION=${{ steps.version.outputs.VERSION }}"
+
+      # 🚀 Deploy PROD
       - name: Deploy to Vercel (Production)
-        if: success() && github.ref == 'refs/heads/main'
-        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npx vercel deploy --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --build-env VITE_APP_VERSION=${{ steps.version.outputs.VERSION }}
 
+      # 🚀 Deploy PREVIEW
       - name: Deploy to Vercel (Preview)
-        if: success() && github.ref == 'refs/heads/develop'
-        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK_PREVIEW }}
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          npx vercel deploy \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --build-env VITE_APP_VERSION=${{ steps.version.outputs.VERSION }}
