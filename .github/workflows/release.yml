@@ -36,21 +36,27 @@ jobs:
         run: npx semantic-release
 
       # 5. leer versión final desde package.json
-      - name: Get released version
+      - name: Get version from git tag
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(git describe --tags --abbrev=0)
+          VERSION=${VERSION#v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       # 6. Deploy a Vercel
+# 🚀 Deploy PROD
       - name: Deploy to Vercel (Production)
         if: github.ref == 'refs/heads/main'
         run: |
-          VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
-          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+           VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
+            npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
 
+# 🚀 Deploy PREVIEW
       - name: Deploy to Vercel (Preview)
         if: github.ref == 'refs/heads/develop'
         run: |
-          VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
-          npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+             VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
+             npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+             
+      - name: Debug version
+        run: echo "VERSION=${{ steps.version.outputs.VERSION }}"
