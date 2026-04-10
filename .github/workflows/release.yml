@@ -1,4 +1,4 @@
-name: Release
+name: Release + Deploy
 
 on:
   push:
@@ -6,31 +6,37 @@ on:
       - main
       - develop
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 jobs:
-  semantic-release:
-    name: semantic-release
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # 🔥 importante para tags
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install deps
         run: npm ci
 
       - name: Run semantic-release
+        id: release
+        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run release
+
+      # 🚀 Deploy SOLO si hubo release
+      - name: Deploy to Vercel (Production)
+        if: success() && github.ref == 'refs/heads/main'
+        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
+
+      - name: Deploy to Vercel (Preview)
+        if: success() && github.ref == 'refs/heads/develop'
+        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK_PREVIEW }}
