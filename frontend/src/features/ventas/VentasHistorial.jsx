@@ -983,19 +983,19 @@ export default function VentasHistorial() {
   return (
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
-        <label className="ventas-fecha-filter">
-          <span>Fecha</span>
-          <AppInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-        </label>
-        <label className="ventas-fecha-filter">
-          <span>Estado</span>
-          <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
-            <option value="todos">Todos</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="entregado">Entregadas</option>
-            <option value="canceladas">Canceladas</option>
-          </AppSelect>
-        </label>
+        <div className="ventas-filtros-group">
+          <label className="ventas-fecha-filter">
+            <AppInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          </label>
+          <label className="ventas-fecha-filter">
+            <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="entregado">Entregadas</option>
+              <option value="canceladas">Canceladas</option>
+            </AppSelect>
+          </label>
+        </div>
         <div className="ventas-export-group">
           <AppButton
             type="button"
