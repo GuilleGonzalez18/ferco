@@ -13,46 +13,42 @@ jobs:
       contents: write
 
     steps:
+      # 1. Checkout completo (necesario para tags)
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2. Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install deps
+      # 3. deps
+      - name: Install dependencies
         run: npm ci
 
-      # 🔥 Ejecuta release
+      # 4. semantic-release (source of truth)
       - name: Run semantic-release
-        id: release
-        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
 
-      # 🔥 Obtener versión REAL desde el último tag
-      - name: Get version from git
+      # 5. leer versión final desde package.json
+      - name: Get released version
         id: version
-        run: |
-          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
-          echo "VERSION=$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
 
-      # 🚀 Deploy PROD
+      # 6. Deploy a Vercel
       - name: Deploy to Vercel (Production)
-        if: success() && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         run: |
-          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" \
-          -H "Content-Type: application/json" \
-          -d "{\"env\": {\"VITE_APP_VERSION\": \"${{ steps.version.outputs.VERSION }}\"}}"
+          VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
 
-      # 🚀 Deploy PREVIEW
       - name: Deploy to Vercel (Preview)
-        if: success() && github.ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/develop'
         run: |
-          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_PREVIEW }}" \
-          -H "Content-Type: application/json" \
-          -d "{\"env\": {\"VITE_APP_VERSION\": \"${{ steps.version.outputs.VERSION }}\"}}"
+          VITE_APP_VERSION=${{ steps.version.outputs.VERSION }} \
+          npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
