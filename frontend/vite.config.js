@@ -4,12 +4,6 @@ import react from '@vitejs/plugin-react'
 import pkg from '../package.json'
 import { execSync } from 'node:child_process'
 
-let version='dev';
-try {
-  version = execSync('git describe --tags --abbrev=0').toString().trim();
-} catch (e) {
-  console.warn('No se pudo obtener versión desde git');
-}
 
 function normalizeTag(tag) {
   const clean = String(tag || '').trim()
