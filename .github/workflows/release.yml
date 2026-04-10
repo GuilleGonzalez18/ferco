@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 🔥 importante para tags
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,17 +26,33 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      # 🔥 Ejecuta release
       - name: Run semantic-release
         id: release
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 🚀 Deploy SOLO si hubo release
+      # 🔥 Obtener versión REAL desde el último tag
+      - name: Get version from git
+        id: version
+        run: |
+          VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+          echo "VERSION=$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      # 🚀 Deploy PROD
       - name: Deploy to Vercel (Production)
         if: success() && github.ref == 'refs/heads/main'
-        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"env\": {\"VITE_APP_VERSION\": \"${{ steps.version.outputs.VERSION }}\"}}"
 
+      # 🚀 Deploy PREVIEW
       - name: Deploy to Vercel (Preview)
         if: success() && github.ref == 'refs/heads/develop'
-        run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK_PREVIEW }}
+        run: |
+          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_PREVIEW }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"env\": {\"VITE_APP_VERSION\": \"${{ steps.version.outputs.VERSION }}\"}}"
