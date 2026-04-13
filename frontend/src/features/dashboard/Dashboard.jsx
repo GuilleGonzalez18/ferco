@@ -52,6 +52,7 @@ function MiUsuarioView({ user }) {
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
+  const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
@@ -66,6 +67,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
   };
+
+  useEffect(() => {
+    if (pantalla !== 'nueva-venta' && ventasCarritoCount !== 0) {
+      setVentasCarritoCount(0);
+    }
+  }, [pantalla, ventasCarritoCount]);
 
   const closeVentasCarritoDrawer = useCallback(() => {
     setVentasCarritoAbierto(false);
@@ -151,6 +158,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
               carritoDrawerOpen={ventasCarritoAbierto}
               onToggleCarritoDrawer={() => setVentasCarritoAbierto((prev) => !prev)}
               onCloseCarritoDrawer={closeVentasCarritoDrawer}
+              onCarritoCountChange={setVentasCarritoCount}
             />
           );
         case 'ventas':       return <VentasHistorial />;
@@ -238,11 +246,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
                   type="button"
                   className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''}`}
                   onClick={() => setVentasCarritoAbierto((prev) => !prev)}
-                  aria-label={ventasCarritoAbierto ? 'Cerrar carrito' : 'Abrir carrito'}
+                  aria-label={ventasCarritoAbierto ? `Cerrar carrito (${ventasCarritoCount})` : `Abrir carrito (${ventasCarritoCount})`}
                   aria-expanded={ventasCarritoAbierto}
                 >
                   <FiShoppingCart aria-hidden="true" />
                   <span>Carrito</span>
+                  {ventasCarritoCount > 0 && <span className="ventas-carrito-count">{ventasCarritoCount}</span>}
                 </button>
               )}
             </div>

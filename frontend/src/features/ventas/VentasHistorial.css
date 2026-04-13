@@ -7,7 +7,15 @@
   align-items: end;
   justify-content: space-between;
   gap: 0.8rem;
+  flex-wrap: wrap;
   margin-bottom: 0.75rem;
+}
+
+.ventas-filtros-group {
+  display: inline-flex;
+  align-items: end;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
 .ventas-fecha-filter {
@@ -40,6 +48,7 @@
   display: inline-flex;
   align-items: end;
   gap: 0.45rem;
+  margin-left: auto;
 }
 
 .ventas-export-btn {
@@ -605,9 +614,16 @@
     align-items: stretch;
   }
 
+  .ventas-filtros-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .ventas-export-group {
     align-items: stretch;
     flex-direction: column;
+    margin-left: 0;
   }
 
   .ventas-export-btn {
