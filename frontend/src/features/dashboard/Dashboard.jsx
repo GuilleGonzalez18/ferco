@@ -209,15 +209,6 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
   return (
     <div className="dashboard-layout">
-      <button
-        type="button"
-        className={`dashboard-mobile-fab ${menuMovilAbierto ? 'is-open' : ''}`}
-        onClick={() => setMenuMovilAbierto((prev) => !prev)}
-        aria-label={menuMovilAbierto ? 'Cerrar menú' : 'Abrir menú'}
-        aria-expanded={menuMovilAbierto}
-      >
-        {menuMovilAbierto ? '✕' : '☰'}
-      </button>
       <div
         className={`dashboard-mobile-backdrop ${menuMovilAbierto ? 'visible' : ''}`}
         onClick={() => setMenuMovilAbierto(false)}
@@ -260,6 +251,15 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       <main className="dashboard-content">
         <div className="dashboard-topbar">
           <div className="dashboard-topbar-content">
+            <button
+              type="button"
+              className={`dashboard-mobile-fab ${menuMovilAbierto ? 'is-open' : ''}`}
+              onClick={() => setMenuMovilAbierto((prev) => !prev)}
+              aria-label={menuMovilAbierto ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuMovilAbierto}
+            >
+              {menuMovilAbierto ? '✕' : '☰'}
+            </button>
             <span className="dashboard-topbar-title">{tituloActual}</span>
             <div className="dashboard-topbar-actions">
               {pantalla === 'nueva-venta' && (

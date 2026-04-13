@@ -577,10 +577,9 @@ body.dashboard-scroll-lock {
 @media (max-width: 850px) {
   .dashboard-mobile-fab {
     display: inline-flex;
-    position: fixed;
-    top: 0.75rem;
-    left: 0.75rem;
-    z-index: 52;
+    position: static;
+    z-index: auto;
+    flex: 0 0 auto;
     width: 44px;
     height: 44px;
     border: 1px solid #d7e4f4;
@@ -604,7 +603,6 @@ body.dashboard-scroll-lock {
   }
 
   .dashboard-mobile-fab.is-open {
-    transform: translateX(calc(min(86vw, 300px) - 44px - 1.5rem));
     background: #e8f1ff;
     border-color: #aac2e2;
   }
@@ -677,7 +675,6 @@ body.dashboard-scroll-lock {
 
   .dashboard-topbar {
     top: 0;
-    padding-left: 4rem;
     min-height: 66px;
     display: flex;
     align-items: center;
@@ -727,7 +724,7 @@ body.dashboard-scroll-lock {
 
   .dashboard-topbar {
     min-height: 62px;
-    padding: 0.5rem 0.85rem 0.5rem 3.75rem;
+    padding: 0.5rem 0.85rem;
   }
 
   .dashboard-topbar-title {
