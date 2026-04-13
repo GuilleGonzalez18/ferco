@@ -321,6 +321,10 @@ body.dashboard-scroll-lock {
   position: relative;
 }
 
+.dashboard-topbar-action.stock-drawer-btn {
+  position: relative;
+}
+
 .ventas-carrito-count {
   min-width: 20px;
   height: 20px;
@@ -579,21 +583,30 @@ body.dashboard-scroll-lock {
     z-index: 52;
     width: 44px;
     height: 44px;
-    border: none;
-    border-radius: 10px;
-    background: var(--menu-bg);
-    color: #fff;
+    border: 1px solid #d7e4f4;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--menu-active);
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
     cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
-    transition: transform 0.2s ease, background 0.2s ease;
+    box-shadow: 0 12px 24px rgba(26, 48, 84, 0.16);
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     will-change: transform;
+  }
+
+  .dashboard-mobile-fab:hover {
+    background: #f5f9ff;
+    border-color: #b9cce5;
   }
 
   .dashboard-mobile-fab.is-open {
     transform: translateX(calc(min(86vw, 300px) - 44px - 1.5rem));
+    background: #e8f1ff;
+    border-color: #aac2e2;
   }
 
   .dashboard-mobile-backdrop {
@@ -702,6 +715,12 @@ body.dashboard-scroll-lock {
 }
 
 @media (max-width: 480px) {
+  .dashboard-mobile-fab {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
   .dashboard-content::before {
     filter: blur(2px) saturate(0.92);
   }

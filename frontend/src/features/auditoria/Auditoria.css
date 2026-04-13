@@ -10,10 +10,53 @@
   margin-bottom: 0.75rem;
 }
 
+.auditoria-toolbar-dates {
+  flex: 1;
+}
+
+.auditoria-toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
 .auditoria-filtros {
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
+}
+
+.auditoria-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid #dce8f5;
+  border-radius: 12px;
+  background: #f7fbff;
+}
+
+.auditoria-tab {
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #5b6d84;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.6rem 0.95rem;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.auditoria-tab:hover {
+  background: #edf4fb;
+  color: #375f8c;
+}
+
+.auditoria-tab.active {
+  background: #375f8c;
+  color: #fff;
+  box-shadow: 0 10px 18px rgba(55, 95, 140, 0.18);
 }
 
 .auditoria-filtros select,
@@ -65,6 +108,10 @@
   border: 1px solid #e4ebf4;
   border-radius: 10px;
   padding: 0.65rem;
+}
+
+.auditoria-card-hidden {
+  display: none;
 }
 
 .auditoria-card h4 {
@@ -202,8 +249,22 @@
     align-items: stretch;
   }
 
+  .auditoria-toolbar-actions {
+    width: 100%;
+  }
+
   .auditoria-filtros {
     flex-direction: column;
+  }
+
+  .auditoria-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .auditoria-tab {
+    flex: 1 1 0;
+    text-align: center;
   }
 
   .auditoria-filtros input {

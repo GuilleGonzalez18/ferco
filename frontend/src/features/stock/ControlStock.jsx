@@ -11,7 +11,13 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export default function ControlStock({ productos = [], setProductos }) {
+export default function ControlStock({
+  productos = [],
+  setProductos,
+  stockDrawerOpen = false,
+  onCloseStockDrawer,
+  onSelectedProductoChange,
+}) {
   const [busqueda, setBusqueda] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
@@ -59,6 +65,19 @@ export default function ControlStock({ productos = [], setProductos }) {
     () => productos.find((p) => Number(p.id) === Number(productoIdActivo)) || null,
     [productos, productoIdActivo]
   );
+
+  useEffect(() => {
+    if (typeof onSelectedProductoChange !== 'function') return;
+    if (!productoActivo) {
+      onSelectedProductoChange(null);
+      return;
+    }
+    onSelectedProductoChange({
+      id: productoActivo.id,
+      nombre: productoActivo.nombre || 'Producto',
+      stock: Math.floor(toNumber(productoActivo.stock)),
+    });
+  }, [productoActivo, onSelectedProductoChange]);
 
   const stockColumns = useMemo(
     () => [
@@ -164,9 +183,15 @@ export default function ControlStock({ productos = [], setProductos }) {
 
   return (
     <div className="control-stock-main">
+      <div
+        className={`control-stock-overlay ${stockDrawerOpen && productoActivo ? 'open' : ''}`}
+        onClick={onCloseStockDrawer}
+        aria-hidden={!stockDrawerOpen || !productoActivo}
+      />
       <div className="control-stock-head">
         <AppInput
           type="text"
+          className="table-search-field"
           placeholder="Buscar producto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -183,41 +208,57 @@ export default function ControlStock({ productos = [], setProductos }) {
             tableClassName="control-stock-table"
             emptyMessage="Sin productos para mostrar."
             stickyHeader
+            minWidth={420}
             expandedRowId={productoIdActivo}
             onRowClick={(p) => setProductoIdActivo(p.id)}
           />
         </section>
-
-        <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''}`}>
-          {!productoActivo && <p className="stock-empty">Selecciona un producto para gestionar su stock.</p>}
-          {productoActivo && (
-            <>
-              <p className="stock-producto">{productoActivo.nombre}</p>
-              <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
-              <label className="stock-cantidad">
-                Cantidad
-                <AppInput
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
-                />
-              </label>
-              <div className="stock-actions">
-                <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
-                <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
-                <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
-              </div>
-              <div className="stock-history-row">
-                <AppButton type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
-                  Historial de stock
-                </AppButton>
-              </div>
-            </>
-          )}
-        </aside>
       </div>
+
+      <aside
+        key={productoActivo?.id || 'none'}
+        className={`control-stock-panel ${stockDrawerOpen && productoActivo ? 'is-open' : ''}`}
+        aria-hidden={!stockDrawerOpen || !productoActivo}
+      >
+        <div className="control-stock-panel-head">
+          <h3>Stock</h3>
+          <button
+            type="button"
+            className="control-stock-panel-close"
+            onClick={onCloseStockDrawer}
+            aria-label="Cerrar panel de stock"
+          >
+            ✕
+          </button>
+        </div>
+        {!productoActivo && <p className="stock-empty">Selecciona un producto para visualizar su stock.</p>}
+        {productoActivo && (
+          <>
+            <p className="stock-producto">{productoActivo.nombre}</p>
+            <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
+            <label className="stock-cantidad">
+              Cantidad
+              <AppInput
+                type="number"
+                min="0"
+                step="1"
+                value={cantidad}
+                onChange={(e) => setCantidad(e.target.value)}
+              />
+            </label>
+            <div className="stock-actions">
+              <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
+              <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
+              <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
+            </div>
+            <div className="stock-history-row">
+              <AppButton type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
+                Historial de stock
+              </AppButton>
+            </div>
+          </>
+        )}
+      </aside>
 
       {historialOpen && (
         <div className={`stock-modal-overlay ${historialClosing ? 'is-closing' : ''}`} role="dialog" aria-modal="true">

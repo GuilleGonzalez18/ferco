@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
@@ -29,6 +29,7 @@ function formatQty(value) {
 }
 
 export default function Auditoria() {
+  const [activeTab, setActiveTab] = useState('movimientos');
   const [eventos, setEventos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,7 @@ export default function Auditoria() {
   const [movimientosPage, setMovimientosPage] = useState(1);
   const [eventosPage, setEventosPage] = useState(1);
 
-  const loadAuditoria = async (nextDesde = desde, nextHasta = hasta) => {
+  const loadAuditoria = useCallback(async (nextDesde = '', nextHasta = '') => {
     setLoading(true);
     setError('');
     try {
@@ -62,12 +63,17 @@ export default function Auditoria() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadAuditoria('', '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAuditoria]);
+
+  useEffect(() => {
+    if (desde && hasta) {
+      loadAuditoria(desde, hasta);
+    }
+  }, [desde, hasta, loadAuditoria]);
 
   const movimientosFiltrados = useMemo(() => {
     const q = filtroTextoMov.trim().toLowerCase();
@@ -300,12 +306,11 @@ export default function Auditoria() {
   return (
     <div className="auditoria-main">
       <div className="auditoria-toolbar">
-        <div className="auditoria-filtros">
+        <div className="auditoria-toolbar-dates auditoria-filtros">
           <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-          <AppButton type="button" className="audit-btn" onClick={() => loadAuditoria(desde, hasta)}>
-            Filtrar
-          </AppButton>
+        </div>
+        <div className="auditoria-toolbar-actions">
           <AppButton
             type="button"
             className="audit-btn secondary"
@@ -320,12 +325,37 @@ export default function Auditoria() {
         </div>
       </div>
 
+      <div className="auditoria-tabs" role="tablist" aria-label="Secciones de auditoría">
+        <button
+          type="button"
+          role="tab"
+          className={`auditoria-tab ${activeTab === 'movimientos' ? 'active' : ''}`}
+          aria-selected={activeTab === 'movimientos'}
+          onClick={() => setActiveTab('movimientos')}
+        >
+          Movimientos de stock
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`auditoria-tab ${activeTab === 'eventos' ? 'active' : ''}`}
+          aria-selected={activeTab === 'eventos'}
+          onClick={() => setActiveTab('eventos')}
+        >
+          Eventos de auditoría
+        </button>
+      </div>
+
       {loading && <div className="auditoria-msg">Cargando auditoría...</div>}
       {!loading && error && <div className="auditoria-msg error">{error}</div>}
 
       {!loading && !error && (
         <>
-          <section className="auditoria-card">
+          <section
+            className={`auditoria-card ${activeTab === 'movimientos' ? '' : 'auditoria-card-hidden'}`}
+            role="tabpanel"
+            hidden={activeTab !== 'movimientos'}
+          >
             <div className="auditoria-card-head">
               <h4>Movimientos de stock</h4>
               <AppButton type="button" className="audit-btn" onClick={exportarStockPDF}>PDF stock</AppButton>
@@ -350,6 +380,7 @@ export default function Auditoria() {
               </AppSelect>
               <AppInput
                 type="text"
+                className="table-search-field"
                 placeholder="Buscar por producto o detalle..."
                 value={filtroTextoMov}
                 onChange={(e) => setFiltroTextoMov(e.target.value)}
@@ -421,7 +452,11 @@ export default function Auditoria() {
             </div>
           </section>
 
-          <section className="auditoria-card">
+          <section
+            className={`auditoria-card ${activeTab === 'eventos' ? '' : 'auditoria-card-hidden'}`}
+            role="tabpanel"
+            hidden={activeTab !== 'eventos'}
+          >
             <div className="auditoria-card-head">
               <h4>Eventos de auditoría (altas, ediciones y eliminaciones)</h4>
             </div>
@@ -440,6 +475,7 @@ export default function Auditoria() {
               </AppSelect>
               <AppInput
                 type="text"
+                className="table-search-field"
                 placeholder="Buscar por entidad, acción o detalle..."
                 value={filtroTextoEvento}
                 onChange={(e) => setFiltroTextoEvento(e.target.value)}

@@ -54,15 +54,20 @@ export default function AppTable({
   headerRowClassName = '',
   emptyColSpan,
   stickyHeader = false,
+  minWidth,
+  stickyMaxHeight,
 }) {
   const wrapRef = useRef(null);
   const [viewportHeight, setViewportHeight] = useState(null);
   const colSpan = emptyColSpan || Math.max(columns.length, 1);
-  const computedMinWidth = Math.max(680, columns.length * 120);
+  const parsedMinWidth = Number(minWidth);
+  const computedMinWidth = Number.isFinite(parsedMinWidth) && parsedMinWidth > 0
+    ? parsedMinWidth
+    : Math.max(680, columns.length * 120);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (!stickyHeader) return;
+    if (!stickyHeader || stickyMaxHeight) return;
 
     const updateHeight = () => {
       const el = wrapRef.current;
@@ -79,14 +84,19 @@ export default function AppTable({
     return () => {
       window.removeEventListener('resize', updateHeight);
     };
-  }, [stickyHeader, columns.length, rows.length]);
+  }, [stickyHeader, stickyMaxHeight, columns.length, rows.length]);
 
   const wrapperStyle = {
     '--app-table-min-width': `${computedMinWidth}px`,
   };
 
-  if (stickyHeader && viewportHeight !== null) {
-    wrapperStyle['--app-table-max-height'] = `${viewportHeight}px`;
+  if (stickyHeader) {
+    if (stickyMaxHeight) {
+      wrapperStyle['--app-table-max-height'] =
+        typeof stickyMaxHeight === 'number' ? `${stickyMaxHeight}px` : String(stickyMaxHeight);
+    } else if (viewportHeight !== null) {
+      wrapperStyle['--app-table-max-height'] = `${viewportHeight}px`;
+    }
   }
 
   return (

@@ -53,6 +53,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
+  const [stockDrawerAbierto, setStockDrawerAbierto] = useState(false);
+  const [stockProductoSeleccionado, setStockProductoSeleccionado] = useState(null);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
@@ -66,6 +68,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     onNavigate(seccion);
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
+    setStockDrawerAbierto(false);
   };
 
   useEffect(() => {
@@ -74,6 +77,13 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     }
   }, [pantalla, ventasCarritoCount]);
 
+  useEffect(() => {
+    if (pantalla !== 'control-stock') {
+      setStockDrawerAbierto(false);
+      setStockProductoSeleccionado(null);
+    }
+  }, [pantalla]);
+
   const closeVentasCarritoDrawer = useCallback(() => {
     setVentasCarritoAbierto(false);
   }, []);
@@ -81,6 +91,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const handleLogout = () => {
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
+    setStockDrawerAbierto(false);
     onLogout();
   };
 
@@ -96,6 +107,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       onNavigate(target);
       setMenuMovilAbierto(false);
       setVentasCarritoAbierto(false);
+      setStockDrawerAbierto(false);
     };
     window.addEventListener('ferco:navigate', onNavigateEvent);
     return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
@@ -169,7 +181,15 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         case 'auditoria':    return <Auditoria />;
         case 'control-stock':
           return esPropietario
-            ? <ControlStock productos={productos} setProductos={setProductos} />
+            ? (
+              <ControlStock
+                productos={productos}
+                setProductos={setProductos}
+                stockDrawerOpen={stockDrawerAbierto}
+                onCloseStockDrawer={() => setStockDrawerAbierto(false)}
+                onSelectedProductoChange={setStockProductoSeleccionado}
+              />
+            )
             : <Placeholder titulo="Acceso restringido" icon="X" />;
         case 'estadisticas': return <Estadisticas />;
         default:             return null;
@@ -183,6 +203,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       esPropietario,
       ventasCarritoAbierto,
       closeVentasCarritoDrawer,
+      stockDrawerAbierto,
     ]
   );
 
@@ -252,6 +273,21 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
                   <FiShoppingCart aria-hidden="true" />
                   <span>Carrito</span>
                   {ventasCarritoCount > 0 && <span className="ventas-carrito-count">{ventasCarritoCount}</span>}
+                </button>
+              )}
+              {pantalla === 'control-stock' && stockProductoSeleccionado && (
+                <button
+                  type="button"
+                  className={`dashboard-topbar-action stock-drawer-btn ${stockDrawerAbierto ? 'active' : ''}`}
+                  onClick={() => setStockDrawerAbierto((prev) => !prev)}
+                  aria-label={stockDrawerAbierto
+                    ? `Cerrar panel de stock de ${stockProductoSeleccionado.nombre}`
+                    : `Abrir panel de stock de ${stockProductoSeleccionado.nombre}`}
+                  aria-expanded={stockDrawerAbierto}
+                >
+                  <CgArrowsExchange aria-hidden="true" />
+                  <span>Stock</span>
+                  <span className="ventas-carrito-count">{stockProductoSeleccionado.stock}</span>
                 </button>
               )}
             </div>

@@ -275,7 +275,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       <div className="usuarios-toolbar">
         <AppInput
           type="text"
-          className="buscar-usuario"
+          className="buscar-usuario table-search-field"
           placeholder="Buscar usuario..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}

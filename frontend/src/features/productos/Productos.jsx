@@ -892,7 +892,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         <div className="productos-toolbar">
           <AppInput
             type="text"
-            className="buscar-producto"
+            className="buscar-producto table-search-field"
             placeholder="Buscar por nombre, codigo, categoria..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}

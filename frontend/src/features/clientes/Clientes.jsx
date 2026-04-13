@@ -470,7 +470,7 @@ export default function Clientes() {
       <div className="clientes-toolbar">
         <AppInput
           type="text"
-          className="buscar-cliente"
+          className="buscar-cliente table-search-field"
           placeholder="Buscar por nombre o RUT/C.I."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
