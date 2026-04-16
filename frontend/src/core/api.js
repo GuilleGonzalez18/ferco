@@ -148,6 +148,10 @@ export const api = {
     request(`/ventas/${id}/cancelar`, {
       method: 'PUT',
     }),
+  deleteVenta: (id) =>
+    request(`/ventas/${id}`, {
+      method: 'DELETE',
+    }),
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),

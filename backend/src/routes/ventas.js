@@ -16,10 +16,58 @@ function roundMoney(value) {
 export const ventasRouter = Router();
 const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado', 'cancelado']);
 const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
+const ACTIVE_SALES_CONDITION = 'v.cancelada = false AND COALESCE(v.eliminada, false) = false';
 
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
+}
+
+async function restoreVentaStock(client, ventaId, authUser, origen, detalleMovimiento) {
+  const detalleQ = await client.query(
+    `SELECT vd.producto_id, vd.cantidad, p.nombre AS producto_nombre, p.stock
+     FROM public.venta_detalle vd
+     INNER JOIN public.productos p ON p.id = vd.producto_id
+     WHERE vd.venta_id = $1
+     ORDER BY vd.id ASC
+     FOR UPDATE OF p`,
+    [ventaId]
+  );
+
+  for (const row of detalleQ.rows) {
+    const productoId = Number(row.producto_id);
+    const cantidad = Math.max(0, Math.floor(toNumber(row.cantidad)));
+    if (!cantidad) continue;
+    const stockAnterior = Number(row.stock || 0);
+    const stockNuevo = stockAnterior + cantidad;
+
+    await client.query(
+      `UPDATE public.productos
+       SET stock = $1
+       WHERE id = $2`,
+      [stockNuevo, productoId]
+    );
+
+    await client.query(
+      `INSERT INTO public.movimientos_stock
+        (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [
+        productoId,
+        row.producto_nombre || null,
+        'entrada',
+        origen,
+        cantidad,
+        stockAnterior,
+        stockNuevo,
+        'venta',
+        ventaId,
+        detalleMovimiento,
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+  }
 }
 
 function normalizePaymentMethods(pagos = []) {
@@ -118,7 +166,7 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     `SELECT COALESCE(SUM(v.total), 0) AS total,
             COUNT(*) AS cantidad
      FROM public.ventas v
-     WHERE v.cancelada = false
+     WHERE ${ACTIVE_SALES_CONDITION}
        AND v.fecha >= CURRENT_DATE
        AND v.fecha < CURRENT_DATE + INTERVAL '1 day'
        ${userClauseVentas}`,
@@ -129,7 +177,7 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     `SELECT COALESCE(SUM(v.total), 0) AS total,
             COUNT(*) AS cantidad
      FROM public.ventas v
-     WHERE v.cancelada = false
+     WHERE ${ACTIVE_SALES_CONDITION}
        AND v.fecha >= date_trunc('month', CURRENT_DATE)
        AND v.fecha < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
        ${userClauseVentas}`,
@@ -145,10 +193,10 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
               date_trunc('month', CURRENT_DATE),
               INTERVAL '1 month'
             ) AS months(mes)
-       LEFT JOIN public.ventas v
-         ON v.cancelada = false
-        AND date_trunc('month', v.fecha) = months.mes
-        ${userClauseVentas}
+        LEFT JOIN public.ventas v
+          ON ${ACTIVE_SALES_CONDITION}
+         AND date_trunc('month', v.fecha) = months.mes
+         ${userClauseVentas}
        GROUP BY months.mes
      ) m`,
     userParams
@@ -176,21 +224,21 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
      FROM public.venta_detalle vd
      INNER JOIN public.ventas v ON v.id = vd.venta_id
      LEFT JOIN public.productos p ON p.id = vd.producto_id
-     WHERE v.cancelada = false
+     WHERE ${ACTIVE_SALES_CONDITION}
        AND v.fecha >= CURRENT_DATE
        AND v.fecha < CURRENT_DATE + INTERVAL '1 day'`
   );
   const ventasTotalEmpresaQ = await pool.query(
-    `SELECT COALESCE(SUM(v.total), 0) AS total
-     FROM public.ventas v
-     WHERE v.cancelada = false`
+     `SELECT COALESCE(SUM(v.total), 0) AS total
+      FROM public.ventas v
+      WHERE ${ACTIVE_SALES_CONDITION}`
   );
   const costoTotalEmpresaQ = await pool.query(
-    `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
-     FROM public.venta_detalle vd
-     INNER JOIN public.ventas v ON v.id = vd.venta_id
-     LEFT JOIN public.productos p ON p.id = vd.producto_id
-     WHERE v.cancelada = false`
+     `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
+      FROM public.venta_detalle vd
+      INNER JOIN public.ventas v ON v.id = vd.venta_id
+      LEFT JOIN public.productos p ON p.id = vd.producto_id
+      WHERE ${ACTIVE_SALES_CONDITION}`
   );
 
   const costoHoy = Number(costoHoyQ.rows[0]?.total || 0);
@@ -252,10 +300,10 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   if (!esPropietario) {
     userParams.push(Number(authUser.id));
   }
-  const whereVentas = `WHERE v.cancelada = false
+  const whereVentas = `WHERE ${ACTIVE_SALES_CONDITION}
     AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))
     ${userClauseVentas}`;
-  const wherePersonalVentas = `WHERE v.cancelada = false
+  const wherePersonalVentas = `WHERE ${ACTIVE_SALES_CONDITION}
     AND DATE(v.fecha) BETWEEN COALESCE($1::date, DATE(v.fecha)) AND COALESCE($2::date, DATE(v.fecha))
     AND v.usuario_id = $3`;
 
@@ -367,10 +415,10 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
 
   const [ultimaVentaQ, mejorDiaSemanaQ, mejorHorarioQ, periodosQ] = await Promise.all([
     pool.query(
-      `SELECT MAX(DATE(v.fecha)) AS ultima_fecha
-       FROM public.ventas v
-       WHERE v.cancelada = false
-          AND v.usuario_id = $1`,
+       `SELECT MAX(DATE(v.fecha)) AS ultima_fecha
+        FROM public.ventas v
+       WHERE ${ACTIVE_SALES_CONDITION}
+           AND v.usuario_id = $1`,
       [targetUsuarioId]
     ),
     pool.query(
@@ -423,9 +471,9 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
            WHERE v.fecha >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
              AND v.fecha < date_trunc('month', CURRENT_DATE)
          ), 0) AS ventas_mes_anterior
-       FROM public.ventas v
-       WHERE v.cancelada = false
-          AND v.usuario_id = $1`,
+        FROM public.ventas v
+        WHERE ${ACTIVE_SALES_CONDITION}
+           AND v.usuario_id = $1`,
       [targetUsuarioId]
     ),
   ]);
@@ -792,10 +840,10 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
        LEFT JOIN public.productos p ON p.id = vd.producto_id
        GROUP BY vd.venta_id
      ) det ON det.venta_id = v.id
-     WHERE v.cancelada = false
-       AND COALESCE(v.estado_entrega, CASE WHEN v.entregado THEN 'entregado' ELSE 'pendiente' END) <> 'entregado'
-       AND v.fecha_entrega IS NOT NULL
-       AND DATE(v.fecha_entrega) BETWEEN $1::date AND $2::date
+      WHERE ${ACTIVE_SALES_CONDITION}
+        AND COALESCE(v.estado_entrega, CASE WHEN v.entregado THEN 'entregado' ELSE 'pendiente' END) <> 'entregado'
+        AND v.fecha_entrega IS NOT NULL
+        AND DATE(v.fecha_entrega) BETWEEN $1::date AND $2::date
        ${userFilter}
       ORDER BY DATE(v.fecha_entrega) ASC, v.fecha ASC, v.id ASC`,
     params
@@ -855,21 +903,23 @@ ventasRouter.get('/', async (req, res) => {
   const result = await pool.query(
     `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
             v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
+            COALESCE(v.eliminada, false) AS eliminada,
             c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
             c.direccion AS cliente_direccion,
             c.horario_apertura AS cliente_horario_apertura, c.horario_cierre AS cliente_horario_cierre,
             c.tiene_reapertura AS cliente_tiene_reapertura,
             c.horario_reapertura AS cliente_horario_reapertura, c.horario_cierre_reapertura AS cliente_horario_cierre_reapertura,
             u.nombre AS usuario_nombre
-     FROM public.ventas v
-     LEFT JOIN public.clientes c ON c.id = v.cliente_id
-     LEFT JOIN public.usuarios u ON u.id = v.usuario_id
-     WHERE (
-       ($1::date IS NOT NULL AND DATE(v.fecha) = $1::date)
-       OR
-       ($1::date IS NULL AND DATE(v.fecha) BETWEEN COALESCE($2::date, DATE(v.fecha)) AND COALESCE($3::date, DATE(v.fecha)))
-     )
-     ORDER BY v.fecha DESC, v.id DESC`,
+      FROM public.ventas v
+      LEFT JOIN public.clientes c ON c.id = v.cliente_id
+      LEFT JOIN public.usuarios u ON u.id = v.usuario_id
+      WHERE (
+        ($1::date IS NOT NULL AND DATE(v.fecha) = $1::date)
+        OR
+        ($1::date IS NULL AND DATE(v.fecha) BETWEEN COALESCE($2::date, DATE(v.fecha)) AND COALESCE($3::date, DATE(v.fecha)))
+      )
+      AND COALESCE(v.eliminada, false) = false
+      ORDER BY v.fecha DESC, v.id DESC`,
     [filterDate, filterDesde, filterHasta]
   );
   const ventas = result.rows;
@@ -906,6 +956,7 @@ ventasRouter.get('/:id', async (req, res) => {
   const ventaResult = await pool.query(
       `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
               v.subtotal, v.descuento_total_tipo, v.descuento_total_valor, v.total, v.medio_pago, v.cancelada, v.entregado, v.estado_entrega,
+              COALESCE(v.eliminada, false) AS eliminada,
               c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo,
               c.direccion AS cliente_direccion,
               c.horario_apertura AS cliente_horario_apertura, c.horario_cierre AS cliente_horario_cierre,
@@ -915,7 +966,8 @@ ventasRouter.get('/:id', async (req, res) => {
        FROM public.ventas v
        LEFT JOIN public.clientes c ON c.id = v.cliente_id
        LEFT JOIN public.usuarios u ON u.id = v.usuario_id
-     WHERE v.id = $1`,
+       WHERE v.id = $1
+         AND COALESCE(v.eliminada, false) = false`,
     [ventaId]
   );
 
@@ -1150,18 +1202,21 @@ ventasRouter.put('/:id/entregado', async (req, res) => {
   }
 
   const result = await pool.query(
-    `UPDATE public.ventas
-     SET entregado = $1,
-          estado_entrega = CASE WHEN $1 THEN 'entregado' ELSE 'pendiente' END
-     WHERE id = $2 AND cancelada = false
+     `UPDATE public.ventas
+      SET entregado = $1,
+           estado_entrega = CASE WHEN $1 THEN 'entregado' ELSE 'pendiente' END
+     WHERE id = $2 AND cancelada = false AND COALESCE(eliminada, false) = false
      RETURNING id, entregado, estado_entrega`,
     [entregado, ventaId]
   );
 
   if (!result.rowCount) {
-    const exists = await pool.query(`SELECT id, cancelada FROM public.ventas WHERE id = $1`, [ventaId]);
+    const exists = await pool.query(`SELECT id, cancelada, COALESCE(eliminada, false) AS eliminada FROM public.ventas WHERE id = $1`, [ventaId]);
     if (!exists.rowCount) {
       return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    if (exists.rows[0].eliminada) {
+      return res.status(400).json({ error: 'No se puede actualizar una venta eliminada' });
     }
     return res.status(400).json({ error: 'No se puede actualizar una venta cancelada' });
   }
@@ -1225,6 +1280,7 @@ ventasRouter.post('/:id/enviar-email', async (req, res) => {
      FROM public.ventas v
      LEFT JOIN public.clientes c ON c.id = v.cliente_id
      WHERE v.id = $1
+       AND COALESCE(v.eliminada, false) = false
      LIMIT 1`,
     [ventaId]
   );
@@ -1290,6 +1346,7 @@ ventasRouter.put('/:id/cancelar', async (req, res) => {
       `SELECT id, cancelada
        FROM public.ventas
        WHERE id = $1
+         AND COALESCE(eliminada, false) = false
        FOR UPDATE`,
       [ventaId]
     );
@@ -1300,50 +1357,7 @@ ventasRouter.put('/:id/cancelar', async (req, res) => {
       throw new Error('La venta ya está cancelada');
     }
 
-    const detalleQ = await client.query(
-      `SELECT vd.producto_id, vd.cantidad, p.nombre AS producto_nombre, p.stock
-       FROM public.venta_detalle vd
-       INNER JOIN public.productos p ON p.id = vd.producto_id
-       WHERE vd.venta_id = $1
-       ORDER BY vd.id ASC
-       FOR UPDATE OF p`,
-      [ventaId]
-    );
-
-    for (const row of detalleQ.rows) {
-      const productoId = Number(row.producto_id);
-      const cantidad = Math.max(0, Math.floor(toNumber(row.cantidad)));
-      if (!cantidad) continue;
-      const stockAnterior = Number(row.stock || 0);
-      const stockNuevo = stockAnterior + cantidad;
-
-      await client.query(
-        `UPDATE public.productos
-         SET stock = $1
-         WHERE id = $2`,
-        [stockNuevo, productoId]
-      );
-
-      await client.query(
-        `INSERT INTO public.movimientos_stock
-          (producto_id, producto_nombre, tipo, origen, cantidad, stock_anterior, stock_nuevo, referencia_tipo, referencia_id, detalle, usuario_id, usuario_nombre)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [
-          productoId,
-          row.producto_nombre || null,
-          'entrada',
-          'cancelacion_venta',
-          cantidad,
-          stockAnterior,
-          stockNuevo,
-          'venta',
-          ventaId,
-          'Reposición de stock por cancelación de venta',
-          authUser?.id || null,
-          actorName(authUser),
-        ]
-      );
-    }
+    await restoreVentaStock(client, ventaId, authUser, 'cancelacion_venta', 'Reposición de stock por cancelación de venta');
 
     const result = await client.query(
       `UPDATE public.ventas
@@ -1376,6 +1390,76 @@ ventasRouter.put('/:id/cancelar', async (req, res) => {
       return res.status(404).json({ error: error.message });
     }
     if (error.message === 'La venta ya está cancelada') {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(400).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+ventasRouter.delete('/:id', async (req, res) => {
+  const ventaId = Number(req.params.id);
+  const authUser = getAuthUserFromRequest(req);
+
+  if (!Number.isInteger(ventaId) || ventaId <= 0) {
+    return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const ventaQ = await client.query(
+      `SELECT id, cancelada, COALESCE(eliminada, false) AS eliminada
+       FROM public.ventas
+       WHERE id = $1
+       FOR UPDATE`,
+      [ventaId]
+    );
+    if (!ventaQ.rowCount) {
+      throw new Error('Venta no encontrada');
+    }
+    if (ventaQ.rows[0].eliminada) {
+      throw new Error('La venta ya está eliminada');
+    }
+
+    if (!ventaQ.rows[0].cancelada) {
+      await restoreVentaStock(client, ventaId, authUser, 'eliminacion_venta', 'Reposición de stock por eliminación de venta');
+    }
+
+    const result = await client.query(
+      `UPDATE public.ventas
+       SET eliminada = true,
+           cancelada = true,
+           entregado = false,
+           estado_entrega = 'cancelado'
+       WHERE id = $1
+       RETURNING id, eliminada, cancelada, estado_entrega`,
+      [ventaId]
+    );
+
+    await client.query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'venta',
+        ventaId,
+        'eliminar',
+        ventaQ.rows[0].cancelada ? 'Venta eliminada lógicamente' : 'Venta eliminada lógicamente y stock repuesto',
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+
+    await client.query('COMMIT');
+    return res.json(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.message === 'Venta no encontrada') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'La venta ya está eliminada') {
       return res.status(400).json({ error: error.message });
     }
     return res.status(400).json({ error: error.message });

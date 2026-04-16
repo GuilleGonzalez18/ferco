@@ -16,8 +16,20 @@ import AppButton from '../../shared/components/button/AppButton';
 
 function todayISO() {
   const now = new Date();
-  const tzOffset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
+  return toISODateValue(now);
+}
+
+function toISODateValue(value) {
+  const date = new Date(value);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+}
+
+function yesterdayISO() {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  now.setDate(now.getDate() - 1);
+  return toISODateValue(now);
 }
 
 function weekRangeISO() {
@@ -29,22 +41,30 @@ function weekRangeISO() {
   start.setDate(now.getDate() + diffToMonday);
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
-  const toISO = (d) => {
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 10);
-  };
-  return { desde: toISO(start), hasta: toISO(end) };
+  return { desde: toISODateValue(start), hasta: toISODateValue(end) };
+}
+
+function previousWeekRangeISO() {
+  const current = weekRangeISO();
+  const start = new Date(`${current.desde}T00:00:00`);
+  start.setDate(start.getDate() - 7);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { desde: toISODateValue(start), hasta: toISODateValue(end) };
 }
 
 function monthRangeISO() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const toISO = (d) => {
-    const tzOffset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 10);
-  };
-  return { desde: toISO(start), hasta: toISO(end) };
+  return { desde: toISODateValue(start), hasta: toISODateValue(end) };
+}
+
+function previousMonthRangeISO() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), 0);
+  return { desde: toISODateValue(start), hasta: toISODateValue(end) };
 }
 
 function tomorrowISO() {
@@ -138,7 +158,8 @@ function escapeHtml(value) {
 }
 
 export default function VentasHistorial() {
-  const [fecha, setFecha] = useState(todayISO());
+  const [desde, setDesde] = useState(todayISO());
+  const [hasta, setHasta] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
   const [ventas, setVentas] = useState([]);
   const [sortBy, setSortBy] = useState('id');
@@ -148,6 +169,7 @@ export default function VentasHistorial() {
   const [printingId, setPrintingId] = useState(null);
   const [updatingEntregaId, setUpdatingEntregaId] = useState(null);
   const [cancelandoVentaId, setCancelandoVentaId] = useState(null);
+  const [eliminandoVentaId, setEliminandoVentaId] = useState(null);
   const [expandedVentaId, setExpandedVentaId] = useState(null);
   const [detalleByVentaId, setDetalleByVentaId] = useState({});
   const [loadingDetalleId, setLoadingDetalleId] = useState(null);
@@ -182,10 +204,20 @@ export default function VentasHistorial() {
 
   useEffect(() => {
     const load = async () => {
+      if (!desde || !hasta) {
+        setVentas([]);
+        setError('');
+        return;
+      }
+      if (desde > hasta) {
+        setVentas([]);
+        setError('La fecha "Desde" no puede ser mayor que "Hasta".');
+        return;
+      }
       setLoading(true);
       setError('');
       try {
-        const rows = await api.getVentas(fecha);
+        const rows = await api.getVentas({ desde, hasta });
         setVentas(rows);
       } catch (err) {
         setError(err.message || 'No se pudieron cargar las ventas.');
@@ -195,7 +227,7 @@ export default function VentasHistorial() {
     };
 
     load();
-  }, [fecha]);
+  }, [desde, hasta]);
 
   const totalDelDia = useMemo(
     () => ventas.filter((v) => {
@@ -465,6 +497,43 @@ export default function VentasHistorial() {
       await appAlert(err.message || 'No se pudo cancelar la venta.');
     } finally {
       setCancelandoVentaId(null);
+    }
+  };
+
+  const eliminarVenta = async (ventaId) => {
+    const venta = ventas.find((v) => Number(v.id) === Number(ventaId));
+    const ok = await appConfirm(
+      venta?.cancelada
+        ? '¿Seguro que deseas eliminar esta venta? Ya no aparecerá en el historial visible.'
+        : '¿Seguro que deseas eliminar esta venta? Se repondrá stock y dejará de contar en listados y estadísticas.',
+      {
+        title: 'Eliminar venta',
+        confirmText: 'Eliminar',
+        cancelText: 'Volver',
+      }
+    );
+    if (!ok) return;
+    setEliminandoVentaId(ventaId);
+    try {
+      await api.deleteVenta(ventaId);
+      window.dispatchEvent(
+        new CustomEvent('ferco:stats-refresh', {
+          detail: { source: 'venta-eliminada', ventaId },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('ferco:stock-refresh', {
+          detail: { source: 'venta-eliminada', ventaId },
+        })
+      );
+      setVentas((prev) => prev.filter((v) => Number(v.id) !== Number(ventaId)));
+      if (expandedVentaId === ventaId) {
+        setExpandedVentaId(null);
+      }
+    } catch (err) {
+      await appAlert(err.message || 'No se pudo eliminar la venta.');
+    } finally {
+      setEliminandoVentaId(null);
     }
   };
 
@@ -793,6 +862,11 @@ export default function VentasHistorial() {
 
   const sortMark = (column) => (sortBy === column ? (sortDir === 'asc' ? '▲' : '▼') : '');
 
+  const aplicarRango = (nextDesde, nextHasta) => {
+    setDesde(nextDesde);
+    setHasta(nextHasta);
+  };
+
   const ventasColumns = [
     {
       key: 'id',
@@ -928,6 +1002,17 @@ export default function VentasHistorial() {
           </AppButton>
           <AppButton
             type="button"
+            className="delete-btn"
+            onClick={() => eliminarVenta(v.id)}
+            disabled={eliminandoVentaId === v.id}
+            title="Eliminar venta"
+            aria-label="Eliminar venta"
+          >
+            <span>{eliminandoVentaId === v.id ? '…' : '🗑'}</span>
+            <small>Eliminar</small>
+          </AppButton>
+          <AppButton
+            type="button"
             className="reprint-btn"
             onClick={() => replicarVenta(v.id)}
             disabled={printingId === v.id}
@@ -984,10 +1069,72 @@ export default function VentasHistorial() {
     <div className="ventas-historial-main">
       <div className="ventas-historial-toolbar">
         <div className="ventas-filtros-group">
+          <div className="ventas-range-stack">
+            <div className="ventas-quick-range-row">
+              <AppButton
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const y = yesterdayISO();
+                  aplicarRango(y, y);
+                }}
+              >
+                Ayer
+              </AppButton>
+              <AppButton
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const range = previousWeekRangeISO();
+                  aplicarRango(range.desde, range.hasta);
+                }}
+              >
+                Semana pasada
+              </AppButton>
+              <AppButton
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const range = previousMonthRangeISO();
+                  aplicarRango(range.desde, range.hasta);
+                }}
+              >
+                Mes anterior
+              </AppButton>
+              <AppButton
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const t = todayISO();
+                  aplicarRango(t, t);
+                }}
+              >
+                Hoy
+              </AppButton>
+              <AppButton
+                type="button"
+                className="ticket-preset-btn"
+                onClick={() => {
+                  const range = monthRangeISO();
+                  aplicarRango(range.desde, range.hasta);
+                }}
+              >
+                Este mes
+              </AppButton>
+            </div>
+            <div className="ventas-range-inputs">
+              <label className="ventas-fecha-filter">
+                <span>Desde</span>
+                <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+              </label>
+              <label className="ventas-fecha-filter">
+                <span>Hasta</span>
+                <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+              </label>
+            </div>
+          </div>
           <label className="ventas-fecha-filter">
-            <AppInput type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-          </label>
-          <label className="ventas-fecha-filter">
+            <span>Estado</span>
             <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
               <option value="todos">Todos</option>
               <option value="pendiente">Pendientes</option>
