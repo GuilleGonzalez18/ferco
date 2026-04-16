@@ -127,6 +127,7 @@ const statements = [
     fecha_entrega timestamp without time zone NULL,
     medio_pago varchar(20) NOT NULL DEFAULT 'efectivo',
     cancelada boolean NOT NULL DEFAULT false,
+    eliminada boolean NOT NULL DEFAULT false,
     entregado boolean NOT NULL DEFAULT false,
     estado_entrega varchar(20) NOT NULL DEFAULT 'pendiente',
     observacion text NULL,
@@ -156,6 +157,13 @@ const statements = [
   `,
   `
   CREATE INDEX IF NOT EXISTS ix_ventas_estado_entrega ON public.ventas (estado_entrega);
+  `,
+  `
+  ALTER TABLE public.ventas
+  ADD COLUMN IF NOT EXISTS eliminada boolean NOT NULL DEFAULT false;
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS ix_ventas_eliminada ON public.ventas (eliminada);
   `,
   `
   ALTER TABLE public.clientes
