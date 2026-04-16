@@ -84,7 +84,8 @@ const statements = [
     ean varchar(80) NULL,
     cantidad_empaque integer NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
-    empaque_id integer NULL
+    empaque_id integer NULL,
+    activo boolean NOT NULL DEFAULT true
   );
   `,
   `
@@ -93,6 +94,10 @@ const statements = [
   `
   ALTER TABLE public.productos
   DROP COLUMN IF EXISTS empaque;
+  `,
+  `
+  ALTER TABLE public.productos
+  ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
   `,
   `
   CREATE TABLE IF NOT EXISTS public.empaques (

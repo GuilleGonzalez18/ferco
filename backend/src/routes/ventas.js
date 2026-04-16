@@ -990,10 +990,13 @@ ventasRouter.post('/', async (req, res) => {
       if (cantidad <= 0) throw new Error('Cantidad inválida en detalle');
 
       const prodResult = await client.query(
-        `SELECT id, nombre, stock FROM public.productos WHERE id = $1 FOR UPDATE`,
+        `SELECT id, nombre, stock
+         FROM public.productos
+         WHERE id = $1 AND activo = true
+         FOR UPDATE`,
         [productoId]
       );
-      if (!prodResult.rowCount) throw new Error(`Producto ${productoId} no existe`);
+      if (!prodResult.rowCount) throw new Error(`Producto ${productoId} no existe o está archivado`);
 
       const stockActual = Number(prodResult.rows[0].stock);
       const productoNombre = prodResult.rows[0].nombre || null;
