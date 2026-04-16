@@ -69,6 +69,8 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [archivadosModalOpen, setArchivadosModalOpen] = useState(false);
+  const [productosArchivados, setProductosArchivados] = useState([]);
   const [empaquesModalOpen, setEmpaquesModalOpen] = useState(false);
   const [empaques, setEmpaques] = useState([]);
   const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
@@ -92,6 +94,18 @@ export default function Productos({ user, productos = [], setProductos }) {
       loadEmpaques();
     });
   }, []);
+
+  const loadProductosArchivados = async () => {
+    try {
+      const rows = await api.getProductos({ includeArchived: true });
+      const archivados = Array.isArray(rows)
+        ? rows.filter((row) => row?.activo === false).map(fromApiProducto)
+        : [];
+      setProductosArchivados(archivados);
+    } catch (error) {
+      await appAlert(error.message || 'No se pudieron cargar los productos archivados.');
+    }
+  };
 
   const normalizeImageUrl = (value) => {
     const trimmed = String(value || '').trim();
@@ -183,18 +197,39 @@ export default function Productos({ user, productos = [], setProductos }) {
   };
 
   const handleEliminar = async id => {
-    const ok = await appConfirm('¿Seguro que deseas eliminar este producto?', {
-      title: 'Eliminar producto',
-      confirmText: 'Eliminar',
+    const ok = await appConfirm('¿Seguro que deseas archivar este producto? Dejará de aparecer en el catálogo y en ventas nuevas.', {
+      title: 'Archivar producto',
+      confirmText: 'Archivar',
       cancelText: 'Cancelar',
     });
     if (!ok) return;
     try {
       await api.deleteProducto(id);
       setProductos(productos.filter(p => p.id !== id));
+      const archivado = productos.find((p) => Number(p.id) === Number(id));
+      if (archivado) {
+        setProductosArchivados((prev) => [archivado, ...prev.filter((p) => Number(p.id) !== Number(id))]);
+      }
       setProductoExpandidoId((prev) => (prev === id ? null : prev));
     } catch (error) {
-      await appAlert(`No se pudo eliminar: ${error.message}`);
+      await appAlert(`No se pudo archivar: ${error.message}`);
+    }
+  };
+
+  const handleRestaurar = async (producto) => {
+    const ok = await appConfirm(`¿Restaurar "${producto.nombre}" al catálogo activo?`, {
+      title: 'Restaurar producto',
+      confirmText: 'Restaurar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      const restored = await api.restoreProducto(producto.id);
+      const mapped = fromApiProducto(restored);
+      setProductos((prev) => [mapped, ...prev.filter((p) => Number(p.id) !== Number(producto.id))]);
+      setProductosArchivados((prev) => prev.filter((p) => Number(p.id) !== Number(producto.id)));
+    } catch (error) {
+      await appAlert(`No se pudo restaurar: ${error.message}`);
     }
   };
 
@@ -902,6 +937,16 @@ export default function Productos({ user, productos = [], setProductos }) {
               <img src="/add.svg" alt="" aria-hidden="true" />
               <span>PRODUCTO</span>
             </AppButton>
+            <AppButton
+              className="agregar-btn toolbar-add"
+              title="Ver archivados"
+              onClick={async () => {
+                await loadProductosArchivados();
+                setArchivadosModalOpen(true);
+              }}
+            >
+              <span>ARCHIVADOS</span>
+            </AppButton>
             <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
               <span>EMPAQUES</span>
             </AppButton>
@@ -972,6 +1017,28 @@ export default function Productos({ user, productos = [], setProductos }) {
           </div>
         )}
 
+        {archivadosModalOpen && (
+          <div className="export-modal-overlay" role="dialog" aria-modal="true">
+            <div className="export-modal-backdrop" onClick={() => setArchivadosModalOpen(false)} />
+            <div className="export-modal">
+              <h4>Productos archivados</h4>
+              <p>Estos productos no aparecen en el catálogo activo ni en ventas nuevas.</p>
+              <div className="empaques-list">
+                {productosArchivados.map((producto) => (
+                  <div key={producto.id} className="empaque-item">
+                    <span>{producto.nombre}</span>
+                    <AppButton type="button" onClick={() => handleRestaurar(producto)}>Restaurar</AppButton>
+                  </div>
+                ))}
+                {!productosArchivados.length && <p className="empaque-empty">No hay productos archivados.</p>}
+              </div>
+              <AppButton type="button" className="export-modal-close" onClick={() => setArchivadosModalOpen(false)}>
+                Cerrar
+              </AppButton>
+            </div>
+          </div>
+        )}
+
         {empaquesModalOpen && (
           <div className="export-modal-overlay" role="dialog" aria-modal="true">
             <div className="export-modal-backdrop" onClick={() => setEmpaquesModalOpen(false)} />
@@ -1030,9 +1097,9 @@ export default function Productos({ user, productos = [], setProductos }) {
                   e.stopPropagation();
                   handleEliminar(p.id);
                 }}
-                title="Eliminar"
+                title="Archivar"
               >
-                Eliminar
+                Archivar
               </AppButton>
             </div>
           )}

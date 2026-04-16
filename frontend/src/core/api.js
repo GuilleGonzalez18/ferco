@@ -77,13 +77,20 @@ export const api = {
   deleteUsuario: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
 
-  getProductos: () => request('/productos'),
+  getProductos: (options = {}) => {
+    const q = new URLSearchParams();
+    if (options?.includeArchived) q.set('includeArchived', 'true');
+    const suffix = q.toString();
+    return request(`/productos${suffix ? `?${suffix}` : ''}`);
+  },
   createProducto: (payload) =>
     request('/productos', { method: 'POST', body: JSON.stringify(payload) }),
   updateProducto: (id, payload) =>
     request(`/productos/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteProducto: (id) =>
     request(`/productos/${id}`, { method: 'DELETE' }),
+  restoreProducto: (id) =>
+    request(`/productos/${id}/restaurar`, { method: 'PATCH' }),
   ajustarStockProducto: (id, stock) =>
     request(`/productos/${id}/stock`, {
       method: 'PATCH',
