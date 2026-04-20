@@ -13,6 +13,7 @@ function isSupportedImageUrl(value) {
 export function fromApiProducto(row) {
   return {
     id: row.id,
+    activo: row.activo !== false,
     nombre: row.nombre || '',
     stock: String(row.stock ?? ''),
     categoria: row.unidad || '',

@@ -12,10 +12,31 @@
 }
 
 .ventas-filtros-group {
-  display: inline-flex;
+  display: flex;
   align-items: end;
+  flex-wrap: wrap;
   gap: 0.55rem;
   min-width: 0;
+}
+
+.ventas-range-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: min(100%, 640px);
+}
+
+.ventas-range-inputs {
+  display: flex;
+  align-items: end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ventas-quick-range-row {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
 .ventas-fecha-filter {

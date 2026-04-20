@@ -17,7 +17,7 @@ function actorName(authUser) {
 async function getProductoRowById(id) {
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
             e.nombre AS empaque_nombre,
             ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
      FROM public.productos p
@@ -28,15 +28,18 @@ async function getProductoRowById(id) {
   return result.rows[0] || null;
 }
 
-productosRouter.get('/', async (_req, res) => {
+productosRouter.get('/', async (req, res) => {
+  const includeArchived = String(req.query.includeArchived || '').toLowerCase() === 'true';
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
             e.nombre AS empaque_nombre,
             ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
-      FROM public.productos p
-      LEFT JOIN public.empaques e ON e.id = p.empaque_id
-      ORDER BY p.id DESC`
+       FROM public.productos p
+       LEFT JOIN public.empaques e ON e.id = p.empaque_id
+      WHERE ($1::boolean = true OR p.activo = true)
+       ORDER BY p.activo DESC, p.id DESC`,
+    [includeArchived]
   );
   res.json(result.rows);
 });
@@ -155,7 +158,7 @@ productosRouter.put('/:id', async (req, res) => {
     }
   }
 
-  const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1`, [id]);
+  const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1 AND activo = true`, [id]);
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
 
@@ -223,9 +226,45 @@ productosRouter.put('/:id', async (req, res) => {
 productosRouter.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
-  const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1`, [id]);
-  const result = await query(`DELETE FROM public.productos WHERE id = $1`, [id]);
+  const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = true`, [id]);
+  const result = await query(
+    `UPDATE public.productos
+     SET activo = false
+     WHERE id = $1 AND activo = true`,
+    [id]
+  );
   if (!result.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
+  const nombre = prevResult.rows[0]?.nombre || `#${id}`;
+  await query(
+    `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'producto',
+        id,
+        'archivar',
+        `Producto archivado: ${nombre}`,
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+  );
+  return res.status(204).send();
+});
+
+productosRouter.patch('/:id/restaurar', async (req, res) => {
+  const id = Number(req.params.id);
+  const authUser = getAuthUserFromRequest(req);
+  const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = false`, [id]);
+  if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto archivado no encontrado' });
+
+  const result = await query(
+    `UPDATE public.productos
+     SET activo = true
+     WHERE id = $1 AND activo = false
+     RETURNING id`,
+    [id]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Producto archivado no encontrado' });
+
   const nombre = prevResult.rows[0]?.nombre || `#${id}`;
   await query(
     `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -233,20 +272,22 @@ productosRouter.delete('/:id', async (req, res) => {
     [
       'producto',
       id,
-      'eliminar',
-      `Producto eliminado: ${nombre}`,
+      'restaurar',
+      `Producto restaurado: ${nombre}`,
       authUser?.id || null,
       actorName(authUser),
     ]
   );
-  return res.status(204).send();
+
+  const restoredRow = await getProductoRowById(id);
+  return res.json(restoredRow);
 });
 
 productosRouter.patch('/:id/stock', async (req, res) => {
   const id = Number(req.params.id);
   const { stock } = req.body;
   const authUser = getAuthUserFromRequest(req);
-  const prev = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1`, [id]);
+  const prev = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1 AND activo = true`, [id]);
   if (!prev.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const stockAnterior = Number(prev.rows[0].stock || 0);
   const stockNuevo = Number(stock || 0);
