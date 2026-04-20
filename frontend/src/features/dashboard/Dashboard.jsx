@@ -10,7 +10,7 @@ import ControlStock from '../stock/ControlStock';
 import './Dashboard.css';
 import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
-import { FiShoppingCart } from 'react-icons/fi';
+import { FiRotateCcw, FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
 
@@ -55,6 +55,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
   const [stockDrawerAbierto, setStockDrawerAbierto] = useState(false);
   const [stockProductoSeleccionado, setStockProductoSeleccionado] = useState(null);
+  const [auditoriaDateFiltersActivos, setAuditoriaDateFiltersActivos] = useState(false);
+  const [auditoriaClearSignal, setAuditoriaClearSignal] = useState(0);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
@@ -81,6 +83,9 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     if (pantalla !== 'control-stock') {
       setStockDrawerAbierto(false);
       setStockProductoSeleccionado(null);
+    }
+    if (pantalla !== 'auditoria') {
+      setAuditoriaDateFiltersActivos(false);
     }
   }, [pantalla]);
 
@@ -178,7 +183,13 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         case 'clientes':     return <Clientes />;
         case 'usuarios':     return <Usuarios currentUser={user} />;
         case 'mi-usuario':   return <MiUsuarioView user={user} />;
-        case 'auditoria':    return <Auditoria />;
+        case 'auditoria':
+          return (
+            <Auditoria
+              onDateFiltersActiveChange={setAuditoriaDateFiltersActivos}
+              clearDateFiltersSignal={auditoriaClearSignal}
+            />
+          );
         case 'control-stock':
           return esPropietario
             ? (
@@ -204,6 +215,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       ventasCarritoAbierto,
       closeVentasCarritoDrawer,
       stockDrawerAbierto,
+      auditoriaClearSignal,
     ]
   );
 
@@ -288,6 +300,18 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
                   <CgArrowsExchange aria-hidden="true" />
                   <span>Stock</span>
                   <span className="ventas-carrito-count">{stockProductoSeleccionado.stock}</span>
+                </button>
+              )}
+              {pantalla === 'auditoria' && (
+                <button
+                  type="button"
+                  className="dashboard-topbar-action auditoria-clear-btn"
+                  onClick={() => setAuditoriaClearSignal((prev) => prev + 1)}
+                  aria-label="Limpiar rango de fechas"
+                  disabled={!auditoriaDateFiltersActivos}
+                >
+                  <FiRotateCcw aria-hidden="true" />
+                  <span>Limpiar</span>
                 </button>
               )}
             </div>

@@ -312,6 +312,11 @@ body.dashboard-scroll-lock {
   border-color: #aac2e2;
 }
 
+.dashboard-topbar-action:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
 .dashboard-topbar-action svg {
   width: 15px;
   height: 15px;

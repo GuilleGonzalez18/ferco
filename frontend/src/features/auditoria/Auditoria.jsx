@@ -28,7 +28,7 @@ function formatQty(value) {
   return Number.isFinite(n) ? n.toLocaleString('es-UY') : String(value ?? '-');
 }
 
-export default function Auditoria() {
+export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersSignal = 0 }) {
   const [activeTab, setActiveTab] = useState('movimientos');
   const [eventos, setEventos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -74,6 +74,19 @@ export default function Auditoria() {
       loadAuditoria(desde, hasta);
     }
   }, [desde, hasta, loadAuditoria]);
+
+  useEffect(() => {
+    if (typeof onDateFiltersActiveChange !== 'function') return undefined;
+    onDateFiltersActiveChange(Boolean(desde || hasta));
+    return () => onDateFiltersActiveChange(false);
+  }, [desde, hasta, onDateFiltersActiveChange]);
+
+  useEffect(() => {
+    if (!clearDateFiltersSignal) return;
+    setDesde('');
+    setHasta('');
+    loadAuditoria('', '');
+  }, [clearDateFiltersSignal, loadAuditoria]);
 
   const movimientosFiltrados = useMemo(() => {
     const q = filtroTextoMov.trim().toLowerCase();
@@ -309,19 +322,6 @@ export default function Auditoria() {
         <div className="auditoria-toolbar-dates auditoria-filtros">
           <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
           <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-        </div>
-        <div className="auditoria-toolbar-actions">
-          <AppButton
-            type="button"
-            className="audit-btn secondary"
-            onClick={() => {
-              setDesde('');
-              setHasta('');
-              loadAuditoria('', '');
-            }}
-          >
-            Limpiar
-          </AppButton>
         </div>
       </div>
 
