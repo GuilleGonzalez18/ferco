@@ -4,8 +4,10 @@ import { api } from '../../core/api';
 import { APP_VERSION } from '../../core/version';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppButton from '../../shared/components/button/AppButton';
+import { useConfig } from '../../core/ConfigContext';
 
 export default function Login({ onLogin }) {
+  const { empresa } = useConfig();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
@@ -81,11 +83,11 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-container">
       <form className="login-form" onSubmit={handleSubmit}>
-          <img
-            src="/images/logo2.png"
-            alt="Logo de la empresa"
-            className="login-logo"
-          />
+          {empresa.logo_base64 ? (
+            <img src={empresa.logo_base64} alt={empresa.nombre || 'Logo'} className="login-logo" />
+          ) : (
+            <img src="/images/logo2.png" alt="Logo de la empresa" className="login-logo" />
+          )}
           <h2>Iniciar sesión</h2>
         <AppInput
           type="email"

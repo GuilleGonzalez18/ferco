@@ -7,12 +7,14 @@ import Auditoria from '../auditoria/Auditoria';
 import Usuarios from '../usuarios/Usuarios';
 import Estadisticas from '../estadisticas/Estadisticas';
 import ControlStock from '../stock/ControlStock';
+import Configuracion from '../configuracion/Configuracion';
 import './Dashboard.css';
 import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
 import { FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
+import { useConfig } from '../../core/ConfigContext';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
@@ -24,6 +26,7 @@ const OPCIONES = [
   { key: 'auditoria', label: 'Auditoría', topbarTitle: 'Auditoría y movimientos de stock', icon: '/auditory.svg' },
   { key: 'control-stock', label: 'Control de stock', topbarTitle: 'Control de stock', icon: 'stock-control' },
   { key: 'estadisticas', label: 'Estadísticas', topbarTitle: 'Estadísticas comerciales', icon: '/stats.svg' },
+  { key: 'configuracion', label: 'Configuración', topbarTitle: 'Configuración del sistema', icon: '/settings.svg' },
 ];
 
 function Placeholder({ titulo, icon }) {
@@ -55,10 +58,19 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
   const [resumen, setResumen] = useState(null);
   const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const { empresa, modulos } = useConfig();
   const opcionesMenu = OPCIONES.filter((op) => {
-    if (op.key === 'usuarios' || op.key === 'control-stock') return esPropietario;
-    if (op.key === 'mi-usuario') return !esPropietario;
-    if (op.key === 'estadisticas') return esPropietario;
+    if (op.key === 'usuarios' || op.key === 'control-stock') {
+      if (!esPropietario) return false;
+    }
+    if (op.key === 'mi-usuario' && esPropietario) return false;
+    if (op.key === 'estadisticas' && !esPropietario) return false;
+    if (op.key === 'configuracion' && !esPropietario) return false;
+
+    if (modulos.length > 0) {
+      const mod = modulos.find((m) => m.codigo === op.key);
+      if (mod && !mod.habilitado) return false;
+    }
     return true;
   });
 
@@ -172,6 +184,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             ? <ControlStock productos={productos} setProductos={setProductos} />
             : <Placeholder titulo="Acceso restringido" icon="X" />;
         case 'estadisticas': return <Estadisticas />;
+        case 'configuracion':
+          return esPropietario ? <Configuracion /> : <Placeholder titulo="Acceso restringido" icon="🔒" />;
         default:             return null;
       }
     },
@@ -211,7 +225,11 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             title="Ir al dashboard"
             aria-label="Ir al dashboard"
           >
-            <img src="/images/logo2.png" alt="Logo" className="dashboard-logo" />
+            <img
+              src={empresa.logo_base64 || '/images/logo2.png'}
+              alt={empresa.nombre || 'Logo'}
+              className="dashboard-logo"
+            />
           </button>
         </div>
         <nav className="dashboard-nav">

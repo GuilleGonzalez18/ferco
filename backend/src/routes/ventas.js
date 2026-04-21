@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
 import { sendMail } from '../mailer.js';
+import { getMetodoGanancias, calcularGanancia } from '../gananciaCalculator.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -219,31 +220,13 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     });
   }
 
-  const costoHoyQ = await pool.query(
-    `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
-     FROM public.venta_detalle vd
-     INNER JOIN public.ventas v ON v.id = vd.venta_id
-     LEFT JOIN public.productos p ON p.id = vd.producto_id
-     WHERE ${ACTIVE_SALES_CONDITION}
-       AND v.fecha >= CURRENT_DATE
-       AND v.fecha < CURRENT_DATE + INTERVAL '1 day'`
-  );
-  const ventasTotalEmpresaQ = await pool.query(
-     `SELECT COALESCE(SUM(v.total), 0) AS total
-      FROM public.ventas v
-      WHERE ${ACTIVE_SALES_CONDITION}`
-  );
-  const costoTotalEmpresaQ = await pool.query(
-     `SELECT COALESCE(SUM(vd.cantidad * COALESCE(p.costo, 0)), 0) AS total
-      FROM public.venta_detalle vd
-      INNER JOIN public.ventas v ON v.id = vd.venta_id
-      LEFT JOIN public.productos p ON p.id = vd.producto_id
-      WHERE ${ACTIVE_SALES_CONDITION}`
-  );
+  const todayISO = new Date().toISOString().slice(0, 10);
 
-  const costoHoy = Number(costoHoyQ.rows[0]?.total || 0);
-  const ventasTotalEmpresa = Number(ventasTotalEmpresaQ.rows[0]?.total || 0);
-  const costoTotalEmpresa = Number(costoTotalEmpresaQ.rows[0]?.total || 0);
+  const metodoGanancias = await getMetodoGanancias();
+  const [{ ganancia: gananciaHoy }, { ganancia: gananciaTotalEmpresa }] = await Promise.all([
+    calcularGanancia(metodoGanancias, { desde: todayISO, hasta: todayISO }),
+    calcularGanancia(metodoGanancias, {}),
+  ]);
 
   return res.json({
     scope: 'propietario',
@@ -252,8 +235,8 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     cantidadVentasHoy,
     cantidadVentasMes,
     promedioVentasMensual,
-    gananciaHoy: ventasHoy - costoHoy,
-    gananciaTotalEmpresa: ventasTotalEmpresa - costoTotalEmpresa,
+    gananciaHoy,
+    gananciaTotalEmpresa,
   });
 });
 
@@ -601,7 +584,12 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   }));
 
   const costoVentasTotales = Number(costoVentasTotalesQ.rows[0]?.costo_ventas_totales || 0);
-  const ganancia = Number(promedioVenta.ventas_totales || 0) - costoVentasTotales;
+  const metodoGanancias = await getMetodoGanancias();
+  const { ganancia } = await calcularGanancia(metodoGanancias, {
+    desde: fechaDesde,
+    hasta: fechaHasta,
+    ...(esPropietario ? {} : { usuarioId: targetUsuarioId }),
+  });
   const costoVentasSerie = serieCostoVentasQ.rows.map((row) => ({
     fecha: row.fecha,
     total: Number(row.total_costo_ventas || 0),

@@ -6,6 +6,7 @@ import AppDialogHost from './shared/components/dialog/AppDialogHost';
 import './App.css';
 import { api } from './core/api';
 import { fromApiProducto } from './shared/lib/productMapper';
+import { ConfigProvider } from './core/ConfigContext';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -17,10 +18,7 @@ function App() {
   useEffect(() => {
     const restoreSession = async () => {
       const token = api.getAuthToken();
-      if (!token) {
-        setAuthReady(true);
-        return;
-      }
+      if (!token) { setAuthReady(true); return; }
       try {
         const currentUser = await api.me();
         setUser(currentUser);
@@ -45,9 +43,7 @@ function App() {
         setProductosError(error.message || 'No se pudieron cargar productos.');
       }
     };
-    const onStockRefresh = () => {
-      loadProductos();
-    };
+    const onStockRefresh = () => { loadProductos(); };
     loadProductos();
     window.addEventListener('ferco:stock-refresh', onStockRefresh);
     return () => window.removeEventListener('ferco:stock-refresh', onStockRefresh);
@@ -63,34 +59,36 @@ function App() {
     return () => window.removeEventListener('ferco:user-updated', onUserUpdated);
   }, []);
 
-  if (!authReady) return null;
-
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
-
   return (
-    <div className="app-shell">
+    <ConfigProvider>
       <AppDialogHost />
-      {productosError ? (
+      {productosError && (
         <div className="app-global-alert app-global-alert-error" role="alert">
           {productosError}
         </div>
-      ) : null}
-      <Dashboard
-        user={user}
-        pantalla={pantalla}
-        productos={productos}
-        setProductos={setProductos}
-        onNavigate={setPantalla}
-        onLogout={() => {
-          api.clearAuthToken();
-          setUser(null);
-          setPantalla('');
-        }}
-      />
-    </div>
+      )}
+      {authReady && (
+        !user ? (
+          <Login onLogin={setUser} />
+        ) : (
+          <div className="app-shell">
+            <Dashboard
+              user={user}
+              pantalla={pantalla}
+              productos={productos}
+              setProductos={setProductos}
+              onNavigate={setPantalla}
+              onLogout={() => {
+                api.clearAuthToken();
+                setUser(null);
+                setPantalla('');
+              }}
+            />
+          </div>
+        )
+      )}
+    </ConfigProvider>
   );
 }
 
-export default App
+export default App;

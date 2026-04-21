@@ -184,4 +184,18 @@ export const api = {
     const suffix = q.toString();
     return request(`/auditoria/stock-costo-serie${suffix ? `?${suffix}` : ''}`);
   },
+
+  // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────
+  getConfigEmpresa: () => request('/configuracion/empresa'),
+  updateConfigEmpresa: (payload) =>
+    request('/configuracion/empresa', { method: 'PUT', body: JSON.stringify(payload) }),
+  getConfigModulos: () => request('/configuracion/modulos'),
+  updateConfigModulo: (codigo, habilitado) =>
+    request(`/configuracion/modulos/${codigo}`, {
+      method: 'PUT',
+      body: JSON.stringify({ habilitado }),
+    }),
+  getConfigGanancias: () => request('/configuracion/ganancias'),
+  updateConfigGanancias: (payload) =>
+    request('/configuracion/ganancias', { method: 'PUT', body: JSON.stringify(payload) }),
 };
