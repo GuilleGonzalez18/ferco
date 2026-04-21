@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import './VentasHistorial.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -158,6 +160,7 @@ function escapeHtml(value) {
 }
 
 export default function VentasHistorial() {
+  const { empresa } = useConfig();
   const [desde, setDesde] = useState(todayISO());
   const [hasta, setHasta] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
@@ -302,7 +305,8 @@ export default function VentasHistorial() {
     let cursorY = 12;
 
     try {
-      const logo = await loadImage('/images/encabezadofacturacion.png');
+      const logoSrc = empresa.logo_base64 || '/images/encabezadofacturacion.png';
+      const logo = await loadImage(logoSrc);
       const logoWidth = 120;
       const logoHeight = 24;
       const x = (pageWidth - logoWidth) / 2;
@@ -341,7 +345,7 @@ export default function VentasHistorial() {
         formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0)),
       ]),
       styles: { fontSize: 9 },
-      headStyles: { fillColor: [55, 95, 140] },
+      headStyles: { fillColor: getPrimaryRgb() },
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
@@ -555,7 +559,8 @@ export default function VentasHistorial() {
       const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
 
       try {
-        const logo = await loadImage('/images/encabezadofacturacion.png');
+        const logoSrc = empresa.logo_base64 || '/images/encabezadofacturacion.png';
+        const logo = await loadImage(logoSrc);
         const logoWidth = 120;
         const logoHeight = 24;
         const x = (pageWidth - logoWidth) / 2;
@@ -592,7 +597,7 @@ export default function VentasHistorial() {
         head: entregaHead,
         body: entregaBody,
         styles: { fontSize: 8, valign: 'middle', cellPadding: 2 },
-        headStyles: { fillColor: [55, 95, 140] },
+        headStyles: { fillColor: getPrimaryRgb() },
         columnStyles: {
           0: { cellWidth: 18 },
           1: { cellWidth: 36 },
@@ -754,7 +759,7 @@ export default function VentasHistorial() {
         head: entregaHead,
         body: entregaBody,
         styles: { fontSize: 8, valign: 'middle' },
-        headStyles: { fillColor: [55, 95, 140] },
+        headStyles: { fillColor: getPrimaryRgb() },
         columnStyles: {
           0: { cellWidth: 18 },
           1: { cellWidth: 36 },

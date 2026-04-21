@@ -4,7 +4,7 @@
 
 .usuarios-main h3 {
   margin: 0 0 0.65rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.98rem;
 }
 
@@ -23,9 +23,9 @@
 .icon-btn {
   min-width: 40px;
   height: 40px;
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -51,7 +51,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: inherit;
   text-align: left;
@@ -121,8 +121,8 @@
 
 .lista-usuarios .header {
   font-weight: 700;
-  color: #375f8c;
-  background: #eaf0fa;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 .lista-usuarios .vacio {
@@ -202,7 +202,7 @@
 
 .side-panel-header h3 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
@@ -212,7 +212,7 @@
   width: 30px;
   height: 30px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -226,7 +226,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -249,7 +249,7 @@
   font-size: 0.8rem;
   cursor: pointer;
   color: #fff;
-  background: #375f8c;
+  background: var(--color-primary);
 }
 
 .usuario-form-actions button[type='button'] {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,6 +31,7 @@ function formatQty(value) {
 }
 
 export default function Auditoria() {
+  const { empresa } = useConfig();
   const [eventos, setEventos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -267,8 +270,9 @@ export default function Auditoria() {
         doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
         resolve(40);
       };
+      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
       const logo = new Image();
-      logo.src = '/images/logo2.png';
+      logo.src = logoSrc;
       logo.onload = () => {
         doc.addImage(logo, 'PNG', 10, 10, 40, 20);
         finish();
@@ -292,7 +296,7 @@ export default function Auditoria() {
         m.usuario_nombre || '-',
       ]),
       styles: { fontSize: 8.8 },
-      headStyles: { fillColor: [55, 95, 140] },
+      headStyles: { fillColor: getPrimaryRgb() },
     });
     doc.save('auditoria-stock.pdf');
   };

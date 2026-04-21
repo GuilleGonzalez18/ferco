@@ -544,6 +544,11 @@ const statements = [
   AND NOT EXISTS (SELECT 1 FROM public.config_ganancias)
   LIMIT 1;
   `,
+  // === NUEVAS COLUMNAS CONFIG_EMPRESA (v2) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text varchar(7) DEFAULT '#1d2b3e';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text_muted varchar(7) DEFAULT '#526278';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_menu_text varchar(7) DEFAULT '#e6ecf4';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS fondo_base64 text NULL;`,
 ];
 
 try {

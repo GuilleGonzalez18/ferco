@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #375f8c;
+  background: var(--color-primary);
 }
 
 .menu-vendedor-title {
@@ -27,7 +27,7 @@
   padding: 1.1rem 0;
   font-size: 1.15rem;
   font-weight: 600;
-  color: #375f8c;
+  color: var(--color-primary);
   background: #fff;
   border: none;
   border-radius: 8px;

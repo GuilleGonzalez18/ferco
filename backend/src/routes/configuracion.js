@@ -18,9 +18,10 @@ configuracionRouter.get('/empresa', requireAuth, async (req, res) => {
 configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req, res) => {
   const {
     nombre, razon_social, rut, direccion, telefono, correo, website,
-    logo_base64,
+    logo_base64, fondo_base64,
     color_primary, color_primary_strong, color_primary_soft,
     color_menu_bg, color_menu_active,
+    color_text, color_text_muted, color_menu_text,
   } = req.body;
 
   try {
@@ -38,18 +39,25 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         telefono             = $5,
         correo               = $6,
         website              = $7,
-        logo_base64          = COALESCE($8, logo_base64),
-        color_primary        = COALESCE($9,  color_primary),
-        color_primary_strong = COALESCE($10, color_primary_strong),
-        color_primary_soft   = COALESCE($11, color_primary_soft),
-        color_menu_bg        = COALESCE($12, color_menu_bg),
-        color_menu_active    = COALESCE($13, color_menu_active),
+        logo_base64          = CASE WHEN $8::text IS NULL THEN logo_base64 WHEN $8::text = '' THEN NULL ELSE $8::text END,
+        color_primary        = COALESCE($9::varchar,  color_primary),
+        color_primary_strong = COALESCE($10::varchar, color_primary_strong),
+        color_primary_soft   = COALESCE($11::varchar, color_primary_soft),
+        color_menu_bg        = COALESCE($12::varchar, color_menu_bg),
+        color_menu_active    = COALESCE($13::varchar, color_menu_active),
+        color_text           = COALESCE($14::varchar, color_text),
+        color_text_muted     = COALESCE($15::varchar, color_text_muted),
+        color_menu_text      = COALESCE($16::varchar, color_menu_text),
+        fondo_base64         = CASE WHEN $17::text IS NULL THEN fondo_base64 WHEN $17::text = '' THEN NULL ELSE $17::text END,
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
       RETURNING *`,
       [nombre, razon_social, rut, direccion, telefono, correo, website,
-       logo_base64, color_primary, color_primary_strong, color_primary_soft,
-       color_menu_bg, color_menu_active]
+       logo_base64 ?? null,
+       color_primary, color_primary_strong, color_primary_soft,
+       color_menu_bg, color_menu_active,
+       color_text, color_text_muted, color_menu_text,
+       fondo_base64 ?? null]
     );
     res.json(result.rows[0]);
   } catch (err) {

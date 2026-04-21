@@ -3,6 +3,8 @@ import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
@@ -56,11 +58,13 @@ function escapeHtml(value) {
 
 function detectImageFormat(url) {
   const value = String(url || '').toLowerCase();
-  if (value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
+  if (value.startsWith('data:image/jpeg') || value.startsWith('data:image/jpg') || value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
+  if (value.startsWith('data:image/webp')) return 'WEBP';
   return 'PNG';
 }
 
 export default function Productos({ user, productos = [], setProductos }) {
+  const { empresa } = useConfig();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -268,53 +272,59 @@ export default function Productos({ user, productos = [], setProductos }) {
     }
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    // Logo
-    const logo = new Image();
-    logo.src = '/images/logo2.png';
-    logo.onload = () => {
-      doc.addImage(logo, 'PNG', 10, 10, 40, 20);
-      doc.setFontSize(16);
-      doc.text('Lista de Productos', 55, 22);
-      doc.setFontSize(10);
-      doc.text('Emitido: ' + fecha, 55, 28);
-      autoTable(doc, {
-        startY: 35,
-        head: [[
-          'Nombre',
-          'Stock',
-          ...(esPropietario ? ['Costo'] : []),
-          'Venta',
-          'Empaque',
-          ...(esPropietario ? ['Ganancia x U'] : []),
-        ]],
-        body: sortedProductos.map(p => [
-          p.nombre,
-          p.stock,
-          ...(esPropietario ? [formatMoney(p.costo)] : []),
-          formatMoney(p.venta),
-          `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
-          ...(esPropietario ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
-        ]),
-        didParseCell: function (data) {
-          if (data.section !== 'body') return;
-          const producto = sortedProductos[data.row.index];
-          const state = stockState(producto?.stock);
-          if (state === 'stock-zero') {
-            data.cell.styles.fillColor = [246, 196, 196];
-            data.cell.styles.textColor = [127, 29, 29];
-          } else if (state === 'stock-low') {
-            data.cell.styles.fillColor = [255, 236, 173];
-            data.cell.styles.textColor = [120, 53, 15];
-          }
-        },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [55, 95, 140] },
+    const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+    try {
+      const logo = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = logoSrc;
       });
-      doc.save('productos.pdf');
-    };
+      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+    } catch {
+      // sin logo
+    }
+    doc.setFontSize(16);
+    doc.text('Lista de Productos', 55, 22);
+    doc.setFontSize(10);
+    doc.text('Emitido: ' + fecha, 55, 28);
+    autoTable(doc, {
+      startY: 35,
+      head: [[
+        'Nombre',
+        'Stock',
+        ...(esPropietario ? ['Costo'] : []),
+        'Venta',
+        'Empaque',
+        ...(esPropietario ? ['Ganancia x U'] : []),
+      ]],
+      body: sortedProductos.map(p => [
+        p.nombre,
+        p.stock,
+        ...(esPropietario ? [formatMoney(p.costo)] : []),
+        formatMoney(p.venta),
+        `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
+        ...(esPropietario ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
+      ]),
+      didParseCell: function (data) {
+        if (data.section !== 'body') return;
+        const producto = sortedProductos[data.row.index];
+        const state = stockState(producto?.stock);
+        if (state === 'stock-zero') {
+          data.cell.styles.fillColor = [246, 196, 196];
+          data.cell.styles.textColor = [127, 29, 29];
+        } else if (state === 'stock-low') {
+          data.cell.styles.fillColor = [255, 236, 173];
+          data.cell.styles.textColor = [120, 53, 15];
+        }
+      },
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: getPrimaryRgb() },
+    });
+    doc.save('productos.pdf');
   };
 
   const exportarExcel = () => {
@@ -489,13 +499,14 @@ export default function Productos({ user, productos = [], setProductos }) {
     let col = 0;
 
     try {
+      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
       const logo = await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = reject;
-        img.src = '/images/logo2.png';
+        img.src = logoSrc;
       });
-      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
+      doc.addImage(logo, detectImageFormat(logoSrc), margin, 8, 24, 12);
     } catch {
       // noop
     }
@@ -577,13 +588,14 @@ export default function Productos({ user, productos = [], setProductos }) {
     let col = 0;
 
     try {
+      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
       const logo = await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = reject;
-        img.src = '/images/logo2.png';
+        img.src = logoSrc;
       });
-      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
+      doc.addImage(logo, detectImageFormat(logoSrc), margin, 8, 24, 12);
     } catch {
       // noop
     }

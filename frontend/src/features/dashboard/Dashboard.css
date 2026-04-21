@@ -234,7 +234,7 @@ body.dashboard-scroll-lock {
       rgba(246, 249, 253, 0.72) 36%,
       rgba(246, 249, 253, 0.88) 100%
     ),
-    url('/images/background.jpg');
+    var(--dashboard-bg-image, url('/images/background.jpg'));
   background-size: cover;
   background-position: center;
   filter: blur(4px) saturate(0.96);
@@ -289,7 +289,7 @@ body.dashboard-scroll-lock {
 .dashboard-topbar-action {
   border: 1px solid #d2deed;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   border-radius: 8px;
   min-height: 36px;
   padding: 0.35rem 0.6rem;
@@ -445,7 +445,7 @@ body.dashboard-scroll-lock {
 
 .landing-card h2 {
   margin: 0 0 0.45rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 1.35rem;
 }
 

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import './Clientes.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -14,6 +16,7 @@ import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitH
 import AppButton from '../../shared/components/button/AppButton';
 
 export default function Clientes() {
+  const { empresa } = useConfig();
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const MINUTOS = ['00', '15', '30', '45'];
 
@@ -265,7 +268,7 @@ export default function Clientes() {
           formatHorarioCliente(c).replace(' y ', '\n'),
         ]),
         styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
-        headStyles: { fillColor: [55, 95, 140] },
+        headStyles: { fillColor: getPrimaryRgb() },
         tableWidth: 'wrap',
         columnStyles: {
           0: { cellWidth: 28 },
@@ -280,8 +283,9 @@ export default function Clientes() {
       doc.save('clientes.pdf');
     };
 
+    const logoSrc = empresa.logo_base64 || '/images/logo2.png';
     const logo = new Image();
-    logo.src = '/images/logo2.png';
+    logo.src = logoSrc;
     logo.onload = () => renderPdf(logo);
     logo.onerror = () => renderPdf();
   };

@@ -100,6 +100,14 @@
   background: var(--color-surface);
 }
 
+.config-fondo-preview {
+  max-height: 100px;
+  max-width: 200px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
 .config-logo-placeholder {
   font-size: var(--font-sm);
   color: var(--color-text-muted);
@@ -112,6 +120,35 @@
   font-size: var(--font-xs);
   color: var(--color-text-muted);
   margin: 0;
+}
+
+.config-paleta-sugerida {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-paleta-label {
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  margin: 0;
+  font-weight: var(--weight-medium);
+}
+
+.config-paleta-preview {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.config-paleta-actions {
+  display: flex;
+  gap: var(--space-sm);
 }
 
 .config-colors-grid {

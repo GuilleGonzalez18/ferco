@@ -62,7 +62,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -175,7 +175,7 @@
 }
 
 .productos-total-card strong {
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.96rem;
 }
 
@@ -228,7 +228,7 @@
 }
 
 .nombre-cell strong {
-  color: #1f2933;
+  color: var(--color-text);
   line-height: 1.1;
 }
 
@@ -296,7 +296,7 @@
   width: 100%;
 }
 .lista-productos .cat {
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -326,7 +326,7 @@
   text-decoration: underline;
 }
 .lista-productos .header {
-  background: #eaf0fa;
+  background: var(--color-primary-soft);
   border-bottom: 2px solid var(--menu-active);
   font-size: 0.84rem;
 }
@@ -369,7 +369,7 @@
   filter: brightness(0) invert(1);
 }
 .exportar-pdf:hover {
-  background: #2f5279;
+  background: var(--color-primary-strong);
 }
 
 .export-modal-overlay {
@@ -397,7 +397,7 @@
 
 .export-modal h4 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .export-modal p {
@@ -408,7 +408,7 @@
 
 .export-modal-section-title {
   margin: 0.7rem 0 0.45rem !important;
-  color: #375f8c !important;
+  color: var(--color-primary) !important;
   font-size: 0.82rem !important;
   font-weight: 800;
   text-transform: uppercase;
@@ -423,9 +423,9 @@
 
 .export-modal-actions button,
 .export-modal-close {
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.45rem 0.7rem;
   font-size: 0.82rem;
@@ -471,9 +471,9 @@
 }
 
 .empaques-create-row button {
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.45rem 0.7rem;
   font-size: 0.82rem;
@@ -565,7 +565,7 @@
 
 .side-panel-header h3 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
@@ -575,7 +575,7 @@
   width: 30px;
   height: 30px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   cursor: pointer;
 }
 

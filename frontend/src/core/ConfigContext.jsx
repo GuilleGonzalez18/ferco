@@ -9,6 +9,10 @@ const DEFAULTS = {
   color_primary_soft: '#e7effa',
   color_menu_bg: '#1f2933',
   color_menu_active: '#375f8c',
+  color_text: '#1d2b3e',
+  color_text_muted: '#526278',
+  color_menu_text: '#e6ecf4',
+  fondo_base64: null,
 };
 
 const ConfigContext = createContext({
@@ -27,6 +31,14 @@ function applyColors(empresa) {
   root.style.setProperty('--menu-hover', empresa.color_menu_bg || DEFAULTS.color_menu_bg);
   root.style.setProperty('--menu-active', empresa.color_menu_active || DEFAULTS.color_menu_active);
   root.style.setProperty('--field-focus-border', empresa.color_primary || DEFAULTS.color_primary);
+  root.style.setProperty('--color-text', empresa.color_text || DEFAULTS.color_text);
+  root.style.setProperty('--color-text-muted', empresa.color_text_muted || DEFAULTS.color_text_muted);
+  root.style.setProperty('--menu-text', empresa.color_menu_text || DEFAULTS.color_menu_text);
+  root.style.setProperty(
+    '--dashboard-bg-image',
+    empresa.fondo_base64 ? `url(${empresa.fondo_base64})` : "url('/images/background.jpg')"
+  );
+  document.title = empresa.nombre ? `${empresa.nombre} | StockUp` : 'StockUp';
 }
 
 export function ConfigProvider({ children }) {

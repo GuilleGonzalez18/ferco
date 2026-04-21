@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
@@ -171,6 +173,7 @@ export default function Ventas({
   onCloseCarritoDrawer,
   onCarritoCountChange,
 }) {
+  const { empresa } = useConfig();
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [vistaProductos, setVistaProductos] = useState('grid');
@@ -686,7 +689,8 @@ export default function Ventas({
     let cursorY = 12;
 
     try {
-      const logo = await loadImage('/images/encabezadofacturacion.png');
+      const logoSrc = empresa.logo_base64 || '/images/encabezadofacturacion.png';
+      const logo = await loadImage(logoSrc);
       const logoWidth = 64;
       const logoHeight = 12;
       const x = (pageWidth - logoWidth) / 2;
@@ -730,7 +734,7 @@ export default function Ventas({
         money(item.subtotalBase),
       ]),
       styles: { fontSize: 9 },
-      headStyles: { fillColor: [55, 95, 140] },
+      headStyles: { fillColor: getPrimaryRgb() },
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;

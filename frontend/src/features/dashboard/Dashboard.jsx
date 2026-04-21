@@ -12,6 +12,7 @@ import './Dashboard.css';
 import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
 import { FiShoppingCart } from 'react-icons/fi';
+import { RiSettings3Line } from 'react-icons/ri';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
 import { useConfig } from '../../core/ConfigContext';
@@ -26,7 +27,7 @@ const OPCIONES = [
   { key: 'auditoria', label: 'Auditoría', topbarTitle: 'Auditoría y movimientos de stock', icon: '/auditory.svg' },
   { key: 'control-stock', label: 'Control de stock', topbarTitle: 'Control de stock', icon: 'stock-control' },
   { key: 'estadisticas', label: 'Estadísticas', topbarTitle: 'Estadísticas comerciales', icon: '/stats.svg' },
-  { key: 'configuracion', label: 'Configuración', topbarTitle: 'Configuración del sistema', icon: '/settings.svg' },
+  { key: 'configuracion', label: 'Configuración', topbarTitle: 'Configuración del sistema', icon: 'configuracion' },
 ];
 
 function Placeholder({ titulo, icon }) {
@@ -242,6 +243,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             >
               {icon === 'stock-control'
                 ? <CgArrowsExchange className="nav-icon-svg" aria-hidden="true" />
+                : icon === 'configuracion'
+                ? <RiSettings3Line className="nav-icon-svg" aria-hidden="true" />
                 : <img src={icon} alt="" className="nav-icon-img" aria-hidden="true" />}
               {label}
             </button>
