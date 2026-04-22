@@ -466,7 +466,7 @@ function TabModulos({ onSaved }) {
         <h3 className="config-section-title">Módulos del sistema</h3>
         <p className="config-hint">Habilitá o deshabilitá secciones del menú. Los módulos deshabilitados no aparecen en la navegación.</p>
         <div className="config-modulos-list">
-          {modulos.map((mod) => (
+          {modulos.filter((mod) => mod.codigo !== 'configuracion').map((mod) => (
             <div key={mod.codigo} className="config-modulo-row">
               <div className="config-modulo-info">
                 <span className="config-modulo-label">{mod.label}</span>
