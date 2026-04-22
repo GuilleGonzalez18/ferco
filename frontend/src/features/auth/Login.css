@@ -4,8 +4,8 @@
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 45%),
-    linear-gradient(140deg, #132437 0%, #1f2933 56%, #27384c 100%);
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(140deg, var(--color-primary-strong) 0%, var(--menu-bg) 56%, var(--color-primary) 100%);
   padding: 1rem;
 }
 

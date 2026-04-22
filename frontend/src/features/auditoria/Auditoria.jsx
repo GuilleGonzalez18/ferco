@@ -270,7 +270,7 @@ export default function Auditoria() {
         doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
         resolve(40);
       };
-      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
       const logo = new Image();
       logo.src = logoSrc;
       logo.onload = () => {

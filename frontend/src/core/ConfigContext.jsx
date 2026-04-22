@@ -2,17 +2,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { api } from './api';
 
 const DEFAULTS = {
-  nombre: 'Mi Empresa',
+  nombre: '',
   logo_base64: null,
-  color_primary: '#375f8c',
-  color_primary_strong: '#294c74',
-  color_primary_soft: '#e7effa',
-  color_menu_bg: '#1f2933',
-  color_menu_active: '#375f8c',
+  color_primary: '#cc2222',
+  color_primary_strong: '#8f0e0e',
+  color_primary_soft: '#fce8e8',
+  color_menu_bg: '#3d1a08',
+  color_menu_active: '#cc2222',
   color_text: '#1d2b3e',
   color_text_muted: '#526278',
-  color_menu_text: '#e6ecf4',
+  color_menu_text: '#f5e6e6',
   fondo_base64: null,
+  configurado: false,
 };
 
 const ConfigContext = createContext({
@@ -38,7 +39,7 @@ function applyColors(empresa) {
     '--dashboard-bg-image',
     empresa.fondo_base64 ? `url(${empresa.fondo_base64})` : "url('/images/background.jpg')"
   );
-  document.title = empresa.nombre ? `${empresa.nombre} | StockUp` : 'StockUp';
+  document.title = empresa.nombre ? `${empresa.nombre} | Mercatus` : 'Mercatus';
 }
 
 export function ConfigProvider({ children }) {

@@ -467,11 +467,11 @@ const statements = [
     correo varchar(180) NULL,
     website varchar(255) NULL,
     logo_base64 text NULL,
-    color_primary varchar(7) NOT NULL DEFAULT '#375f8c',
-    color_primary_strong varchar(7) NOT NULL DEFAULT '#294c74',
-    color_primary_soft varchar(7) NOT NULL DEFAULT '#e7effa',
-    color_menu_bg varchar(7) NOT NULL DEFAULT '#1f2933',
-    color_menu_active varchar(7) NOT NULL DEFAULT '#375f8c',
+    color_primary varchar(7) NOT NULL DEFAULT '#cc2222',
+    color_primary_strong varchar(7) NOT NULL DEFAULT '#8f0e0e',
+    color_primary_soft varchar(7) NOT NULL DEFAULT '#fce8e8',
+    color_menu_bg varchar(7) NOT NULL DEFAULT '#3d1a08',
+    color_menu_active varchar(7) NOT NULL DEFAULT '#cc2222',
     updated_at timestamp without time zone NOT NULL DEFAULT now()
   );
   `,
@@ -547,8 +547,10 @@ const statements = [
   // === NUEVAS COLUMNAS CONFIG_EMPRESA (v2) ===
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text varchar(7) DEFAULT '#1d2b3e';`,
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text_muted varchar(7) DEFAULT '#526278';`,
-  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_menu_text varchar(7) DEFAULT '#e6ecf4';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_menu_text varchar(7) DEFAULT '#f5e6e6';`,
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS fondo_base64 text NULL;`,
+  // === FLAG WIZARD CONFIGURACIÓN INICIAL (v3) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS configurado boolean NOT NULL DEFAULT false;`,
 ];
 
 try {

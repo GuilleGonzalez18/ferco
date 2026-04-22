@@ -86,7 +86,7 @@ export default function Login({ onLogin }) {
           {empresa.logo_base64 ? (
             <img src={empresa.logo_base64} alt={empresa.nombre || 'Logo'} className="login-logo" />
           ) : (
-            <img src="/images/logo2.png" alt="Logo de la empresa" className="login-logo" />
+            <img src="/mercatus-logo.png" alt="Mercatus" className="login-logo" />
           )}
           <h2>Iniciar sesión</h2>
         <AppInput

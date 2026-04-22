@@ -283,7 +283,7 @@ export default function Clientes() {
       doc.save('clientes.pdf');
     };
 
-    const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
     const logo = new Image();
     logo.src = logoSrc;
     logo.onload = () => renderPdf(logo);

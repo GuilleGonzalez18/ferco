@@ -227,7 +227,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             aria-label="Ir al dashboard"
           >
             <img
-              src={empresa.logo_base64 || '/images/logo2.png'}
+              src={empresa.logo_base64 || '/mercatus-logo.png'}
               alt={empresa.nombre || 'Logo'}
               className="dashboard-logo"
             />

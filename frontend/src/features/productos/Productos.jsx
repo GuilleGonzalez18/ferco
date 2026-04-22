@@ -275,7 +275,7 @@ export default function Productos({ user, productos = [], setProductos }) {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
     try {
       const logo = await new Promise((resolve, reject) => {
         const img = new Image();
@@ -448,7 +448,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       </head>
       <body>
         <div class="header">
-          <img class="logo" src="/images/logo2.png" alt="Ferco" />
+          <img class="logo" src="/mercatus-logo.png" alt="Ferco" />
           <div>
             <h1>Catálogo de Productos</h1>
             <div class="meta">Actualizado: ${updatedAt}</div>
@@ -499,7 +499,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     let col = 0;
 
     try {
-      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
       const logo = await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -588,7 +588,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     let col = 0;
 
     try {
-      const logoSrc = empresa.logo_base64 || '/images/logo2.png';
+      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
       const logo = await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);

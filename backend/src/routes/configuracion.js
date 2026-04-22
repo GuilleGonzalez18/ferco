@@ -6,7 +6,7 @@ export const configuracionRouter = Router();
 
 // ── EMPRESA ──────────────────────────────────────────────────────────────────
 
-configuracionRouter.get('/empresa', requireAuth, async (req, res) => {
+configuracionRouter.get('/empresa', async (req, res) => {
   try {
     const result = await query('SELECT * FROM public.config_empresa LIMIT 1');
     res.json(result.rows[0] ?? {});
@@ -22,6 +22,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
     color_primary, color_primary_strong, color_primary_soft,
     color_menu_bg, color_menu_active,
     color_text, color_text_muted, color_menu_text,
+    configurado,
   } = req.body;
 
   try {
@@ -49,6 +50,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         color_text_muted     = COALESCE($15::varchar, color_text_muted),
         color_menu_text      = COALESCE($16::varchar, color_menu_text),
         fondo_base64         = CASE WHEN $17::text IS NULL THEN fondo_base64 WHEN $17::text = '' THEN NULL ELSE $17::text END,
+        configurado          = CASE WHEN $18::boolean IS TRUE THEN true ELSE configurado END,
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
       RETURNING *`,
@@ -57,7 +59,8 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
        color_primary, color_primary_strong, color_primary_soft,
        color_menu_bg, color_menu_active,
        color_text, color_text_muted, color_menu_text,
-       fondo_base64 ?? null]
+       fondo_base64 ?? null,
+       configurado ?? null]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -67,7 +70,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
 
 // ── MÓDULOS ───────────────────────────────────────────────────────────────────
 
-configuracionRouter.get('/modulos', requireAuth, async (req, res) => {
+configuracionRouter.get('/modulos', async (req, res) => {
   try {
     const result = await query(
       'SELECT * FROM public.config_modulos ORDER BY orden ASC'

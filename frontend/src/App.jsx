@@ -2,17 +2,78 @@
 import { useEffect, useState } from 'react';
 import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
+import SetupWizard from './features/setup/SetupWizard';
 import AppDialogHost from './shared/components/dialog/AppDialogHost';
 import './App.css';
 import { api } from './core/api';
 import { fromApiProducto } from './shared/lib/productMapper';
-import { ConfigProvider } from './core/ConfigContext';
+import { ConfigProvider, useConfig } from './core/ConfigContext';
 
-function App() {
-  const [user, setUser] = useState(null);
+// Componente interno con acceso al ConfigContext
+function AppShell({ user, onLogout }) {
+  const { empresa, loading } = useConfig();
+  const [wizardCompleto, setWizardCompleto] = useState(false);
   const [pantalla, setPantalla] = useState('');
   const [productos, setProductos] = useState([]);
   const [productosError, setProductosError] = useState('');
+
+  const esPropietario = 
+    user?.rol === 'propietario' || user?.rol === 'admin' ||
+    user?.tipo === 'propietario' || user?.tipo === 'admin';
+
+  // Empresa sin configurar: flag configurado === false en la BD
+  const empresaSinConfigurar =
+    !loading &&
+    esPropietario &&
+    !wizardCompleto &&
+    empresa.configurado === false;
+
+  useEffect(() => {
+    const loadProductos = async () => {
+      try {
+        const rows = await api.getProductos();
+        setProductos(rows.map(fromApiProducto));
+        setProductosError('');
+      } catch (error) {
+        console.error('Error cargando productos', error);
+        setProductosError(error.message || 'No se pudieron cargar productos.');
+      }
+    };
+    const onStockRefresh = () => loadProductos();
+    loadProductos();
+    window.addEventListener('ferco:stock-refresh', onStockRefresh);
+    return () => window.removeEventListener('ferco:stock-refresh', onStockRefresh);
+  }, []);
+
+  if (loading) return null;
+
+  if (empresaSinConfigurar) {
+    return <SetupWizard onComplete={() => setWizardCompleto(true)} />;
+  }
+
+  return (
+    <>
+      {productosError && (
+        <div className="app-global-alert app-global-alert-error" role="alert">
+          {productosError}
+        </div>
+      )}
+      <div className="app-shell">
+        <Dashboard
+          user={user}
+          pantalla={pantalla}
+          productos={productos}
+          setProductos={setProductos}
+          onNavigate={setPantalla}
+          onLogout={onLogout}
+        />
+      </div>
+    </>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -32,24 +93,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
-    const loadProductos = async () => {
-      try {
-        const rows = await api.getProductos();
-        setProductos(rows.map(fromApiProducto));
-        setProductosError('');
-      } catch (error) {
-        console.error('Error cargando productos', error);
-        setProductosError(error.message || 'No se pudieron cargar productos.');
-      }
-    };
-    const onStockRefresh = () => { loadProductos(); };
-    loadProductos();
-    window.addEventListener('ferco:stock-refresh', onStockRefresh);
-    return () => window.removeEventListener('ferco:stock-refresh', onStockRefresh);
-  }, [authReady]);
-
-  useEffect(() => {
     const onUserUpdated = (event) => {
       const updated = event?.detail;
       if (!updated?.id) return;
@@ -59,32 +102,19 @@ function App() {
     return () => window.removeEventListener('ferco:user-updated', onUserUpdated);
   }, []);
 
+  const handleLogout = () => {
+    api.clearAuthToken();
+    setUser(null);
+  };
+
   return (
     <ConfigProvider>
       <AppDialogHost />
-      {productosError && (
-        <div className="app-global-alert app-global-alert-error" role="alert">
-          {productosError}
-        </div>
-      )}
       {authReady && (
         !user ? (
           <Login onLogin={setUser} />
         ) : (
-          <div className="app-shell">
-            <Dashboard
-              user={user}
-              pantalla={pantalla}
-              productos={productos}
-              setProductos={setProductos}
-              onNavigate={setPantalla}
-              onLogout={() => {
-                api.clearAuthToken();
-                setUser(null);
-                setPantalla('');
-              }}
-            />
-          </div>
+          <AppShell user={user} onLogout={handleLogout} />
         )
       )}
     </ConfigProvider>

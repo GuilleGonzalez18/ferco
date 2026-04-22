@@ -75,7 +75,7 @@ async function main() {
   const unidades = ['unidad', 'kg', 'lt', 'pack', 'caja'];
   const nombresEmpaques = ['pack', 'caja', 'bolsa', 'bandeja'];
   const imagenesProductos = [
-    '/images/logo2.png',
+    '/mercatus-logo.png',
     '/images/logo.png',
     '/images/background.jpg',
     '/images/Ferco - Logotipo Final WEB PNG (1).png',
