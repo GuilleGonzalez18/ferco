@@ -49,7 +49,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         color_text           = COALESCE($14::varchar, color_text),
         color_text_muted     = COALESCE($15::varchar, color_text_muted),
         color_menu_text      = COALESCE($16::varchar, color_menu_text),
-        fondo_base64         = CASE WHEN $17::text IS NULL THEN fondo_base64 WHEN $17::text = '' THEN NULL ELSE $17::text END,
+        fondo_base64         = CASE WHEN $17::text IS NULL THEN fondo_base64 WHEN $17::text = '' THEN '__none__' ELSE $17::text END,
         configurado          = CASE WHEN $18::boolean IS TRUE THEN true ELSE configurado END,
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
@@ -59,7 +59,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
        color_primary, color_primary_strong, color_primary_soft,
        color_menu_bg, color_menu_active,
        color_text, color_text_muted, color_menu_text,
-       fondo_base64 ?? null,
+       fondo_base64 === undefined ? null : (fondo_base64 === '' ? '' : (fondo_base64 ?? null)),
        configurado ?? null]
     );
     res.json(result.rows[0]);

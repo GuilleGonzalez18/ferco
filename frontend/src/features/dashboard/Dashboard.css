@@ -261,18 +261,11 @@ body.dashboard-scroll-lock {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(246, 249, 253, 0.84) 0%,
-      rgba(246, 249, 253, 0.72) 36%,
-      rgba(246, 249, 253, 0.88) 100%
-    ),
-    var(--dashboard-bg-image, url('/images/background.jpg'));
-  background-size: cover;
+  background-image: var(--dashboard-bg-image, url('/mercatus-logo.png'));
+  background-size: var(--dashboard-bg-size, contain);
   background-position: center;
-  filter: blur(4px) saturate(0.96);
-  transform: scale(1.02);
+  background-repeat: no-repeat;
+  opacity: 0.06;
   z-index: -2;
 }
 

@@ -159,7 +159,7 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
         color_text: initialEmpresa.color_text || '#1d2b3e',
         color_text_muted: initialEmpresa.color_text_muted || '#526278',
         color_menu_text: initialEmpresa.color_menu_text || '#e6ecf4',
-        fondo_base64: initialEmpresa.fondo_base64 || null,
+        fondo_base64: initialEmpresa.fondo_base64 === '__none__' ? '' : (initialEmpresa.fondo_base64 || null),
       });
     }
   }, [initialEmpresa]);
@@ -322,14 +322,21 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
             <div className="config-logo-preview-wrap">
               <img src={form.fondo_base64} alt="Fondo preview" className="config-fondo-preview" />
               <AppButton type="button" tone="danger" size="sm" onClick={handleRemoveFondo}>
-                Quitar fondo
+                Sin fondo
               </AppButton>
             </div>
+          ) : form.fondo_base64 === '' ? (
+            <div className="config-logo-placeholder">Sin fondo (fondo blanco)</div>
           ) : (
-            <div className="config-logo-placeholder">Usando imagen por defecto</div>
+            <div className="config-logo-preview-wrap">
+              <img src="/mercatus-logo.png" alt="Fondo por defecto" className="config-fondo-preview" style={{ objectFit: 'contain', opacity: 0.5 }} />
+              <AppButton type="button" tone="danger" size="sm" onClick={handleRemoveFondo}>
+                Sin fondo
+              </AppButton>
+            </div>
           )}
           <AppButton type="button" size="sm" onClick={() => fondoRef.current?.click()}>
-            {form.fondo_base64 && form.fondo_base64 !== '' ? 'Cambiar fondo' : 'Subir fondo'}
+            {form.fondo_base64 && form.fondo_base64 !== '' ? 'Cambiar fondo' : 'Subir imagen personalizada'}
           </AppButton>
           <input
             ref={fondoRef}

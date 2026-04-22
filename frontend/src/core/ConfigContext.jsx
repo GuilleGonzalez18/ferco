@@ -35,9 +35,17 @@ function applyColors(empresa) {
   root.style.setProperty('--color-text', empresa.color_text || DEFAULTS.color_text);
   root.style.setProperty('--color-text-muted', empresa.color_text_muted || DEFAULTS.color_text_muted);
   root.style.setProperty('--menu-text', empresa.color_menu_text || DEFAULTS.color_menu_text);
+  // '__none__' = usuario eligió sin fondo; null = nunca configurado = logo Mercatus por defecto
+  const fondoVal = empresa.fondo_base64;
+  const bgImage = (fondoVal === '__none__' || fondoVal === '')
+    ? 'none'
+    : fondoVal
+      ? `url(${fondoVal})`
+      : "url('/mercatus-logo.png')";
+  root.style.setProperty('--dashboard-bg-image', bgImage);
   root.style.setProperty(
-    '--dashboard-bg-image',
-    empresa.fondo_base64 ? `url(${empresa.fondo_base64})` : "url('/images/background.jpg')"
+    '--dashboard-bg-size',
+    (fondoVal && fondoVal !== '__none__' && fondoVal !== '') ? 'cover' : 'contain'
   );
   document.title = empresa.nombre ? `${empresa.nombre} | Mercatus` : 'Mercatus';
 }
