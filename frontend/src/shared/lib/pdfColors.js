@@ -44,3 +44,40 @@ export function cssVarToRgb(varName, fallback = [55, 95, 140]) {
 export function getPrimaryRgb() {
   return cssVarToRgb('--color-primary', [55, 95, 140]);
 }
+
+/**
+ * Detecta el formato de imagen para jsPDF a partir de una URL o base64.
+ * @param {string} url
+ * @returns {'PNG'|'JPEG'|'WEBP'}
+ */
+export function detectImageFormat(url) {
+  const value = String(url || '').toLowerCase();
+  if (value.startsWith('data:image/jpeg') || value.startsWith('data:image/jpg') || value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
+  if (value.startsWith('data:image/webp')) return 'WEBP';
+  return 'PNG';
+}
+
+/**
+ * Carga una imagen para jsPDF. Usa logo_base64 de la empresa si existe,
+ * sino cae a /mercatus-logo.png. Retorna una Promise<HTMLImageElement | null>.
+ * @param {string|null} logoBase64
+ * @returns {Promise<HTMLImageElement|null>}
+ */
+export function loadLogoForPdf(logoBase64) {
+  return new Promise((resolve) => {
+    const src = logoBase64 || '/mercatus-logo.png';
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      if (src !== '/mercatus-logo.png') {
+        const fallback = new Image();
+        fallback.onload = () => resolve(fallback);
+        fallback.onerror = () => resolve(null);
+        fallback.src = '/mercatus-logo.png';
+      } else {
+        resolve(null);
+      }
+    };
+    img.src = src;
+  });
+}

@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
-import { getPrimaryRgb } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Clientes.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -243,57 +243,51 @@ export default function Clientes() {
     }
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const renderPdf = (logoImage = null) => {
-      let startY = 30;
-      if (logoImage) {
-        doc.addImage(logoImage, 'PNG', 10, 10, 40, 20);
-        doc.setFontSize(16);
-        doc.text('Lista de Clientes', 55, 22);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 55, 28);
-        startY = 35;
-      } else {
-        doc.setFontSize(16);
-        doc.text('Lista de Clientes', 14, 18);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 14, 24);
-      }
-
-      autoTable(doc, {
-        startY,
-        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Horarios']],
-        body: filtrados.map((c) => [
-          c.nombre || '',
-          c.rut || '',
-          c.direccion || '',
-          c.telefono || '',
-          c.correo || '',
-          formatHorarioCliente(c).replace(' y ', '\n'),
-        ]),
-        styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
-        headStyles: { fillColor: getPrimaryRgb() },
-        tableWidth: 'wrap',
-        columnStyles: {
-          0: { cellWidth: 28 },
-          1: { cellWidth: 18 },
-          2: { cellWidth: 44 },
-          3: { cellWidth: 20 },
-          4: { cellWidth: 32 },
-          5: { cellWidth: 36 },
-        },
-      });
-
-      doc.save('clientes.pdf');
-    };
-
+    const logo = await loadLogoForPdf(empresa.logo_base64);
     const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-    const logo = new Image();
-    logo.src = logoSrc;
-    logo.onload = () => renderPdf(logo);
-    logo.onerror = () => renderPdf();
+    let startY = 30;
+    if (logo) {
+      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+      doc.setFontSize(16);
+      doc.text('Lista de Clientes', 55, 22);
+      doc.setFontSize(10);
+      doc.text(`Emitido: ${fecha}`, 55, 28);
+    } else {
+      doc.setFontSize(16);
+      doc.text('Lista de Clientes', 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Emitido: ${fecha}`, 14, 24);
+      startY = 30;
+    }
+
+    autoTable(doc, {
+      startY,
+      head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Horarios']],
+      body: filtrados.map((c) => [
+        c.nombre || '',
+        c.rut || '',
+        c.direccion || '',
+        c.telefono || '',
+        c.correo || '',
+        formatHorarioCliente(c).replace(' y ', '\n'),
+      ]),
+      styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
+      headStyles: { fillColor: getPrimaryRgb() },
+      tableWidth: 'wrap',
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 44 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 36 },
+      },
+    });
+
+    doc.save('clientes.pdf');
   };
 
   const exportarExcel = () => {

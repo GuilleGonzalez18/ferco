@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
-import { getPrimaryRgb } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './VentasHistorial.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -305,13 +305,15 @@ export default function VentasHistorial() {
     let cursorY = 12;
 
     try {
-      const logoSrc = empresa.logo_base64 || '/images/encabezadofacturacion.png';
-      const logo = await loadImage(logoSrc);
-      const logoWidth = 120;
-      const logoHeight = 24;
-      const x = (pageWidth - logoWidth) / 2;
-      doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-      cursorY += logoHeight + 6;
+      const logo = await loadLogoForPdf(empresa.logo_base64);
+      if (logo) {
+        const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+        const logoWidth = 120;
+        const logoHeight = 24;
+        const x = (pageWidth - logoWidth) / 2;
+        doc.addImage(logo, detectImageFormat(logoSrc), x, cursorY, logoWidth, logoHeight);
+        cursorY += logoHeight + 6;
+      }
     } catch {
       cursorY += 2;
     }
@@ -559,13 +561,15 @@ export default function VentasHistorial() {
       const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
 
       try {
-        const logoSrc = empresa.logo_base64 || '/images/encabezadofacturacion.png';
-        const logo = await loadImage(logoSrc);
-        const logoWidth = 120;
-        const logoHeight = 24;
-        const x = (pageWidth - logoWidth) / 2;
-        doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-        cursorY += logoHeight + 6;
+        const logo = await loadLogoForPdf(empresa.logo_base64);
+        if (logo) {
+          const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+          const logoWidth = 120;
+          const logoHeight = 24;
+          const x = (pageWidth - logoWidth) / 2;
+          doc.addImage(logo, detectImageFormat(logoSrc), x, cursorY, logoWidth, logoHeight);
+          cursorY += logoHeight + 6;
+        }
       } catch {
         cursorY += 2;
       }

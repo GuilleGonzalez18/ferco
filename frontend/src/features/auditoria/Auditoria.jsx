@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
-import { getPrimaryRgb } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -262,26 +262,20 @@ export default function Auditoria() {
     return `Hasta ${hasta}`;
   };
 
-  const withHeaderLogo = (doc, titulo) =>
-    new Promise((resolve) => {
-      const fecha = new Date().toLocaleDateString();
-      const finish = () => {
-        doc.setFontSize(16);
-        doc.text(titulo, 55, 22);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 55, 28);
-        doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
-        resolve(40);
-      };
-      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-      const logo = new Image();
-      logo.src = logoSrc;
-      logo.onload = () => {
-        doc.addImage(logo, 'PNG', 10, 10, 40, 20);
-        finish();
-      };
-      logo.onerror = finish;
-    });
+  const withHeaderLogo = async (doc, titulo) => {
+    const fecha = new Date().toLocaleDateString();
+    const logo = await loadLogoForPdf(empresa.logo_base64);
+    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+    if (logo) {
+      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+    }
+    doc.setFontSize(16);
+    doc.text(titulo, 55, 22);
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${fecha}`, 55, 28);
+    doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
+    return 40;
+  };
 
   const exportarStockPDF = async () => {
     const doc = new jsPDF();

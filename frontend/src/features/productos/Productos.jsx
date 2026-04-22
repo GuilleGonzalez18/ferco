@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
-import { getPrimaryRgb } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
@@ -55,13 +55,6 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-function detectImageFormat(url) {
-  const value = String(url || '').toLowerCase();
-  if (value.startsWith('data:image/jpeg') || value.startsWith('data:image/jpg') || value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
-  if (value.startsWith('data:image/webp')) return 'WEBP';
-  return 'PNG';
 }
 
 export default function Productos({ user, productos = [], setProductos }) {
@@ -285,16 +278,9 @@ export default function Productos({ user, productos = [], setProductos }) {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
     const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-    try {
-      const logo = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = logoSrc;
-      });
+    const logo = await loadLogoForPdf(empresa.logo_base64);
+    if (logo) {
       doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
-    } catch {
-      // sin logo
     }
     doc.setFontSize(16);
     doc.text('Lista de Productos', 55, 22);
@@ -507,18 +493,9 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    try {
-      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-      const logo = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = logoSrc;
-      });
-      doc.addImage(logo, detectImageFormat(logoSrc), margin, 8, 24, 12);
-    } catch {
-      // noop
-    }
+    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+    const headerLogo = await loadLogoForPdf(empresa.logo_base64);
+    if (headerLogo) doc.addImage(headerLogo, detectImageFormat(logoSrc), margin, 8, 24, 12);
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -596,18 +573,9 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    try {
-      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-      const logo = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = logoSrc;
-      });
-      doc.addImage(logo, detectImageFormat(logoSrc), margin, 8, 24, 12);
-    } catch {
-      // noop
-    }
+    const logoSrc2 = empresa.logo_base64 || '/mercatus-logo.png';
+    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64);
+    if (headerLogo2) doc.addImage(headerLogo2, detectImageFormat(logoSrc2), margin, 8, 24, 12);
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
