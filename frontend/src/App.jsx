@@ -8,6 +8,7 @@ import './App.css';
 import { api } from './core/api';
 import { fromApiProducto } from './shared/lib/productMapper';
 import { ConfigProvider, useConfig } from './core/ConfigContext';
+import { PermisosProvider } from './core/PermisosContext';
 
 // Componente interno con acceso al ConfigContext
 function AppShell({ user, onLogout }) {
@@ -52,7 +53,7 @@ function AppShell({ user, onLogout }) {
   }
 
   return (
-    <>
+    <PermisosProvider userTipo={user?.tipo}>
       {productosError && (
         <div className="app-global-alert app-global-alert-error" role="alert">
           {productosError}
@@ -68,7 +69,7 @@ function AppShell({ user, onLogout }) {
           onLogout={onLogout}
         />
       </div>
-    </>
+    </PermisosProvider>
   );
 }
 

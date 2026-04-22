@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
 import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import './Clientes.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
@@ -17,6 +18,11 @@ import AppButton from '../../shared/components/button/AppButton';
 
 export default function Clientes() {
   const { empresa } = useConfig();
+  const { can } = usePermisos();
+  const puedeExportar = can('clientes', 'exportar');
+  const puedeAgregar = can('clientes', 'agregar');
+  const puedeEditar = can('clientes', 'editar');
+  const puedeEliminar = can('clientes', 'eliminar');
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const MINUTOS = ['00', '15', '30', '45'];
 
@@ -479,6 +485,7 @@ export default function Clientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        {puedeAgregar && (
         <AppButton
           type="button"
           className="icon-btn"
@@ -488,9 +495,12 @@ export default function Clientes() {
           <img src="/add.svg" alt="" aria-hidden="true" />
           <span>CLIENTE</span>
         </AppButton>
+        )}
+        {puedeExportar && (
         <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
           <img src="/print.svg" alt="" aria-hidden="true" />
         </AppButton>
+        )}
       </div>
 
       {exportModalOpen && (
@@ -531,6 +541,7 @@ export default function Clientes() {
         expandedRowId={clienteExpandidoId}
         renderExpandedRow={(c) => (
           <div className="acciones-cliente-panel">
+            {puedeEditar && (
             <AppButton
               type="button"
               className="edit-btn"
@@ -541,6 +552,8 @@ export default function Clientes() {
             >
               Editar
             </AppButton>
+            )}
+            {puedeEliminar && (
             <AppButton
               type="button"
               className="delete-btn"
@@ -551,6 +564,7 @@ export default function Clientes() {
             >
               Eliminar
             </AppButton>
+            )}
           </div>
         )}
       />

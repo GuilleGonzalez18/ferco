@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
 import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
@@ -79,7 +80,15 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [empaques, setEmpaques] = useState([]);
   const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
   const mostrarOpcionesCatalogo = false;
-  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const { can } = usePermisos();
+  const verCosto = can('productos', 'ver_costo');
+  const verGanancia = can('productos', 'ver_ganancia');
+  const puedeAgregar = can('productos', 'agregar');
+  const puedeEditar = can('productos', 'editar');
+  const puedeEliminar = can('productos', 'eliminar');
+  const puedeExportar = can('productos', 'exportar');
+  const verArchivados = can('productos', 'ver_archivados');
+  const gestionarEmpaques = can('productos', 'gestionar_empaques');
   const [nuevo, setNuevo] = useState({
     nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
@@ -296,18 +305,18 @@ export default function Productos({ user, productos = [], setProductos }) {
       head: [[
         'Nombre',
         'Stock',
-        ...(esPropietario ? ['Costo'] : []),
+        ...(verCosto ? ['Costo'] : []),
         'Venta',
         'Empaque',
-        ...(esPropietario ? ['Ganancia x U'] : []),
+        ...(verGanancia ? ['Ganancia x U'] : []),
       ]],
       body: sortedProductos.map(p => [
         p.nombre,
         p.stock,
-        ...(esPropietario ? [formatMoney(p.costo)] : []),
+        ...(verCosto ? [formatMoney(p.costo)] : []),
         formatMoney(p.venta),
         `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
-        ...(esPropietario ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
+        ...(verGanancia ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
       ]),
       didParseCell: function (data) {
         if (data.section !== 'body') return;
@@ -330,16 +339,16 @@ export default function Productos({ user, productos = [], setProductos }) {
   const exportarExcel = () => {
     const rowsHtml = sortedProductos.map((p, idx) => {
       const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
-      const ganancia = esPropietario ? formatMoney(calcularGananciaUnidad(p.costo, p.venta)) : '';
+      const ganancia = verGanancia ? formatMoney(calcularGananciaUnidad(p.costo, p.venta)) : '';
       return `
         <tr style="background:${zebra}">
           <td>${p.nombre || ''}</td>
           <td>${p.ean || ''}</td>
           <td style="text-align:center">${p.stock || 0}</td>
-          ${esPropietario ? `<td style="text-align:right">${formatMoney(p.costo)}</td>` : ''}
+          ${verCosto ? `<td style="text-align:right">${formatMoney(p.costo)}</td>` : ''}
           <td style="text-align:right">${formatMoney(p.venta)}</td>
           <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
-          ${esPropietario ? `<td style="text-align:right">${ganancia}</td>` : ''}
+          ${verGanancia ? `<td style="text-align:right">${ganancia}</td>` : ''}
         </tr>
       `;
     }).join('');
@@ -354,10 +363,10 @@ export default function Productos({ user, productos = [], setProductos }) {
                 <th>Nombre</th>
                 <th>Código</th>
                 <th>Stock</th>
-                ${esPropietario ? '<th>Costo</th>' : ''}
+                ${verCosto ? '<th>Costo</th>' : ''}
                 <th>Venta</th>
                 <th>Empaque</th>
-                ${esPropietario ? '<th>Ganancia x U</th>' : ''}
+                ${verGanancia ? '<th>Ganancia x U</th>' : ''}
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -383,10 +392,10 @@ export default function Productos({ user, productos = [], setProductos }) {
         <td>${p.nombre || ''}</td>
         <td>${p.ean || '-'}</td>
         <td>${p.stock || 0}</td>
-        ${esPropietario ? `<td>${formatMoney(p.costo)}</td>` : ''}
+        ${verCosto ? `<td>${formatMoney(p.costo)}</td>` : ''}
         <td>${formatMoney(p.venta)}</td>
         <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
-        ${esPropietario ? `<td>${formatMoney(calcularGananciaUnidad(p.costo, p.venta))}</td>` : ''}
+        ${verGanancia ? `<td>${formatMoney(calcularGananciaUnidad(p.costo, p.venta))}</td>` : ''}
       </tr>
     `).join('');
     const w = window.open('', '_blank', 'noopener,noreferrer,width=980,height=700');
@@ -404,7 +413,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         <h2>Lista de productos</h2>
         <table>
           <thead><tr>
-            <th>Nombre</th><th>Código</th><th>Stock</th>${esPropietario ? '<th>Costo</th>' : ''}<th>Venta</th><th>Empaque</th>${esPropietario ? '<th>Ganancia x U</th>' : ''}
+            <th>Nombre</th><th>Código</th><th>Stock</th>${verCosto ? '<th>Costo</th>' : ''}<th>Venta</th><th>Empaque</th>${verGanancia ? '<th>Ganancia x U</th>' : ''}
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
@@ -733,7 +742,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         case 'empaque':
           return asText(a.tipoEmpaque).localeCompare(asText(b.tipoEmpaque)) * dir;
         case 'ganancia': {
-          if (!esPropietario) return 0;
+          if (!verGanancia) return 0;
           const ag = calcularGananciaUnidad(a.costo, a.venta);
           const bg = calcularGananciaUnidad(b.costo, b.venta);
           return (ag - bg) * dir;
@@ -754,7 +763,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     });
 
     return list;
-  }, [productosFiltrados, sortBy, sortDir, esPropietario]);
+  }, [productosFiltrados, sortBy, sortDir, verCosto, verGanancia]);
 
   const totalesInventario = useMemo(() => {
     return productos.reduce((acc, p) => {
@@ -851,7 +860,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       cellClassName: (p) => `stock-value ${stockState(p.stock)}`,
       render: (p) => p.stock,
     },
-    ...(esPropietario
+    ...(verCosto
       ? [{
           key: 'costo',
           header: (
@@ -885,7 +894,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       mobileLabel: 'Empaque',
       render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
     },
-    ...(esPropietario
+    ...(verGanancia
       ? [{
           key: 'ganancia',
           header: (
@@ -945,10 +954,13 @@ export default function Productos({ user, productos = [], setProductos }) {
             onChange={(e) => setBusqueda(e.target.value)}
           />
           <div className="productos-toolbar-actions">
+            {puedeAgregar && (
             <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
               <img src="/add.svg" alt="" aria-hidden="true" />
               <span>PRODUCTO</span>
             </AppButton>
+            )}
+            {verArchivados && (
             <AppButton
               className="agregar-btn toolbar-add"
               title="Ver archivados"
@@ -959,28 +971,37 @@ export default function Productos({ user, productos = [], setProductos }) {
             >
               <span>ARCHIVADOS</span>
             </AppButton>
+            )}
+            {gestionarEmpaques && (
             <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
               <span>EMPAQUES</span>
             </AppButton>
+            )}
+            {puedeExportar && (
             <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
               <img src="/print.svg" alt="" aria-hidden="true" />
             </AppButton>
+            )}
           </div>
         </div>
 
         <div className="productos-totales">
-          <div className="productos-total-card">
-            <span>Total Costo</span>
-            <strong>{formatMoney(totalesInventario.totalCosto)}</strong>
-          </div>
+          {verCosto && (
+            <div className="productos-total-card">
+              <span>Total Costo</span>
+              <strong>{formatMoney(totalesInventario.totalCosto)}</strong>
+            </div>
+          )}
           <div className="productos-total-card">
             <span>Total Venta</span>
             <strong>{formatMoney(totalesInventario.totalVenta)}</strong>
           </div>
-          <div className="productos-total-card">
-            <span>Total Ganancia</span>
-            <strong>{formatMoney(totalesInventario.totalGanancia)}</strong>
-          </div>
+          {verGanancia && (
+            <div className="productos-total-card">
+              <span>Total Ganancia</span>
+              <strong>{formatMoney(totalesInventario.totalGanancia)}</strong>
+            </div>
+          )}
         </div>
 
         {exportModalOpen && (
@@ -1093,6 +1114,7 @@ export default function Productos({ user, productos = [], setProductos }) {
           expandedRowId={productoExpandidoId}
           renderExpandedRow={(p) => (
             <div className="acciones-producto-panel">
+              {puedeEditar && (
               <AppButton
                 className="edit-btn"
                 onClick={(e) => {
@@ -1103,6 +1125,8 @@ export default function Productos({ user, productos = [], setProductos }) {
               >
                 Editar
               </AppButton>
+              )}
+              {puedeEliminar && (
               <AppButton
                 className="delete-btn"
                 onClick={(e) => {
@@ -1113,6 +1137,7 @@ export default function Productos({ user, productos = [], setProductos }) {
               >
                 Archivar
               </AppButton>
+              )}
             </div>
           )}
         />

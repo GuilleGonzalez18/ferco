@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
 import { getPrimaryRgb } from '../../shared/lib/pdfColors';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
@@ -32,6 +33,8 @@ function formatQty(value) {
 
 export default function Auditoria() {
   const { empresa } = useConfig();
+  const { can } = usePermisos();
+  const puedeExportar = can('auditoria', 'exportar');
   const [eventos, setEventos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -332,7 +335,9 @@ export default function Auditoria() {
           <section className="auditoria-card">
             <div className="auditoria-card-head">
               <h4>Movimientos de stock</h4>
+              {puedeExportar && (
               <AppButton type="button" className="audit-btn" onClick={exportarStockPDF}>PDF stock</AppButton>
+              )}
             </div>
             <div className="auditoria-card-filtros">
               <AppSelect value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>

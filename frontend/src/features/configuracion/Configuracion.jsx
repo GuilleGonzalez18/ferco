@@ -11,6 +11,7 @@ const TABS = [
   { key: 'empresa', label: 'Empresa' },
   { key: 'modulos', label: 'Módulos' },
   { key: 'ganancias', label: 'Ganancias' },
+  { key: 'permisos', label: 'Permisos' },
 ];
 
 function compressImage(dataUrl, maxW, maxH, quality) {
@@ -566,6 +567,237 @@ function TabGanancias() {
   );
 }
 
+// ── TAB PERMISOS ──────────────────────────────────────────────────────────────
+
+const RECURSOS = [
+  { key: 'nueva-venta', label: 'Nueva venta',  acciones: ['usar'] },
+  { key: 'ventas',      label: 'Ventas',        acciones: ['ver', 'eliminar', 'exportar'] },
+  { key: 'productos',   label: 'Productos',     acciones: ['ver', 'agregar', 'editar', 'eliminar', 'ver_archivados', 'gestionar_empaques', 'ver_costo', 'ver_ganancia', 'exportar'] },
+  { key: 'clientes',    label: 'Clientes',      acciones: ['ver', 'agregar', 'editar', 'eliminar', 'exportar'] },
+  { key: 'usuarios',    label: 'Usuarios',      acciones: ['ver', 'agregar', 'editar', 'eliminar'] },
+  { key: 'estadisticas',label: 'Estadísticas',  acciones: ['ver', 'ver_empresa', 'ver_por_usuario', 'exportar'] },
+  { key: 'stock',       label: 'Stock',         acciones: ['ver', 'editar'] },
+  { key: 'auditoria',   label: 'Auditoría',     acciones: ['ver', 'exportar'] },
+  { key: 'configuracion',label:'Configuración', acciones: ['ver'] },
+];
+
+const ACCION_LABELS = {
+  usar: 'Usar', ver: 'Ver', agregar: 'Agregar', editar: 'Editar',
+  eliminar: 'Eliminar', exportar: 'Exportar', ver_costo: 'Ver costo',
+  ver_ganancia: 'Ver ganancia', ver_archivados: 'Ver archivados',
+  gestionar_empaques: 'Gestionar empaques',
+  ver_empresa: 'Ver empresa', ver_por_usuario: 'Ver por usuario',
+};
+
+function ResumenPermisos({ recurso, acciones, permisos }) {
+  const activos = acciones.filter((a) => permisos[`${recurso}:${a}`]);
+  return (
+    <span className="config-acordeon-resumen">
+      {activos.length === 0
+        ? <span className="resumen-ninguno">Sin acceso</span>
+        : activos.length === acciones.length
+          ? <span className="resumen-todos">Acceso total</span>
+          : <span className="resumen-parcial">{activos.length} de {acciones.length}</span>
+      }
+    </span>
+  );
+}
+
+function TabPermisos() {
+  const [roles, setRoles] = useState([]);
+  const [rolSeleccionado, setRolSeleccionado] = useState('');
+  const [permisos, setPermisos] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [nuevoRol, setNuevoRol] = useState('');
+  const [creandoRol, setCreandoRol] = useState(false);
+  const [seccionesAbiertas, setSeccionesAbiertas] = useState({});
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const rows = await api.getRoles();
+      setRoles(rows);
+      if (!rolSeleccionado && rows.length > 0) setRolSeleccionado(rows[0].nombre);
+    } catch { /* ignore */ }
+  }, [rolSeleccionado]);
+
+  const loadPermisos = useCallback(async (rol) => {
+    if (!rol) return;
+    try {
+      const rows = await api.getPermisos(rol);
+      const map = {};
+      for (const { recurso, accion, habilitado } of rows) {
+        map[`${recurso}:${accion}`] = !!habilitado;
+      }
+      setPermisos(map);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadRoles(); }, [loadRoles]);
+  useEffect(() => { if (rolSeleccionado) loadPermisos(rolSeleccionado); }, [rolSeleccionado, loadPermisos]);
+
+  const toggle = (recurso, accion) => {
+    const key = `${recurso}:${accion}`;
+    setPermisos((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleSeccion = (key) => {
+    setSeccionesAbiertas((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleTodosSeccion = (recurso, acciones) => {
+    const todosActivos = acciones.every((a) => permisos[`${recurso}:${a}`]);
+    setPermisos((prev) => {
+      const next = { ...prev };
+      for (const a of acciones) next[`${recurso}:${a}`] = !todosActivos;
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true); setMsg(''); setErr('');
+    try {
+      const payload = RECURSOS.flatMap(({ key: recurso, acciones }) =>
+        acciones.map((accion) => ({ recurso, accion, habilitado: !!(permisos[`${recurso}:${accion}`]) }))
+      );
+      await api.updatePermisos(rolSeleccionado, payload);
+      setMsg('Permisos guardados correctamente.');
+      window.dispatchEvent(new CustomEvent('mercatus:permisos-updated'));
+    } catch (e) {
+      setErr(e.message || 'Error al guardar permisos');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCrearRol = async () => {
+    if (!nuevoRol.trim()) return;
+    setCreandoRol(true); setErr('');
+    try {
+      await api.crearRol(nuevoRol.trim());
+      setNuevoRol('');
+      await loadRoles();
+      setRolSeleccionado(nuevoRol.trim().toLowerCase());
+    } catch (e) {
+      setErr(e.message || 'Error al crear rol');
+    } finally {
+      setCreandoRol(false);
+    }
+  };
+
+  const handleEliminarRol = async (nombre) => {
+    if (!window.confirm(`¿Eliminar el rol "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.eliminarRol(nombre);
+      await loadRoles();
+      setRolSeleccionado('propietario');
+    } catch (e) {
+      setErr(e.message || 'Error al eliminar rol');
+    }
+  };
+
+  return (
+    <div className="config-permisos-root">
+      {/* ── Selector de rol ── */}
+      <div className="config-section">
+        <h3 className="config-section-title">Roles del sistema</h3>
+        <p className="config-hint">Seleccioná un rol para ver y editar sus permisos. Los roles del sistema no se pueden eliminar.</p>
+        <div className="config-roles-list">
+          {roles.map((r) => (
+            <div key={r.nombre} className={`config-rol-chip ${r.nombre === rolSeleccionado ? 'active' : ''}`}>
+              <button type="button" className="config-rol-chip-btn" onClick={() => setRolSeleccionado(r.nombre)}>
+                {r.nombre}
+                {r.es_sistema && <span className="config-rol-badge">sistema</span>}
+              </button>
+              {!r.es_sistema && (
+                <button type="button" className="config-rol-delete" title="Eliminar rol" onClick={() => handleEliminarRol(r.nombre)}>×</button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="config-nuevo-rol">
+          <AppInput
+            placeholder="Nombre del nuevo rol..."
+            value={nuevoRol}
+            onChange={(e) => setNuevoRol(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCrearRol()}
+          />
+          <AppButton type="button" size="sm" onClick={handleCrearRol} disabled={creandoRol || !nuevoRol.trim()}>
+            {creandoRol ? '...' : '+ Crear rol'}
+          </AppButton>
+        </div>
+      </div>
+
+      {/* ── Acordeón de permisos ── */}
+      {rolSeleccionado && (
+        <div className="config-section">
+          <h3 className="config-section-title">
+            Permisos del rol: <span className="config-rol-nombre">{rolSeleccionado}</span>
+          </h3>
+          <p className="config-hint">Tocá cada sección para expandir y configurar sus permisos.</p>
+          <div className="config-acordeon">
+            {RECURSOS.map(({ key: recurso, label, acciones }) => {
+              const abierto = !!seccionesAbiertas[recurso];
+              const todosActivos = acciones.every((a) => permisos[`${recurso}:${a}`]);
+              return (
+                <div key={recurso} className={`config-acordeon-item ${abierto ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    className="config-acordeon-header"
+                    onClick={() => toggleSeccion(recurso)}
+                    aria-expanded={abierto}
+                  >
+                    <span className="config-acordeon-label">{label}</span>
+                    <ResumenPermisos recurso={recurso} acciones={acciones} permisos={permisos} />
+                    <span className="config-acordeon-chevron" aria-hidden="true">{abierto ? '▲' : '▼'}</span>
+                  </button>
+                  {abierto && (
+                    <div className="config-acordeon-body">
+                      <button
+                        type="button"
+                        className="config-toggle-todos"
+                        onClick={() => toggleTodosSeccion(recurso, acciones)}
+                      >
+                        {todosActivos ? 'Quitar todo' : 'Activar todo'}
+                      </button>
+                      <div className="config-permisos-acciones">
+                        {acciones.map((accion) => {
+                          const key = `${recurso}:${accion}`;
+                          const habilitado = !!(permisos[key]);
+                          return (
+                            <label key={accion} className={`config-permiso-chip ${habilitado ? 'on' : 'off'}`}>
+                              <input
+                                type="checkbox"
+                                checked={habilitado}
+                                onChange={() => toggle(recurso, accion)}
+                                className="config-permiso-checkbox"
+                              />
+                              <span className="config-permiso-icon" aria-hidden="true">{habilitado ? '✓' : '○'}</span>
+                              {ACCION_LABELS[accion] || accion}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {err && <p className="config-error">{err}</p>}
+          {msg && <p className="config-success">{msg}</p>}
+          <div className="config-actions">
+            <AppButton type="button" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar permisos'}
+            </AppButton>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 
 export default function Configuracion() {
@@ -590,6 +822,7 @@ export default function Configuracion() {
         {tab === 'empresa' && <TabEmpresa empresa={empresa} onSaved={reloadConfig} />}
         {tab === 'modulos' && <TabModulos onSaved={reloadConfig} />}
         {tab === 'ganancias' && <TabGanancias />}
+        {tab === 'permisos' && <TabPermisos />}
       </div>
     </div>
   );

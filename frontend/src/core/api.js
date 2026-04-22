@@ -198,4 +198,12 @@ export const api = {
   getConfigGanancias: () => request('/configuracion/ganancias'),
   updateConfigGanancias: (payload) =>
     request('/configuracion/ganancias', { method: 'PUT', body: JSON.stringify(payload) }),
+
+  // ── PERMISOS ────────────────────────────────────────────────────────────────
+  getRoles: () => request('/permisos/roles'),
+  crearRol: (nombre) => request('/permisos/roles', { method: 'POST', body: JSON.stringify({ nombre }) }),
+  eliminarRol: (nombre) => request(`/permisos/roles/${encodeURIComponent(nombre)}`, { method: 'DELETE' }),
+  getPermisos: (rol) => request(`/permisos/${encodeURIComponent(rol)}`),
+  updatePermisos: (rol, permisos) =>
+    request(`/permisos/${encodeURIComponent(rol)}`, { method: 'PUT', body: JSON.stringify(permisos) }),
 };

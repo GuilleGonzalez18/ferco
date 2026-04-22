@@ -7,6 +7,7 @@ import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
 import { FaFileExcel } from 'react-icons/fa6';
 import { BsFiletypePng } from 'react-icons/bs';
+import { usePermisos } from '../../core/PermisosContext';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
@@ -482,6 +483,10 @@ export default function Estadisticas({ compact = false }) {
   const [ownerTab, setOwnerTab] = useState('empresa');
   const [ownerUsuarioId, setOwnerUsuarioId] = useState('');
   const [ownerSelfUsuarioId, setOwnerSelfUsuarioId] = useState(0);
+  const { can } = usePermisos();
+  const verEmpresa = can('estadisticas', 'ver_empresa');
+  const verPorUsuario = can('estadisticas', 'ver_por_usuario');
+  const puedeExportar = can('estadisticas', 'exportar');
   const esVendedor = stats?.scope === 'vendedor';
   const esPropietario = stats?.scope === 'propietario';
   const showEmpresa = !esVendedor && (!esPropietario || ownerTab === 'empresa');
@@ -724,7 +729,7 @@ export default function Estadisticas({ compact = false }) {
   return (
     <div className={`stats-main ${compact ? 'compact' : ''}`}>
       <div className="stats-toolbar">
-        {esPropietario && (
+        {verEmpresa && (
           <div className="stats-tabs">
             <AppButton
               type="button"
@@ -743,7 +748,7 @@ export default function Estadisticas({ compact = false }) {
           </div>
         )}
           <div className="stats-filters">
-            {esPropietario && (
+            {verPorUsuario && (
               <AppSelect
                 className="stats-user-select"
                 value={ownerUsuarioId}
@@ -831,7 +836,7 @@ export default function Estadisticas({ compact = false }) {
         </div>
       </div>
       <p className="stats-range-pill">{rangeLabel(stats?.desde || desde, stats?.hasta || hasta)}</p>
-      {showPersonal && esPropietario && usuarioFiltroNombre && (
+      {showPersonal && verPorUsuario && usuarioFiltroNombre && (
         <p className="stats-range-pill">Estadísticas personales de: {usuarioFiltroNombre}</p>
       )}
 
@@ -1008,7 +1013,7 @@ export default function Estadisticas({ compact = false }) {
                       type="button"
                       className="stats-refresh-btn secondary chart-export-btn"
                       onClick={exportarGraficaStockExcel}
-                      disabled={stockLoading || !stockChartWithVariation.length}
+                      disabled={!puedeExportar || stockLoading || !stockChartWithVariation.length}
                     >
                       <FaFileExcel aria-hidden="true" />
                       <span>Excel</span>
@@ -1017,7 +1022,7 @@ export default function Estadisticas({ compact = false }) {
                       type="button"
                       className="stats-refresh-btn secondary chart-export-btn"
                       onClick={exportarGraficaStockPng}
-                      disabled={stockLoading || !stockChartWithVariation.length}
+                      disabled={!puedeExportar || stockLoading || !stockChartWithVariation.length}
                     >
                       <BsFiletypePng aria-hidden="true" />
                       <span>PNG</span>
@@ -1054,7 +1059,7 @@ export default function Estadisticas({ compact = false }) {
                         type="button"
                         className="stats-refresh-btn secondary chart-export-btn"
                         onClick={exportarGraficaVentasUsuarioExcel}
-                        disabled={stockLoading || !ventasUsuarioStockChart.length}
+                        disabled={!puedeExportar || stockLoading || !ventasUsuarioStockChart.length}
                       >
                         <FaFileExcel aria-hidden="true" />
                         <span>Excel</span>
@@ -1063,7 +1068,7 @@ export default function Estadisticas({ compact = false }) {
                         type="button"
                         className="stats-refresh-btn secondary chart-export-btn"
                         onClick={exportarGraficaVentasUsuarioPng}
-                        disabled={stockLoading || !ventasUsuarioStockChart.length}
+                        disabled={!puedeExportar || stockLoading || !ventasUsuarioStockChart.length}
                       >
                         <BsFiletypePng aria-hidden="true" />
                         <span>PNG</span>

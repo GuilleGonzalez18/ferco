@@ -6,6 +6,7 @@ import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { usePermisos } from '../../core/PermisosContext';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -27,7 +28,10 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     telefono: '',
     direccion: '',
   });
-  const esPropietario = String(currentUser?.tipo || '').toLowerCase() === 'propietario';
+  const { can, esPropietario } = usePermisos();
+  const puedeAgregar = can('usuarios', 'agregar');
+  const puedeEditar = can('usuarios', 'editar');
+  const puedeEliminar = can('usuarios', 'eliminar');
   const currentUserId = Number(currentUser?.id || 0);
 
   useEffect(() => {
@@ -280,7 +284,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        {esPropietario && (
+        {puedeAgregar && (
           <AppButton
             type="button"
             className="icon-btn"
@@ -321,10 +325,10 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
           expandedRowId={usuarioExpandidoId}
           renderExpandedRow={(u) => (
             <div className="usuario-actions show">
-              {(esPropietario || Number(u.id) === currentUserId) && (
+              {(puedeEditar || Number(u.id) === currentUserId) && (
                 <AppButton type="button" className="edit-btn" onClick={() => editarUsuario(u)}>Editar</AppButton>
               )}
-              {esPropietario && Number(u.id) !== currentUserId && (
+              {puedeEliminar && Number(u.id) !== currentUserId && (
                 <AppButton type="button" className="delete-btn" onClick={() => eliminarUsuario(u.id)}>Eliminar</AppButton>
               )}
             </div>

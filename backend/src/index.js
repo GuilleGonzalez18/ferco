@@ -9,6 +9,7 @@ import { ventasRouter } from './routes/ventas.js';
 import { auditoriaRouter } from './routes/auditoria.js';
 import { empaquesRouter } from './routes/empaques.js';
 import { configuracionRouter } from './routes/configuracion.js';
+import { permisosRouter } from './routes/permisos.js';
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use('/api/ventas', ventasRouter);
 app.use('/api/auditoria', auditoriaRouter);
 app.use('/api/empaques', empaquesRouter);
 app.use('/api/configuracion', configuracionRouter);
+app.use('/api/permisos', permisosRouter);
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

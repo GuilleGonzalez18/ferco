@@ -16,6 +16,7 @@ import { RiSettings3Line } from 'react-icons/ri';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
 import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
@@ -58,15 +59,18 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
   const [resumen, setResumen] = useState(null);
-  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
   const { empresa, modulos } = useConfig();
+  const { can, esPropietario } = usePermisos();
+
   const opcionesMenu = OPCIONES.filter((op) => {
-    if (op.key === 'usuarios' || op.key === 'control-stock') {
-      if (!esPropietario) return false;
-    }
+    // Permisos dinámicos por sección
+    if (op.key === 'usuarios' && !can('usuarios', 'ver')) return false;
     if (op.key === 'mi-usuario' && esPropietario) return false;
-    if (op.key === 'estadisticas' && !esPropietario) return false;
-    if (op.key === 'configuracion' && !esPropietario) return false;
+    if (op.key === 'mi-usuario' && can('usuarios', 'ver')) return false; // si puede ver usuarios, no necesita "mi usuario"
+    if (op.key === 'control-stock' && !can('stock', 'ver')) return false;
+    if (op.key === 'estadisticas' && !can('estadisticas', 'ver')) return false;
+    if (op.key === 'auditoria' && !can('auditoria', 'ver')) return false;
+    if (op.key === 'configuracion' && !can('configuracion', 'ver')) return false;
 
     if (modulos.length > 0) {
       const mod = modulos.find((m) => m.codigo === op.key);
@@ -139,7 +143,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const count = (value) => Number(value || 0).toLocaleString('es-UY');
   const avgCount = (value) => Math.round(Number(value || 0)).toLocaleString('es-UY');
 
-  const cardsResumen = esPropietario
+  const cardsResumen = can('estadisticas', 'ver_empresa')
     ? [
         { key: 'ventasHoy', label: 'Ventas hoy', value: money(resumen?.ventasHoy), tone: 'sales-green', icon: '/dollar.svg' },
         { key: 'ventasMes', label: 'Ventas mes', value: money(resumen?.ventasMes), tone: 'sales-green', icon: '/dollar.svg' },

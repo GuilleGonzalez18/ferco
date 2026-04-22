@@ -551,6 +551,102 @@ const statements = [
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS fondo_base64 text NULL;`,
   // === FLAG WIZARD CONFIGURACIÓN INICIAL (v3) ===
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS configurado boolean NOT NULL DEFAULT false;`,
+  // === ROLES Y PERMISOS (v4) ===
+  `
+  CREATE TABLE IF NOT EXISTS public.roles (
+    id serial PRIMARY KEY,
+    nombre varchar(50) NOT NULL UNIQUE,
+    es_sistema boolean NOT NULL DEFAULT false
+  );
+  `,
+  `
+  INSERT INTO public.roles (nombre, es_sistema) VALUES
+    ('propietario', true),
+    ('vendedor',    true)
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.permisos_rol (
+    id serial PRIMARY KEY,
+    rol varchar(50) NOT NULL,
+    recurso varchar(80) NOT NULL,
+    accion varchar(80) NOT NULL,
+    habilitado boolean NOT NULL DEFAULT true,
+    UNIQUE(rol, recurso, accion)
+  );
+  `,
+  // Permisos por defecto para PROPIETARIO (acceso total)
+  `
+  INSERT INTO public.permisos_rol (rol, recurso, accion, habilitado) VALUES
+    ('propietario','nueva-venta','usar',true),
+    ('propietario','ventas','ver',true),
+    ('propietario','ventas','eliminar',true),
+    ('propietario','ventas','exportar',true),
+    ('propietario','productos','ver',true),
+    ('propietario','productos','agregar',true),
+    ('propietario','productos','editar',true),
+    ('propietario','productos','eliminar',true),
+    ('propietario','productos','ver_archivados',true),
+    ('propietario','productos','gestionar_empaques',true),
+    ('propietario','productos','ver_costo',true),
+    ('propietario','productos','ver_ganancia',true),
+    ('propietario','productos','exportar',true),
+    ('propietario','clientes','ver',true),
+    ('propietario','clientes','agregar',true),
+    ('propietario','clientes','editar',true),
+    ('propietario','clientes','eliminar',true),
+    ('propietario','clientes','exportar',true),
+    ('propietario','usuarios','ver',true),
+    ('propietario','usuarios','agregar',true),
+    ('propietario','usuarios','editar',true),
+    ('propietario','usuarios','eliminar',true),
+    ('propietario','estadisticas','ver',true),
+    ('propietario','estadisticas','ver_empresa',true),
+    ('propietario','estadisticas','ver_por_usuario',true),
+    ('propietario','estadisticas','exportar',true),
+    ('propietario','stock','ver',true),
+    ('propietario','stock','editar',true),
+    ('propietario','auditoria','ver',true),
+    ('propietario','auditoria','exportar',true),
+    ('propietario','configuracion','ver',true)
+  ON CONFLICT (rol, recurso, accion) DO NOTHING;
+  `,
+  // Permisos por defecto para VENDEDOR (acceso limitado)
+  `
+  INSERT INTO public.permisos_rol (rol, recurso, accion, habilitado) VALUES
+    ('vendedor','nueva-venta','usar',true),
+    ('vendedor','ventas','ver',true),
+    ('vendedor','ventas','eliminar',false),
+    ('vendedor','ventas','exportar',false),
+    ('vendedor','productos','ver',true),
+    ('vendedor','productos','agregar',false),
+    ('vendedor','productos','editar',false),
+    ('vendedor','productos','eliminar',false),
+    ('vendedor','productos','ver_archivados',false),
+    ('vendedor','productos','gestionar_empaques',false),
+    ('vendedor','productos','ver_costo',false),
+    ('vendedor','productos','ver_ganancia',false),
+    ('vendedor','productos','exportar',false),
+    ('vendedor','clientes','ver',true),
+    ('vendedor','clientes','agregar',false),
+    ('vendedor','clientes','editar',false),
+    ('vendedor','clientes','eliminar',false),
+    ('vendedor','clientes','exportar',false),
+    ('vendedor','usuarios','ver',false),
+    ('vendedor','usuarios','agregar',false),
+    ('vendedor','usuarios','editar',false),
+    ('vendedor','usuarios','eliminar',false),
+    ('vendedor','estadisticas','ver',true),
+    ('vendedor','estadisticas','ver_empresa',false),
+    ('vendedor','estadisticas','ver_por_usuario',false),
+    ('vendedor','estadisticas','exportar',false),
+    ('vendedor','stock','ver',false),
+    ('vendedor','stock','editar',false),
+    ('vendedor','auditoria','ver',false),
+    ('vendedor','auditoria','exportar',false),
+    ('vendedor','configuracion','ver',false)
+  ON CONFLICT (rol, recurso, accion) DO NOTHING;
+  `,
 ];
 
 try {

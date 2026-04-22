@@ -309,3 +309,278 @@
   color: var(--color-text-muted);
   font-size: var(--font-sm);
 }
+
+/* ── TAB PERMISOS ────────────────────────────────────────────────────────── */
+.config-permisos-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+}
+
+/* Roles */
+.config-roles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.config-rol-chip {
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.config-rol-chip.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.config-rol-chip-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.45rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.config-rol-chip.active .config-rol-chip-btn { color: var(--color-primary); }
+
+.config-rol-badge {
+  font-size: 0.62rem;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 10px;
+  padding: 0.1rem 0.4rem;
+  font-weight: 500;
+}
+
+.config-rol-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  min-height: 36px;
+  color: var(--color-error);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.config-nuevo-rol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+
+.config-nuevo-rol .app-input-wrapper {
+  flex: 1;
+  min-width: 160px;
+}
+
+.config-rol-nombre {
+  color: var(--color-primary);
+  font-style: normal;
+}
+
+/* Acordeón */
+.config-acordeon {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+
+.config-acordeon-item {
+  border-top: 1px solid var(--color-border);
+}
+
+.config-acordeon-item:first-child {
+  border-top: none;
+}
+
+.config-acordeon-item.open > .config-acordeon-header {
+  background: var(--color-primary-soft);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-acordeon-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.75rem 1rem;
+  min-height: 52px;
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.config-acordeon-header:hover {
+  background: var(--color-surface-soft);
+}
+
+.config-acordeon-item.open > .config-acordeon-header:hover {
+  background: var(--color-primary-soft);
+}
+
+.config-acordeon-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+  flex: 1;
+  text-align: left;
+}
+
+.config-acordeon-resumen {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.resumen-ninguno {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.resumen-todos {
+  background: #e6f4ec;
+  color: var(--color-success);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.resumen-parcial {
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.config-acordeon-chevron {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.config-acordeon-body {
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.config-toggle-todos {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.config-toggle-todos:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Chips de permiso */
+.config-permisos-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.config-permiso-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 14px;
+  padding: 0.4rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  user-select: none;
+}
+
+.config-permiso-chip.on {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.config-permiso-chip.off {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  opacity: 0.75;
+}
+
+.config-permiso-chip.off:hover {
+  border-color: var(--color-primary);
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+.config-permiso-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.config-permiso-checkbox { display: none; }
+
+.config-success {
+  color: var(--color-success);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .config-acordeon-header {
+    padding: 0.85rem 0.75rem;
+    min-height: 56px;
+  }
+
+  .config-acordeon-body {
+    padding: 0.75rem;
+  }
+
+  .config-permiso-chip {
+    min-height: 40px;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.9rem;
+  }
+
+  .config-rol-chip-btn {
+    min-height: 40px;
+    padding: 0.5rem 0.9rem;
+  }
+}
