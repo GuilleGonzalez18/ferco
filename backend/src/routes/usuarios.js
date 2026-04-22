@@ -310,7 +310,7 @@ usuariosRouter.post('/forgot-password', async (req, res) => {
     await sendMail({
       from,
       to: correo,
-      subject: 'Recuperar contraseña - Ferco',
+      subject: 'Recuperar contraseña - Mercatus',
       text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
     });
   } catch (error) {

@@ -314,7 +314,7 @@ function StepEmpresa({ form, set }) {
           id="sw-nombre"
           value={form.nombre}
           onChange={(e) => set('nombre', e.target.value)}
-          placeholder="Ej: Ferco Distribuciones"
+          placeholder="Ej: Mercatus"
           autoFocus
         />
       </div>
@@ -324,7 +324,7 @@ function StepEmpresa({ form, set }) {
           id="sw-razon"
           value={form.razon_social}
           onChange={(e) => set('razon_social', e.target.value)}
-          placeholder="Ej: Ferco S.A."
+          placeholder="Ej: RPG Software S.R.L."
         />
       </div>
       <div className="setup-color-item">

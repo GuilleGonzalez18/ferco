@@ -139,6 +139,13 @@ export default function Login({ onLogin }) {
               Olvidé mi contraseña
             </AppButton>
             <small className="app-version-label">{APP_VERSION}</small>
+            <div className="login-brand-watermark">
+              <span className="login-brand-name">
+                <img src="/favicon.png" alt="" className="login-brand-icon" aria-hidden="true" />
+                Mercatus
+              </span>
+              <span className="login-brand-copy">© 2025 RPG Software. Todos los derechos reservados.</span>
+            </div>
           </>
         ) : (
           <>

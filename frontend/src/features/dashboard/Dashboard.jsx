@@ -255,6 +255,13 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           Cerrar sesión
         </AppButton>
         <small className="dashboard-version-label">v. {APP_VERSION}</small>
+        <div className="dashboard-brand-watermark">
+          <span className="dashboard-brand-name">
+            <img src="/favicon.png" alt="" className="dashboard-brand-icon" aria-hidden="true" />
+            Mercatus
+          </span>
+          <span className="dashboard-brand-copy">© 2025 RPG Software. Todos los derechos reservados.</span>
+        </div>
       </aside>
 
       <main className="dashboard-content">
