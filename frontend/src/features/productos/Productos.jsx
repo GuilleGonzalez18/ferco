@@ -57,7 +57,7 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-export default function Productos({ user, productos = [], setProductos }) {
+export default function Productos({ productos = [], setProductos }) {
   const { empresa } = useConfig();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);

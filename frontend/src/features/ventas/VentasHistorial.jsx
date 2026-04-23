@@ -291,14 +291,6 @@ export default function VentasHistorial() {
     setSortDir('asc');
   };
 
-  const loadImage = (src) =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
-    });
-
   const buildVentaPdf = async (venta) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();

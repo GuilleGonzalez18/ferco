@@ -757,14 +757,23 @@ const statements = [
   `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debe_cambiar_password boolean NOT NULL DEFAULT false;`,
 ];
 
-try {
+export async function runMigration() {
   for (const sql of statements) {
     await query(sql);
   }
-  // eslint-disable-next-line no-console
-  console.log('Migración aplicada correctamente.');
-} catch (error) {
-  // eslint-disable-next-line no-console
-  console.error('Error de migración:', error.message);
-  process.exit(1);
+}
+
+// Ejecución directa: node src/scripts/runMigration.js
+if (process.argv[1]?.endsWith('runMigration.js')) {
+  runMigration()
+    .then(() => {
+      // eslint-disable-next-line no-console
+      console.log('Migración aplicada correctamente.');
+      process.exit(0);
+    })
+    .catch((error) => {
+      // eslint-disable-next-line no-console
+      console.error('Error de migración:', error.message);
+      process.exit(1);
+    });
 }

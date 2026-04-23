@@ -342,7 +342,7 @@ function StepEmpresa({ form, set }) {
 
 // ── Paso 2: Logo y colores ────────────────────────────────────────────────────
 
-function StepLogoColores({ form, set, fileRef, paletaSugerida, setPaletaSugerida, onLogoDrop, onLogoFile }) {
+function StepLogoColores({ form, set, fileRef, paletaSugerida, setPaletaSugerida, onLogoDrop }) {
   const colores = [
     { key: 'color_primary', label: 'Color primario' },
     { key: 'color_primary_strong', label: 'Primario oscuro' },
