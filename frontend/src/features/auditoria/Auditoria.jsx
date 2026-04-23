@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
-import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -264,13 +264,10 @@ export default function Auditoria() {
 
   const withHeaderLogo = async (doc, titulo) => {
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64);
-    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
     if (logo) {
-      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
     }
-    doc.setFontSize(16);
-    doc.text(titulo, 55, 22);
     doc.setFontSize(10);
     doc.text(`Emitido: ${fecha}`, 55, 28);
     doc.text(`Rango: ${getRangoLabel()}`, 55, 33);

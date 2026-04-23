@@ -155,6 +155,154 @@ function pickFields(obj, keys) {
   return Object.fromEntries(keys.map((k) => [k, obj[k]]));
 }
 
+// ── Vista previa de PDFs ───────────────────────────────────────────────────────
+
+const PDF_PLACEHOLDER_ROWS = [
+  ['Producto A', '2', '1 caja', '$120,00', '$0,00', '$240,00'],
+  ['Producto B', '1', '500g',   '$85,00',  '$5,00', '$80,00'],
+  ['Producto C', '3', '1 unit', '$60,00',  '$0,00', '$180,00'],
+];
+
+const PDF_PRODUCTOS_ROWS = [
+  ['Aceite Del Sur 1L',    '48',  '$340,00', '$422,00', 'Caja x 12', '$82,00'],
+  ['Fideos Matarazzo 500g','120', '$90,00',  '$138,00', 'Caja x 24', '$48,00'],
+  ['Arroz Gallo 1kg',      '75',  '$130,00', '$185,00', 'Caja x 10', '$55,00'],
+];
+
+function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor }) {
+  const primary = primaryColor || '#375f8c';
+  const bgLogo  = logoBgColor  || '#ffffff';
+
+  // El mock interno mide 680px de ancho (simula hoja A4), se escala al 38%
+  const SCALE    = 0.38;
+  const MOCK_W   = 680;
+  const MOCK_H   = tipo === 'ticket' ? 440 : 320;
+  const boxW     = Math.round(MOCK_W * SCALE);
+  const boxH     = Math.round(MOCK_H * SCALE);
+
+  // Tamaño del logo dentro del mock: proporcional a logo_tamano (max 200 → ~100px en mock)
+  const logoMaxPx = Math.round(Math.min((logoTamano || 200) * 0.5, 110));
+
+  const inner = {
+    width:           MOCK_W,
+    minHeight:       MOCK_H,
+    transform:       `scale(${SCALE})`,
+    transformOrigin: 'top left',
+    background:      '#fff',
+    fontFamily:      'Arial, sans-serif',
+    fontSize:        11,
+    color:           '#222',
+    padding:         24,
+    boxSizing:       'border-box',
+    lineHeight:      1.4,
+  };
+
+  const thStyle = {
+    background: primary,
+    color: '#fff',
+    padding: '4px 6px',
+    fontSize: 10,
+    fontWeight: 600,
+    textAlign: 'left',
+  };
+
+  const tdStyle = { padding: '3px 6px', fontSize: 9.5, borderBottom: '1px solid #eee' };
+  const tdAltStyle = { ...tdStyle, background: '#f7f9fc' };
+
+  if (tipo === 'ticket') {
+    const logoBoxH = 80;
+    return (
+      <div style={{ width: boxW, height: boxH, overflow: 'hidden', position: 'relative' }}>
+        <div style={inner}>
+          {/* Header: logo izquierda + info derecha */}
+          <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+            <div style={{ width: logoBoxH, height: logoBoxH, background: bgLogo, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #ddd' }}>
+              {logoSrc ? (
+                <img src={logoSrc} alt="logo" style={{ maxWidth: logoMaxPx, maxHeight: logoBoxH - 8, objectFit: 'contain', display: 'block' }} />
+              ) : (
+                <div style={{ width: 40, height: 20, background: '#ddd', borderRadius: 3 }} />
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Ticket de Venta</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px' }}>
+                {[
+                  'Fecha Emisión: 23/04/2026', 'Cliente: Juan Pérez',
+                  'Nro. ticket: #932',          'Teléfono: 091 234 567',
+                  'Vendedor: María González',   'Dirección: Av. 18 de Julio 1234',
+                  'Fecha entrega: 24/04/2026',  'Horarios: 9:00–18:00',
+                ].map((t, i) => (
+                  <div key={i} style={{ fontSize: 9, color: '#444', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Tabla */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
+            <thead>
+              <tr>{['Producto','Cant.','Presentación','P. Unit.','Desc.','Subtotal'].map((h) => (
+                <th key={h} style={thStyle}>{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {PDF_PLACEHOLDER_ROWS.map((row, i) => (
+                <tr key={i}>{row.map((cell, j) => (
+                  <td key={j} style={i % 2 === 0 ? tdStyle : tdAltStyle}>{cell}</td>
+                ))}</tr>
+              ))}
+            </tbody>
+          </table>
+          {/* Totales alineados derecha */}
+          <div style={{ textAlign: 'right', fontSize: 9.5, lineHeight: 1.8 }}>
+            <div>Subtotal: $500,00</div>
+            <div>Descuentos: -$5,00</div>
+            <div style={{ fontWeight: 700, fontSize: 11 }}>Total: $495,00</div>
+            <div style={{ marginTop: 4 }}>Pagos:</div>
+            <div>- Efectivo: $495,00</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // tipo === 'productos'
+  return (
+    <div style={{ width: boxW, height: boxH, overflow: 'hidden', position: 'relative' }}>
+      <div style={inner}>
+        {/* Header: logo izquierda + título/fecha a la derecha */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+          <div style={{ width: 54, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {logoSrc ? (
+              <img src={logoSrc} alt="logo" style={{ maxWidth: 50, maxHeight: 26, objectFit: 'contain', display: 'block' }} />
+            ) : (
+              <div style={{ width: 34, height: 16, background: '#ddd', borderRadius: 2 }} />
+            )}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Lista de Productos</div>
+            <div style={{ fontSize: 9, color: '#666', marginTop: 2 }}>Emitido: 23/4/2026</div>
+          </div>
+        </div>
+        {/* Tabla */}
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>{['Nombre','Stock','Costo','Venta','Empaque','Ganancia x U'].map((h) => (
+              <th key={h} style={thStyle}>{h}</th>
+            ))}</tr>
+          </thead>
+          <tbody>
+            {PDF_PRODUCTOS_ROWS.map((row, i) => (
+              <tr key={i}>{row.map((cell, j) => (
+                <td key={j} style={i % 2 === 0 ? tdStyle : tdAltStyle}>{cell}</td>
+              ))}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function SectionActions({ dirty, saving, onSave, onUndo, msg }) {
   if (!dirty && !msg) return null;
   return (
@@ -181,6 +329,7 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   const [msgs, setMsgs]       = useState({});
   const [err, setErr]         = useState('');
   const [paletaSugerida, setPaletaSugerida] = useState(null);
+  const [subTab, setSubTab]   = useState('datos');
   const fileRef  = useRef(null);
   const fondoRef = useRef(null);
   const msgTimers = useRef({});
@@ -295,13 +444,32 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
     if (fondoRef.current) fondoRef.current.value = '';
   };
 
+  const SUBTABS = [
+    { key: 'datos',   label: 'Datos de la empresa' },
+    { key: 'imagen',  label: 'Logo e Imagen de fondo' },
+    { key: 'colores', label: 'Colores' },
+  ];
+
   return (
-    <div className="config-tab-form">
-      {err && <p className="config-error">{err}</p>}
+    <div>
+      <div className="config-subtabs">
+        {SUBTABS.map((st) => (
+          <button
+            key={st.key}
+            type="button"
+            className={`config-subtab-btn${subTab === st.key ? ' active' : ''}`}
+            onClick={() => setSubTab(st.key)}
+          >
+            {st.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="config-tab-form">
+        {err && <p className="config-error">{err}</p>}
 
       {/* ── DATOS DE LA EMPRESA ── */}
-      <div className="config-section">
-        <h3 className="config-section-title">Datos de la empresa</h3>
+      {subTab === 'datos' && <div className="config-section">
         <div className="config-field-row">
           <label className="config-field-label">Nombre *</label>
           <AppInput value={form.nombre} onChange={set('nombre')} placeholder="Nombre de la empresa" />
@@ -337,11 +505,39 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
           onUndo={() => undoSection(DATOS_FIELDS)}
           msg={msgs.datos}
         />
-      </div>
+      </div>}
 
-      {/* ── LOGO ── */}
-      <div className="config-section">
+      {/* ── LOGO e IMAGEN ── */}
+      {subTab === 'imagen' && <><div className="config-section">
         <h3 className="config-section-title">Logo</h3>
+
+        {/* Vista previa del menú */}
+        <div className="config-logo-menu-preview">
+          <p className="config-hint" style={{ marginBottom: '0.5rem' }}>Vista previa en el menú:</p>
+          <div
+            className="config-logo-menu-mock"
+            style={{ background: form.color_menu_bg || '#1f2933' }}
+          >
+            <div
+              className="config-logo-menu-mock-wrap"
+              style={{ background: form.logo_bg_color || '#ffffff' }}
+            >
+              {form.logo_base64 && form.logo_base64 !== '' ? (
+                <img
+                  src={form.logo_base64}
+                  alt="Vista previa del logo"
+                  className="config-logo-menu-mock-img"
+                  style={{ maxWidth: `${Math.round((form.logo_tamano || 200) * 0.45)}px` }}
+                />
+              ) : (
+                <span className="config-logo-menu-mock-empty" style={{ color: form.color_menu_text || '#e6ecf4' }}>
+                  Sin logo
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="config-logo-area">
           {form.logo_base64 && form.logo_base64 !== '' ? (
             <div className="config-logo-preview-wrap">
@@ -471,9 +667,40 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
         />
       </div>
 
-      {/* ── COLORES ── */}
+      {/* ── VISTA PREVIA EN DOCUMENTOS PDF ── */}
       <div className="config-section">
-        <h3 className="config-section-title">Colores</h3>
+        <h3 className="config-section-title">Vista previa en documentos PDF</h3>
+        <p className="config-hint">Así se verá tu logo y colores en los reportes generados.</p>
+        <div className="config-pdf-previews-row">
+          <div className="config-pdf-preview-card">
+            <span className="config-pdf-preview-label">Ticket de venta</span>
+            <div className="config-pdf-mock">
+              <PdfPreviewMock
+                tipo="ticket"
+                logoSrc={form.logo_base64 || null}
+                logoBgColor={form.logo_bg_color}
+                logoTamano={form.logo_tamano}
+                primaryColor={form.color_primary}
+              />
+            </div>
+          </div>
+          <div className="config-pdf-preview-card">
+            <span className="config-pdf-preview-label">Reporte de productos</span>
+            <div className="config-pdf-mock">
+              <PdfPreviewMock
+                tipo="productos"
+                logoSrc={form.logo_base64 || null}
+                logoBgColor={form.logo_bg_color}
+                logoTamano={form.logo_tamano}
+                primaryColor={form.color_primary}
+              />
+            </div>
+          </div>
+        </div>
+      </div></>}
+
+      {/* ── COLORES ── */}
+      {subTab === 'colores' && <div className="config-section">
         <div className="config-colors-grid">
           {[
             { field: 'color_primary',        label: 'Color principal',         placeholder: '#375f8c' },
@@ -522,6 +749,7 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
           <span style={{ color: form.color_text_muted, background: '#f4f7fb', padding: '6px 16px', borderRadius: 6, fontSize: 13, border: '1px solid #ddd' }}>Secundario</span>
           <span style={{ background: form.color_logout_bg, color: '#fff', padding: '6px 16px', borderRadius: 6, fontSize: 13 }}>Cerrar sesión</span>
         </div>
+      </div>}
       </div>
     </div>
   );

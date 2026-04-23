@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
-import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
@@ -704,17 +704,16 @@ export default function Ventas({
     const colMaxW = infoWidth / 2 - 2;
 
     // ── Logo (contain dentro del cuadrado, sin distorsión) ──
-    const logo = await loadLogoForPdf(empresa.logo_base64);
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
     if (logo) {
-      const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-      const nw = logo.naturalWidth || logo.width || logoBoxSize;
-      const nh = logo.naturalHeight || logo.height || logoBoxSize;
+      const nw = logo.naturalWidth  || logoBoxSize;
+      const nh = logo.naturalHeight || logoBoxSize;
       const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
       const drawW = nw * scale;
       const drawH = nh * scale;
       const drawX = logoX + (logoBoxSize - drawW) / 2;
       const drawY = headerY + (logoBoxSize - drawH) / 2;
-      doc.addImage(logo, detectImageFormat(logoSrc), drawX, drawY, drawW, drawH);
+      doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
     }
 
     // ── Título ──

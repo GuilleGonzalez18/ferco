@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
-import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Clientes.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -246,11 +246,10 @@ export default function Clientes() {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64);
-    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
     let startY = 30;
     if (logo) {
-      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
       doc.setFontSize(16);
       doc.text('Lista de Clientes', 55, 22);
       doc.setFontSize(10);

@@ -48,6 +48,51 @@
   flex-direction: column;
   gap: var(--space-lg);
   padding: var(--space-lg);
+  animation: configFadeIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes configFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Sub-tabs dentro de TabEmpresa ── */
+.config-subtabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 2px solid var(--color-border);
+  padding: var(--space-md) var(--space-lg) 0;
+  background: color-mix(in srgb, var(--color-primary-soft, #e7effa) 30%, transparent);
+}
+
+.config-subtab-btn {
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.config-subtab-btn:hover {
+  color: var(--color-primary);
+}
+
+.config-subtab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
 }
 
 .config-section {
@@ -82,6 +127,42 @@
   flex-direction: column;
   gap: var(--space-sm);
   align-items: flex-start;
+}
+
+/* ── Vista previa del logo en el menú ── */
+.config-logo-menu-preview {
+  margin-bottom: var(--space-sm);
+}
+
+.config-logo-menu-mock {
+  width: 130px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+.config-logo-menu-mock-wrap {
+  padding: 0.9rem 0.8rem 0.7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+}
+
+.config-logo-menu-mock-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+}
+
+.config-logo-menu-mock-empty {
+  font-size: 11px;
+  opacity: 0.55;
+  font-style: italic;
 }
 
 .config-logo-preview-wrap {
@@ -620,6 +701,36 @@
   color: var(--color-success);
   font-size: var(--font-sm);
   margin: 0;
+}
+
+/* ── Vista previa en documentos PDF ──────────────────────────────────────── */
+.config-pdf-previews-row {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.config-pdf-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-pdf-preview-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.config-pdf-mock {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
 }
 
 /* Mobile */

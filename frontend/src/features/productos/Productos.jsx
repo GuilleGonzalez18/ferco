@@ -277,10 +277,9 @@ export default function Productos({ user, productos = [], setProductos }) {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-    const logo = await loadLogoForPdf(empresa.logo_base64);
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
     if (logo) {
-      doc.addImage(logo, detectImageFormat(logoSrc), 10, 10, 40, 20);
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
     }
     doc.setFontSize(16);
     doc.text('Lista de Productos', 55, 22);
@@ -493,9 +492,10 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const logoSrc = empresa.logo_base64 || '/mercatus-logo.png';
-    const headerLogo = await loadLogoForPdf(empresa.logo_base64);
-    if (headerLogo) doc.addImage(headerLogo, detectImageFormat(logoSrc), margin, 8, 24, 12);
+    const headerLogo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (headerLogo) {
+      doc.addImage(headerLogo.dataUrl, 'JPEG', margin, 8, 24, 12);
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);
@@ -573,9 +573,10 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const logoSrc2 = empresa.logo_base64 || '/mercatus-logo.png';
-    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64);
-    if (headerLogo2) doc.addImage(headerLogo2, detectImageFormat(logoSrc2), margin, 8, 24, 12);
+    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (headerLogo2) {
+      doc.addImage(headerLogo2.dataUrl, 'JPEG', margin, 8, 24, 12);
+    }
 
     doc.setFontSize(16);
     doc.setTextColor(55, 95, 140);

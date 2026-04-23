@@ -58,26 +58,73 @@ export function detectImageFormat(url) {
 }
 
 /**
- * Carga una imagen para jsPDF. Usa logo_base64 de la empresa si existe,
- * sino cae a /mercatus-logo.png. Retorna una Promise<HTMLImageElement | null>.
- * @param {string|null} logoBase64
- * @returns {Promise<HTMLImageElement|null>}
+ * Dibuja un rectángulo de fondo del color `logoBgColor` antes del logo,
+ * para evitar el fondo negro en PNGs con transparencia al exportar con jsPDF.
+ * @param {import('jspdf').jsPDF} doc
+ * @param {number} x
+ * @param {number} y
+ * @param {number} w
+ * @param {number} h
+ * @param {string} [logoBgColor='#ffffff']
  */
-export function loadLogoForPdf(logoBase64) {
+export function fillLogoBg(doc, x, y, w, h, logoBgColor = '#ffffff') {
+  try {
+    const [r, g, b] = hexToRgb(logoBgColor || '#ffffff');
+    doc.setFillColor(r, g, b);
+    doc.rect(x, y, w, h, 'F');
+  } catch (_) {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x, y, w, h, 'F');
+  }
+}
+
+/**
+ * Carga una imagen para jsPDF aplanada sobre un canvas con el color de fondo
+ * indicado. Esto elimina la transparencia PNG (que jsPDF renderiza como negro).
+ * Retorna un data URL JPEG listo para usar con doc.addImage(..., 'JPEG', ...).
+ * @param {string|null} logoBase64
+ * @param {string} [bgColor='#ffffff']
+ * @returns {Promise<{ dataUrl: string; naturalWidth: number; naturalHeight: number } | null>}
+ */
+export function loadLogoForPdf(logoBase64, bgColor = '#ffffff') {
   return new Promise((resolve) => {
     const src = logoBase64 || '/mercatus-logo.png';
+
+    const flatten = (img) => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth  || img.width  || 200;
+        canvas.height = img.naturalHeight || img.height || 100;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = bgColor || '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        resolve({
+          dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+          naturalWidth:  canvas.width,
+          naturalHeight: canvas.height,
+        });
+      } catch (_) {
+        resolve(null);
+      }
+    };
+
     const img = new Image();
-    img.onload = () => resolve(img);
+    img.onload = () => flatten(img);
     img.onerror = () => {
       if (src !== '/mercatus-logo.png') {
         const fallback = new Image();
-        fallback.onload = () => resolve(fallback);
+        fallback.onload  = () => flatten(fallback);
         fallback.onerror = () => resolve(null);
         fallback.src = '/mercatus-logo.png';
       } else {
         resolve(null);
       }
     };
-    img.src = src;
+    if (!logoBase64) {
+      img.src = src;
+    } else {
+      img.src = src;
+    }
   });
 }

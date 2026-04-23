@@ -1106,8 +1106,8 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
                  CASE
                    WHEN COALESCE(p.cantidad_empaque, 0) > 1 THEN
                      CASE
-                       WHEN MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque) = 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(p.empaque), ''), 'empaque'))
-                       WHEN (COALESCE(vd.cantidad, 0) / p.cantidad_empaque) > 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(p.empaque), ''), 'empaque'), ' + ', MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque)::text, ' unidades')
+                       WHEN MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque) = 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(e.nombre), ''), 'empaque'))
+                       WHEN (COALESCE(vd.cantidad, 0) / p.cantidad_empaque) > 0 THEN CONCAT((COALESCE(vd.cantidad, 0) / p.cantidad_empaque)::text, ' ', COALESCE(NULLIF(TRIM(e.nombre), ''), 'empaque'), ' + ', MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque)::text, ' unidades')
                        ELSE CONCAT(MOD(COALESCE(vd.cantidad, 0), p.cantidad_empaque)::text, ' unidades')
                      END
                    ELSE CONCAT(COALESCE(vd.cantidad, 0)::text, ' unidades')
@@ -1120,6 +1120,7 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
            ) AS productos
         FROM public.venta_detalle vd
        LEFT JOIN public.productos p ON p.id = vd.producto_id
+       LEFT JOIN public.empaques e ON e.id = p.empaque_id
        GROUP BY vd.venta_id
      ) det ON det.venta_id = v.id
       WHERE ${ACTIVE_SALES_CONDITION}
