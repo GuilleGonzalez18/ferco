@@ -200,6 +200,24 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     }
   };
 
+  const forzarCambioPassword = async (usuario) => {
+    const ok = await appConfirm({
+      message: `¿Forzar a ${usuario.nombre || usuario.username} a cambiar su contraseña en el próximo inicio de sesión?`,
+      title: 'Forzar cambio de contraseña',
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      await api.forzarCambioPassword(usuario.id);
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === usuario.id ? { ...u, debe_cambiar_password: true } : u))
+      );
+    } catch (err) {
+      await appAlert(err.message || 'No se pudo forzar el cambio de contraseña.');
+    }
+  };
+
   useEffect(() => {
     if (onlySelf && !esPropietario && usuarioPropio) {
       setEditandoId(usuarioPropio.id);
@@ -341,6 +359,16 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
               )}
               {puedeEliminar && Number(u.id) !== currentUserId && (
                 <AppButton type="button" className="delete-btn" onClick={() => eliminarUsuario(u.id)}>Eliminar</AppButton>
+              )}
+              {esPropietario && Number(u.id) !== currentUserId && (
+                <AppButton
+                  type="button"
+                  className="secondary-btn"
+                  title="Forzar cambio de contraseña al próximo login"
+                  onClick={() => forzarCambioPassword(u)}
+                >
+                  {u.debe_cambiar_password ? '🔐 Cambio pendiente' : '🔑 Forzar cambio de clave'}
+                </AppButton>
               )}
             </div>
           )}

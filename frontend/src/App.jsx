@@ -4,6 +4,8 @@ import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 import SetupWizard from './features/setup/SetupWizard';
 import AppDialogHost from './shared/components/dialog/AppDialogHost';
+import InstallPwaPrompt from './shared/components/pwa/InstallPwaPrompt';
+import CambiarPasswordModal from './shared/components/auth/CambiarPasswordModal';
 import './App.css';
 import { api } from './core/api';
 import { fromApiProducto } from './shared/lib/productMapper';
@@ -108,14 +110,26 @@ function App() {
     setUser(null);
   };
 
+  const handlePasswordChanged = () => {
+    setUser((prev) => prev ? { ...prev, debe_cambiar_password: false } : prev);
+  };
+
   return (
     <ConfigProvider>
       <AppDialogHost />
+      <InstallPwaPrompt />
       {authReady && (
         !user ? (
           <Login onLogin={setUser} />
         ) : (
-          <AppShell user={user} onLogout={handleLogout} />
+          <>
+            {user.debe_cambiar_password && (
+              <CambiarPasswordModal onSuccess={handlePasswordChanged} />
+            )}
+            {!user.debe_cambiar_password && (
+              <AppShell user={user} onLogout={handleLogout} />
+            )}
+          </>
         )
       )}
     </ConfigProvider>

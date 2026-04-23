@@ -435,7 +435,7 @@
   margin-right: auto;
 }
 
-
+.config-section-pending {
   font-size: var(--font-xs);
   color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);

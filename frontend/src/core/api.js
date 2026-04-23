@@ -76,6 +76,13 @@ export const api = {
     request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteUsuario: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
+  cambiarPassword: ({ passwordActual, passwordNueva }) =>
+    request('/usuarios/cambiar-password', {
+      method: 'POST',
+      body: JSON.stringify({ passwordActual, passwordNueva }),
+    }),
+  forzarCambioPassword: (id) =>
+    request(`/usuarios/${id}/forzar-cambio-password`, { method: 'POST' }),
 
   getProductos: (options = {}) => {
     const q = new URLSearchParams();

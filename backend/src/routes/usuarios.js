@@ -115,9 +115,9 @@ usuariosRouter.post('/', async (req, res) => {
   try {
     const hashedPassword = await hashPassword(passwordValue);
     const result = await query(
-      `INSERT INTO public.usuarios (username, password, rol_id, nombre, apellido, correo, telefono, direccion)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING id, username, rol_id, nombre, apellido, correo, telefono, direccion`,
+      `INSERT INTO public.usuarios (username, password, rol_id, nombre, apellido, correo, telefono, direccion, debe_cambiar_password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, true)
+       RETURNING id, username, rol_id, nombre, apellido, correo, telefono, direccion, debe_cambiar_password`,
       [usernameValue, hashedPassword, rolQ.rows[0].id, nombre, apellido, correoValue, telefono, direccion]
     );
     return res.status(201).json({ ...result.rows[0], rol_nombre: rolQ.rows[0].nombre });
@@ -241,6 +241,7 @@ usuariosRouter.post('/login', async (req, res) => {
 
   const result = await query(
     `SELECT u.id, u.username, u.password, u.nombre, u.apellido, u.correo, u.rol_id,
+            u.debe_cambiar_password,
             r.nombre AS rol_nombre
      FROM public.usuarios u
      LEFT JOIN public.roles r ON r.id = u.rol_id
@@ -268,12 +269,13 @@ usuariosRouter.post('/login', async (req, res) => {
   const user = {
     id: dbUser.id,
     username: dbUser.username,
-    tipo: tipoNormalizado,   // derivado de rol_nombre, para compatibilidad con frontend/middleware
+    tipo: tipoNormalizado,
     rol_id: dbUser.rol_id,
     rol_nombre: rolNombre,
     nombre: dbUser.nombre,
     apellido: dbUser.apellido,
     correo: dbUser.correo,
+    debe_cambiar_password: Boolean(dbUser.debe_cambiar_password),
   };
   const token = jwt.sign(
     {
@@ -289,6 +291,70 @@ usuariosRouter.post('/login', async (req, res) => {
     { expiresIn: JWT_EXPIRES_IN }
   );
   return res.json({ user, token });
+});
+
+// ── Cambiar contraseña (usuario autenticado) ─────────────────────────────────
+usuariosRouter.post('/cambiar-password', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const { passwordActual, passwordNueva } = req.body || {};
+  if (!passwordActual || !passwordNueva) {
+    return res.status(400).json({ error: 'Se requieren la contraseña actual y la nueva' });
+  }
+  if (String(passwordNueva).length < 8) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+  }
+
+  const userQ = await query(
+    `SELECT id, password FROM public.usuarios WHERE id = $1 LIMIT 1`,
+    [authUser.id]
+  );
+  if (!userQ.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const dbUser = userQ.rows[0];
+  let passwordOk = false;
+  if (isBcryptHash(dbUser.password)) {
+    passwordOk = await comparePassword(String(passwordActual), dbUser.password);
+  } else {
+    passwordOk = dbUser.password === String(passwordActual);
+  }
+  if (!passwordOk) return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+
+  const sameAsOld = isBcryptHash(dbUser.password)
+    ? await comparePassword(String(passwordNueva), dbUser.password)
+    : dbUser.password === String(passwordNueva);
+  if (sameAsOld) {
+    return res.status(400).json({ error: 'La nueva contraseña no puede ser igual a la actual' });
+  }
+
+  const newHash = await hashPassword(String(passwordNueva));
+  await query(
+    `UPDATE public.usuarios SET password = $1, debe_cambiar_password = false WHERE id = $2`,
+    [newHash, authUser.id]
+  );
+  return res.json({ ok: true });
+});
+
+// ── Forzar cambio de contraseña (solo propietario) ───────────────────────────
+usuariosRouter.post('/:id/forzar-cambio-password', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+  if (normalizeTipo(authUser.tipo) !== 'propietario') {
+    return res.status(403).json({ error: 'Solo el propietario puede forzar cambio de contraseña' });
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Id de usuario inválido' });
+  }
+
+  const result = await query(
+    `UPDATE public.usuarios SET debe_cambiar_password = true WHERE id = $1 RETURNING id`,
+    [id]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+  return res.json({ ok: true });
 });
 
 usuariosRouter.post('/forgot-password', async (req, res) => {

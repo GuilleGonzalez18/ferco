@@ -753,6 +753,8 @@ const statements = [
     created_at timestamptz NOT NULL DEFAULT now()
   );`,
   `CREATE INDEX IF NOT EXISTS idx_dashboard_widgets_usuario ON public.dashboard_widgets(usuario_id);`,
+  // === CAMBIO DE CONTRASEÑA OBLIGATORIO (v11) ===
+  `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debe_cambiar_password boolean NOT NULL DEFAULT false;`,
 ];
 
 try {
