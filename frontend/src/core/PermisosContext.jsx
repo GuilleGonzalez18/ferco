@@ -25,7 +25,7 @@ function buildMap(permisos) {
   return map;
 }
 
-export function PermisosProvider({ children, userTipo }) {
+export function PermisosProvider({ children, userTipo, userRolId }) {
   const [permisos, setPermisos] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,17 +33,18 @@ export function PermisosProvider({ children, userTipo }) {
   const esPropietario = tipo === 'propietario' || tipo === 'admin';
 
   const loadPermisos = useCallback(async () => {
-    if (!userTipo) { setLoading(false); return; }
+    if (!userRolId && !userTipo) { setLoading(false); return; }
     setLoading(true);
     try {
-      const rows = await api.getPermisos(tipo);
+      // Preferir rolId (numérico) sobre el nombre para la consulta
+      const rows = await api.getPermisos(userRolId ?? tipo);
       setPermisos(buildMap(rows));
     } catch {
       setPermisos(null);
     } finally {
       setLoading(false);
     }
-  }, [tipo, userTipo]);
+  }, [userRolId, tipo, userTipo]);
 
   useEffect(() => { loadPermisos(); }, [loadPermisos]);
 

@@ -155,6 +155,18 @@ export const api = {
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),
+  getDashboardWidget: ({ category, type, metric, range, comparison_period }) => {
+    const q = new URLSearchParams({ category, type, metric });
+    if (range) q.set('range', range);
+    if (comparison_period) q.set('comparison_period', comparison_period);
+    return request(`/ventas/dashboard/widget?${q}`);
+  },
+  getWidgets: () => request('/ventas/dashboard/widgets'),
+  saveWidgets: (widgets) => request('/ventas/dashboard/widgets', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(widgets),
+  }),
   getEstadisticasResumen: (desde, hasta, usuarioId) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);
@@ -202,8 +214,8 @@ export const api = {
   // ── PERMISOS ────────────────────────────────────────────────────────────────
   getRoles: () => request('/permisos/roles'),
   crearRol: (nombre) => request('/permisos/roles', { method: 'POST', body: JSON.stringify({ nombre }) }),
-  eliminarRol: (nombre) => request(`/permisos/roles/${encodeURIComponent(nombre)}`, { method: 'DELETE' }),
-  getPermisos: (rol) => request(`/permisos/${encodeURIComponent(rol)}`),
-  updatePermisos: (rol, permisos) =>
-    request(`/permisos/${encodeURIComponent(rol)}`, { method: 'PUT', body: JSON.stringify(permisos) }),
+  eliminarRol: (id) => request(`/permisos/roles/${id}`, { method: 'DELETE' }),
+  getPermisos: (rolId) => request(`/permisos/${rolId}`),
+  updatePermisos: (rolId, permisos) =>
+    request(`/permisos/${rolId}`, { method: 'PUT', body: JSON.stringify(permisos) }),
 };

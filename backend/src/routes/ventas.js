@@ -93,6 +93,17 @@ function normalizeTipo(tipo) {
   return 'vendedor';
 }
 
+async function tienePermisoEmpresaStats(rolId) {
+  if (!rolId) return false;
+  const result = await pool.query(
+    `SELECT 1 FROM public.permisos_rol
+     WHERE rol_id = $1 AND recurso = 'estadisticas' AND accion = 'ver_empresa' AND habilitado = true
+     LIMIT 1`,
+    [Number(rolId)]
+  );
+  return result.rowCount > 0;
+}
+
 function calcGrowthPercent(currentValue, previousValue) {
   const current = Number(currentValue || 0);
   const previous = Number(previousValue || 0);
@@ -159,7 +170,10 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
-  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  let esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  if (!esPropietario && authUser.rol_id) {
+    esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
+  }
   const userClauseVentas = esPropietario ? '' : 'AND v.usuario_id = $1';
   const userParams = esPropietario ? [] : [Number(authUser.id)];
 
@@ -240,13 +254,293 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
   });
 });
 
+function widgetDateRange(range) {
+  const now = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const f = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  switch (range) {
+    case 'today': return { desde: f(now), hasta: f(now) };
+    case 'week': {
+      const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      const mon = new Date(now); mon.setDate(now.getDate() - dow);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      return { desde: f(mon), hasta: f(sun) };
+    }
+    case 'month': {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { desde: f(first), hasta: f(last) };
+    }
+    case 'year':
+      return { desde: `${now.getFullYear()}-01-01`, hasta: `${now.getFullYear()}-12-31` };
+    case 'all':
+    default:
+      return { desde: null, hasta: null };
+  }
+}
+
+function comparisonPeriodRange(period) {
+  const now = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const f = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+
+  switch (period) {
+    case 'yesterday': {
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      const dayBefore = new Date(now); dayBefore.setDate(now.getDate() - 2);
+      return {
+        current: { desde: f(yesterday), hasta: f(yesterday) },
+        previous: { desde: f(dayBefore), hasta: f(dayBefore) },
+      };
+    }
+    case 'last_week': {
+      const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - dow);
+      const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+      const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1);
+      const prevMonday = new Date(lastMonday); prevMonday.setDate(lastMonday.getDate() - 7);
+      const prevSunday = new Date(lastMonday); prevSunday.setDate(lastMonday.getDate() - 1);
+      return {
+        current: { desde: f(lastMonday), hasta: f(lastSunday) },
+        previous: { desde: f(prevMonday), hasta: f(prevSunday) },
+      };
+    }
+    case 'last_month': {
+      const firstLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      const firstPrevMonth = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const lastPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 0);
+      return {
+        current: { desde: f(firstLastMonth), hasta: f(lastLastMonth) },
+        previous: { desde: f(firstPrevMonth), hasta: f(lastPrevMonth) },
+      };
+    }
+    case 'last_year': {
+      const y = now.getFullYear();
+      return {
+        current: { desde: `${y - 1}-01-01`, hasta: `${y - 1}-12-31` },
+        previous: { desde: `${y - 2}-01-01`, hasta: `${y - 2}-12-31` },
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function rangoDias(desde, hasta) {
+  if (!desde || !hasta) return 1;
+  const d1 = new Date(desde); const d2 = new Date(hasta);
+  return Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
+}
+
+async function fetchWidgetValue({ category, type, metric, desde, hasta, userId, canEmpresa }) {
+  const dateClauseFn = (col) =>
+    `DATE(${col}) BETWEEN COALESCE($1::date, DATE(${col})) AND COALESCE($2::date, DATE(${col}))`;
+
+  if (category === 'ventas') {
+    const userClause = userId ? `AND v.usuario_id = $3` : '';
+    const params = [desde, hasta]; if (userId) params.push(userId);
+    const dateClause = dateClauseFn('v.fecha');
+    const where = `WHERE ${ACTIVE_SALES_CONDITION} AND ${dateClause} ${userClause}`;
+
+    if (type === 'cantidad' && metric === 'monto') {
+      const q = await pool.query(`SELECT COALESCE(SUM(v.total),0) AS val FROM public.ventas v ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'cantidad' && metric === 'count') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.ventas v ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'promedio' && metric === 'monto_venta') {
+      const q = await pool.query(`SELECT COALESCE(AVG(v.total),0) AS val FROM public.ventas v ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'promedio' && metric === 'diario') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.ventas v ${where}`, params);
+      return Number(q.rows[0]?.val || 0) / rangoDias(desde, hasta);
+    }
+  }
+
+  if (category === 'productos') {
+    const params = [desde, hasta];
+    const where = `WHERE p.activo = true AND ${dateClauseFn('p.created_at')}`;
+    if (type === 'cantidad') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.productos p ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'promedio' && metric === 'diario') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.productos p ${where}`, params);
+      return Number(q.rows[0]?.val || 0) / rangoDias(desde, hasta);
+    }
+  }
+
+  if (category === 'clientes') {
+    const params = [desde, hasta];
+    const where = `WHERE ${dateClauseFn('c.created_at')}`;
+    if (type === 'cantidad') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.clientes c ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'promedio' && metric === 'diario') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.clientes c ${where}`, params);
+      return Number(q.rows[0]?.val || 0) / rangoDias(desde, hasta);
+    }
+  }
+
+  if (category === 'usuarios') {
+    const params = [desde, hasta];
+    const where = `WHERE ${dateClauseFn('u.created_at')}`;
+    if (type === 'cantidad') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.usuarios u ${where}`, params);
+      return Number(q.rows[0]?.val || 0);
+    }
+    if (type === 'promedio' && metric === 'diario') {
+      const q = await pool.query(`SELECT COUNT(*) AS val FROM public.usuarios u ${where}`, params);
+      return Number(q.rows[0]?.val || 0) / rangoDias(desde, hasta);
+    }
+  }
+
+  if (category === 'stock') {
+    const q = await pool.query(`SELECT COALESCE(SUM(p.stock), 0) AS val FROM public.productos p WHERE p.activo = true`);
+    return Number(q.rows[0]?.val || 0);
+  }
+
+  if (category === 'ganancia') {
+    if (!canEmpresa) return null;
+    const metodo = await getMetodoGanancias();
+    const { ganancia } = await calcularGanancia(metodo, desde ? { desde, hasta } : {});
+    if (type === 'promedio' && metric === 'diario') {
+      return Number(ganancia || 0) / rangoDias(desde, hasta);
+    }
+    return Number(ganancia || 0);
+  }
+
+  return 0;
+}
+
+ventasRouter.get('/dashboard/widget', async (req, res) => {
+  const { category, type, metric, range, comparison_period } = req.query;
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const ALLOWED_CATEGORIES = ['ventas', 'productos', 'clientes', 'usuarios', 'stock', 'ganancia'];
+  const ALLOWED_TYPES = ['cantidad', 'promedio', 'comparacion'];
+  if (!ALLOWED_CATEGORIES.includes(category)) return res.status(400).json({ error: `Categoría desconocida: ${category}` });
+  if (!ALLOWED_TYPES.includes(type)) return res.status(400).json({ error: `Tipo desconocido: ${type}` });
+
+  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+
+  if (category === 'ganancia' && !canEmpresa) {
+    return res.status(403).json({ error: 'Sin permiso para ver ganancias' });
+  }
+
+  const userId = (category === 'ventas' && !canEmpresa) ? Number(authUser.id) : null;
+
+  try {
+    if (type === 'comparacion') {
+      const periods = comparisonPeriodRange(comparison_period);
+      if (!periods) return res.status(400).json({ error: `Período de comparación desconocido: ${comparison_period}` });
+      const [current, previous] = await Promise.all([
+        fetchWidgetValue({ category, type: 'cantidad', metric, desde: periods.current.desde, hasta: periods.current.hasta, userId, canEmpresa }),
+        fetchWidgetValue({ category, type: 'cantidad', metric, desde: periods.previous.desde, hasta: periods.previous.hasta, userId, canEmpresa }),
+      ]);
+      const pct_change = previous === 0 ? null : Math.round(((current - previous) / previous) * 100 * 10) / 10;
+      return res.json({ current, previous, pct_change, period_label: comparison_period });
+    }
+
+    const { desde, hasta } = category === 'stock' ? {} : widgetDateRange(range);
+    const raw = await fetchWidgetValue({ category, type, metric, desde, hasta, userId, canEmpresa });
+    return res.json({ raw });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Widget preferences (persist per user in DB) ───────────────────────────────
+
+const DEFAULT_WIDGETS_FOR_USER = (canEmpresa) => [
+  { posicion: 0, categoria: 'ventas',    tipo: 'cantidad',    metrica: 'monto',  rango: 'today', periodo_comparacion: null, etiqueta: 'Ventas del día' },
+  { posicion: 1, categoria: 'ventas',    tipo: 'cantidad',    metrica: 'count',  rango: 'today', periodo_comparacion: null, etiqueta: 'Cantidad de ventas' },
+  { posicion: 2, categoria: 'ventas',    tipo: 'promedio',    metrica: 'monto_venta', rango: 'month', periodo_comparacion: null, etiqueta: 'Promedio por venta' },
+  { posicion: 3, categoria: 'clientes',  tipo: 'cantidad',    metrica: 'count',  rango: 'month', periodo_comparacion: null, etiqueta: 'Clientes nuevos' },
+  { posicion: 4, categoria: 'productos', tipo: 'cantidad',    metrica: 'count',  rango: 'month', periodo_comparacion: null, etiqueta: 'Productos agregados' },
+  ...(canEmpresa ? [
+    { posicion: 5, categoria: 'ganancia', tipo: 'cantidad', metrica: 'total', rango: 'today', periodo_comparacion: null, etiqueta: 'Ganancia del día' },
+  ] : []),
+];
+
+ventasRouter.get('/dashboard/widgets', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+
+  try {
+    const q = await pool.query(
+      `SELECT id, posicion, categoria, tipo, metrica, rango, periodo_comparacion, etiqueta
+       FROM public.dashboard_widgets WHERE usuario_id = $1 ORDER BY posicion`,
+      [authUser.id]
+    );
+    if (q.rows.length > 0) return res.json(q.rows);
+    return res.json(DEFAULT_WIDGETS_FOR_USER(canEmpresa).map((w, i) => ({ ...w, id: null, posicion: i })));
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+ventasRouter.put('/dashboard/widgets', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const widgets = req.body;
+  if (!Array.isArray(widgets)) return res.status(400).json({ error: 'Se esperaba un array de widgets' });
+
+  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+
+  // Rechazar widgets de ganancia si no tiene permiso
+  if (!canEmpresa && widgets.some((w) => w.categoria === 'ganancia')) {
+    return res.status(403).json({ error: 'Sin permiso para agregar widgets de ganancia' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM public.dashboard_widgets WHERE usuario_id = $1', [authUser.id]);
+    const inserted = [];
+    for (let i = 0; i < widgets.length; i++) {
+      const w = widgets[i];
+      const r = await client.query(
+        `INSERT INTO public.dashboard_widgets (usuario_id, posicion, categoria, tipo, metrica, rango, periodo_comparacion, etiqueta)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, posicion, categoria, tipo, metrica, rango, periodo_comparacion, etiqueta`,
+        [authUser.id, i, w.categoria, w.tipo, w.metrica, w.rango ?? null, w.periodo_comparacion ?? null, w.etiqueta]
+      );
+      inserted.push(r.rows[0]);
+    }
+    await client.query('COMMIT');
+    return res.json(inserted);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    return res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+
+
 ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   const { desde, hasta, usuarioId } = req.query;
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) {
     return res.status(401).json({ error: 'No autorizado' });
   }
-  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  let esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  if (!esPropietario && authUser.rol_id) {
+    esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
+  }
   const targetUsuarioId = esPropietario && usuarioId ? Number(usuarioId) : Number(authUser.id);
 
   if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(String(desde))) {

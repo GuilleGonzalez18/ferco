@@ -53,7 +53,7 @@ function AppShell({ user, onLogout }) {
   }
 
   return (
-    <PermisosProvider userTipo={user?.tipo}>
+    <PermisosProvider userTipo={user?.tipo} userRolId={user?.rol_id}>
       {productosError && (
         <div className="app-global-alert app-global-alert-error" role="alert">
           {productosError}

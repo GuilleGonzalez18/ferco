@@ -39,6 +39,7 @@ export function getAuthUserFromRequest(req) {
       nombre: payload.nombre || null,
       apellido: payload.apellido || null,
       tipo: payload.tipo || null,
+      rol_id: payload.rol_id || null,
     };
   } catch {
     return null;

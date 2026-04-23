@@ -114,70 +114,157 @@ function extractPaletteFromDataUrl(dataUrl) {
 
 // ── TAB EMPRESA ───────────────────────────────────────────────────────────────
 
-function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
-  const [form, setForm] = useState({
-    nombre: '',
-    razon_social: '',
-    rut: '',
-    direccion: '',
-    telefono: '',
-    correo: '',
-    website: '',
-    logo_base64: null,
-    color_primary: '#375f8c',
-    color_primary_strong: '#294c74',
-    color_primary_soft: '#e7effa',
-    color_menu_bg: '#1f2933',
-    color_menu_active: '#375f8c',
-    color_text: '#1d2b3e',
-    color_text_muted: '#526278',
-    color_menu_text: '#e6ecf4',
-    fondo_base64: null,
-  });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [err, setErr] = useState('');
+const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website'];
+const LOGO_FIELDS   = ['logo_base64', 'logo_tamano', 'logo_bg_color'];
+const FONDO_FIELDS  = ['fondo_base64', 'fondo_opacidad'];
+const COLORES_FIELDS = [
+  'color_primary', 'color_primary_strong', 'color_primary_soft',
+  'color_menu_bg', 'color_menu_active', 'color_text', 'color_text_muted',
+  'color_menu_text', 'color_logout_bg',
+];
+const VISUAL_FIELDS = [...LOGO_FIELDS, ...FONDO_FIELDS, ...COLORES_FIELDS];
+
+function buildForm(emp) {
+  emp = emp || {};
+  return {
+    nombre:               emp.nombre || '',
+    razon_social:         emp.razon_social || '',
+    rut:                  emp.rut || '',
+    direccion:            emp.direccion || '',
+    telefono:             emp.telefono || '',
+    correo:               emp.correo || '',
+    website:              emp.website || '',
+    logo_base64:          emp.logo_base64 || null,
+    color_primary:        emp.color_primary || '#375f8c',
+    color_primary_strong: emp.color_primary_strong || '#294c74',
+    color_primary_soft:   emp.color_primary_soft || '#e7effa',
+    color_menu_bg:        emp.color_menu_bg || '#1f2933',
+    color_menu_active:    emp.color_menu_active || '#375f8c',
+    color_text:           emp.color_text || '#1d2b3e',
+    color_text_muted:     emp.color_text_muted || '#526278',
+    color_menu_text:      emp.color_menu_text || '#e6ecf4',
+    color_logout_bg:      emp.color_logout_bg || '#d32f2f',
+    fondo_opacidad:       emp.fondo_opacidad ?? 0.06,
+    logo_tamano:          emp.logo_tamano ?? 200,
+    logo_bg_color:        emp.logo_bg_color || '#ffffff',
+    fondo_base64:         emp.fondo_base64 === '__none__' ? '' : (emp.fondo_base64 || null),
+  };
+}
+
+function pickFields(obj, keys) {
+  return Object.fromEntries(keys.map((k) => [k, obj[k]]));
+}
+
+function SectionActions({ dirty, saving, onSave, onUndo, msg }) {
+  if (!dirty && !msg) return null;
+  return (
+    <div className="config-section-actions">
+      {msg && <span className="config-section-ok">{msg}</span>}
+      {dirty && (
+        <>
+          <AppButton type="button" size="sm" tone="ghost" onClick={onUndo} disabled={!!saving}>
+            Deshacer
+          </AppButton>
+          <AppButton type="button" size="sm" onClick={onSave} disabled={!!saving}>
+            {saving ? 'Guardando...' : 'Guardar'}
+          </AppButton>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPreview }) {
+  const [form, setForm]       = useState(() => buildForm(initialEmpresa));
+  const [saved, setSaved]     = useState(() => buildForm(initialEmpresa));
+  const [savingSection, setSavingSection] = useState(null);
+  const [msgs, setMsgs]       = useState({});
+  const [err, setErr]         = useState('');
   const [paletaSugerida, setPaletaSugerida] = useState(null);
-  const fileRef = useRef(null);
+  const fileRef  = useRef(null);
   const fondoRef = useRef(null);
+  const msgTimers = useRef({});
 
   useEffect(() => {
     if (initialEmpresa) {
-      setForm({
-        nombre: initialEmpresa.nombre || '',
-        razon_social: initialEmpresa.razon_social || '',
-        rut: initialEmpresa.rut || '',
-        direccion: initialEmpresa.direccion || '',
-        telefono: initialEmpresa.telefono || '',
-        correo: initialEmpresa.correo || '',
-        website: initialEmpresa.website || '',
-        logo_base64: initialEmpresa.logo_base64 || null,
-        color_primary: initialEmpresa.color_primary || '#375f8c',
-        color_primary_strong: initialEmpresa.color_primary_strong || '#294c74',
-        color_primary_soft: initialEmpresa.color_primary_soft || '#e7effa',
-        color_menu_bg: initialEmpresa.color_menu_bg || '#1f2933',
-        color_menu_active: initialEmpresa.color_menu_active || '#375f8c',
-        color_text: initialEmpresa.color_text || '#1d2b3e',
-        color_text_muted: initialEmpresa.color_text_muted || '#526278',
-        color_menu_text: initialEmpresa.color_menu_text || '#e6ecf4',
-        fondo_base64: initialEmpresa.fondo_base64 === '__none__' ? '' : (initialEmpresa.fondo_base64 || null),
-      });
+      const f = buildForm(initialEmpresa);
+      setForm(f);
+      setSaved(f);
     }
   }, [initialEmpresa]);
 
-  const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  useEffect(() => {
+    return () => {
+      cancelPreview?.();
+      Object.values(msgTimers.current).forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isDirty = useCallback((fields) => fields.some((f) => form[f] !== saved[f]), [form, saved]);
+
+  const showMsg = (section, text) => {
+    clearTimeout(msgTimers.current[section]);
+    setMsgs((prev) => ({ ...prev, [section]: text }));
+    if (text) {
+      msgTimers.current[section] = setTimeout(
+        () => setMsgs((prev) => ({ ...prev, [section]: '' })),
+        3000,
+      );
+    }
+  };
+
+  const setVisualDirect = (field, value) => {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      applyPreview?.(next);
+      return next;
+    });
+  };
+
+  const setVisual = (field) => (e) => setVisualDirect(field, e.target.value);
+
+  const set = (field) => {
+    if (VISUAL_FIELDS.includes(field)) return setVisual(field);
+    return (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const undoSection = (fields) => {
+    setForm((prev) => {
+      const next = { ...prev, ...pickFields(saved, fields) };
+      if (fields.some((f) => VISUAL_FIELDS.includes(f))) applyPreview?.(next);
+      return next;
+    });
+  };
+
+  const saveSection = async (sectionKey, fields) => {
+    if (sectionKey === 'datos' && !form.nombre.trim()) {
+      setErr('El nombre de la empresa es requerido');
+      return;
+    }
+    setSavingSection(sectionKey);
+    setErr('');
+    const payload = { ...saved, ...pickFields(form, fields) };
+    try {
+      await api.updateConfigEmpresa(payload);
+      setSaved(payload);
+      showMsg(sectionKey, 'Guardado correctamente.');
+      onSaved?.();
+    } catch (error) {
+      setErr(error.message || 'Error al guardar');
+    } finally {
+      setSavingSection(null);
+    }
+  };
 
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setErr('El logo no puede superar 10 MB');
-      return;
-    }
+    if (file.size > 10 * 1024 * 1024) { setErr('El logo no puede superar 10 MB'); return; }
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const compressed = await compressImage(ev.target.result, 400, 200, 0.8);
-      setForm((prev) => ({ ...prev, logo_base64: compressed }));
+      setVisualDirect('logo_base64', compressed);
       setErr('');
       const paleta = await extractPaletteFromDataUrl(compressed);
       if (paleta) setPaletaSugerida(paleta);
@@ -186,54 +273,38 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
   };
 
   const handleRemoveLogo = () => {
-    setForm((prev) => ({ ...prev, logo_base64: '' }));
+    setVisualDirect('logo_base64', '');
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const handleFondoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      setErr('La imagen de fondo no puede superar 15 MB');
-      return;
-    }
+    if (file.size > 15 * 1024 * 1024) { setErr('La imagen de fondo no puede superar 15 MB'); return; }
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const compressed = await compressImage(ev.target.result, 1920, 1080, 0.7);
-      setForm((prev) => ({ ...prev, fondo_base64: compressed }));
+      setVisualDirect('fondo_base64', compressed);
       setErr('');
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveFondo = () => {
-    setForm((prev) => ({ ...prev, fondo_base64: '' }));
+    setVisualDirect('fondo_base64', '');
     if (fondoRef.current) fondoRef.current.value = '';
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMsg('');
-    setErr('');
-    try {
-      await api.updateConfigEmpresa(form);
-      setMsg('Configuración guardada correctamente.');
-      onSaved?.();
-    } catch (error) {
-      setErr(error.message || 'Error al guardar');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
-    <form className="config-tab-form" onSubmit={handleSave}>
+    <div className="config-tab-form">
+      {err && <p className="config-error">{err}</p>}
+
+      {/* ── DATOS DE LA EMPRESA ── */}
       <div className="config-section">
         <h3 className="config-section-title">Datos de la empresa</h3>
         <div className="config-field-row">
           <label className="config-field-label">Nombre *</label>
-          <AppInput value={form.nombre} onChange={set('nombre')} placeholder="Nombre de la empresa" required />
+          <AppInput value={form.nombre} onChange={set('nombre')} placeholder="Nombre de la empresa" />
         </div>
         <div className="config-field-row">
           <label className="config-field-label">Razón social</label>
@@ -259,8 +330,16 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
           <label className="config-field-label">Sitio web</label>
           <AppInput value={form.website} onChange={set('website')} placeholder="https://..." />
         </div>
+        <SectionActions
+          dirty={isDirty(DATOS_FIELDS)}
+          saving={savingSection === 'datos'}
+          onSave={() => saveSection('datos', DATOS_FIELDS)}
+          onUndo={() => undoSection(DATOS_FIELDS)}
+          msg={msgs.datos}
+        />
       </div>
 
+      {/* ── LOGO ── */}
       <div className="config-section">
         <h3 className="config-section-title">Logo</h3>
         <div className="config-logo-area">
@@ -277,14 +356,29 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
           <AppButton type="button" size="sm" onClick={() => fileRef.current?.click()}>
             {form.logo_base64 && form.logo_base64 !== '' ? 'Cambiar logo' : 'Subir logo'}
           </AppButton>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleLogoChange}
-          />
+          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoChange} />
           <p className="config-hint">Formatos: PNG, JPG, WebP. Se comprime automáticamente.</p>
+        </div>
+        <div className="config-fondo-extra">
+          <div className="config-field-group">
+            <label className="config-field-label">
+              Tamaño del logo en el menú: <strong>{form.logo_tamano}px</strong>
+            </label>
+            <input
+              type="range"
+              min="60" max="250" step="5"
+              value={form.logo_tamano}
+              onChange={(e) => setVisualDirect('logo_tamano', Number(e.target.value))}
+              className="config-range"
+            />
+          </div>
+          <div className="config-color-row" style={{ marginTop: '0.6rem' }}>
+            <label className="config-field-label">Color de fondo del logo</label>
+            <div className="config-color-input-wrap">
+              <input type="color" value={form.logo_bg_color} onChange={set('logo_bg_color')} className="config-color-picker" />
+              <AppInput value={form.logo_bg_color} onChange={set('logo_bg_color')} placeholder="#ffffff" className="config-color-text" />
+            </div>
+          </div>
         </div>
         {paletaSugerida && (
           <div className="config-paleta-sugerida">
@@ -301,7 +395,11 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
                 type="button"
                 size="sm"
                 onClick={() => {
-                  setForm((prev) => ({ ...prev, ...paletaSugerida }));
+                  setForm((prev) => {
+                    const next = { ...prev, ...paletaSugerida };
+                    applyPreview?.(next);
+                    return next;
+                  });
                   setPaletaSugerida(null);
                 }}
               >
@@ -313,8 +411,16 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
             </div>
           </div>
         )}
+        <SectionActions
+          dirty={isDirty(LOGO_FIELDS)}
+          saving={savingSection === 'logo'}
+          onSave={() => saveSection('logo', LOGO_FIELDS)}
+          onUndo={() => undoSection(LOGO_FIELDS)}
+          msg={msgs.logo}
+        />
       </div>
 
+      {/* ── IMAGEN DE FONDO ── */}
       <div className="config-section">
         <h3 className="config-section-title">Imagen de fondo</h3>
         <p className="config-hint">Se muestra detrás del contenido principal del sistema.</p>
@@ -339,76 +445,72 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
           <AppButton type="button" size="sm" onClick={() => fondoRef.current?.click()}>
             {form.fondo_base64 && form.fondo_base64 !== '' ? 'Cambiar fondo' : 'Subir imagen personalizada'}
           </AppButton>
-          <input
-            ref={fondoRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleFondoChange}
-          />
+          <input ref={fondoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFondoChange} />
           <p className="config-hint">Formatos: JPG, PNG, WebP. Se comprime automáticamente.</p>
         </div>
+        <div className="config-fondo-extra">
+          <div className="config-field-group">
+            <label className="config-field-label">
+              Opacidad del fondo: <strong>{Math.round(Number(form.fondo_opacidad) * 100)}%</strong>
+            </label>
+            <input
+              type="range"
+              min="0" max="1" step="0.01"
+              value={form.fondo_opacidad}
+              onChange={(e) => setVisualDirect('fondo_opacidad', Number(e.target.value))}
+              className="config-range"
+            />
+          </div>
+        </div>
+        <SectionActions
+          dirty={isDirty(FONDO_FIELDS)}
+          saving={savingSection === 'fondo'}
+          onSave={() => saveSection('fondo', FONDO_FIELDS)}
+          onUndo={() => undoSection(FONDO_FIELDS)}
+          msg={msgs.fondo}
+        />
       </div>
 
+      {/* ── COLORES ── */}
       <div className="config-section">
         <h3 className="config-section-title">Colores</h3>
         <div className="config-colors-grid">
-          <div className="config-color-row">
-            <label className="config-field-label">Color principal</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_primary} onChange={set('color_primary')} className="config-color-picker" />
-              <AppInput value={form.color_primary} onChange={set('color_primary')} placeholder="#375f8c" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Color principal fuerte</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_primary_strong} onChange={set('color_primary_strong')} className="config-color-picker" />
-              <AppInput value={form.color_primary_strong} onChange={set('color_primary_strong')} placeholder="#294c74" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Color principal suave</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_primary_soft} onChange={set('color_primary_soft')} className="config-color-picker" />
-              <AppInput value={form.color_primary_soft} onChange={set('color_primary_soft')} placeholder="#e7effa" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Fondo del menú</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_menu_bg} onChange={set('color_menu_bg')} className="config-color-picker" />
-              <AppInput value={form.color_menu_bg} onChange={set('color_menu_bg')} placeholder="#1f2933" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Color activo del menú</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_menu_active} onChange={set('color_menu_active')} className="config-color-picker" />
-              <AppInput value={form.color_menu_active} onChange={set('color_menu_active')} placeholder="#375f8c" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Texto del menú</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_menu_text} onChange={set('color_menu_text')} className="config-color-picker" />
-              <AppInput value={form.color_menu_text} onChange={set('color_menu_text')} placeholder="#e6ecf4" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Color de texto</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_text} onChange={set('color_text')} className="config-color-picker" />
-              <AppInput value={form.color_text} onChange={set('color_text')} placeholder="#1d2b3e" className="config-color-text" />
-            </div>
-          </div>
-          <div className="config-color-row">
-            <label className="config-field-label">Texto secundario</label>
-            <div className="config-color-input-wrap">
-              <input type="color" value={form.color_text_muted} onChange={set('color_text_muted')} className="config-color-picker" />
-              <AppInput value={form.color_text_muted} onChange={set('color_text_muted')} placeholder="#526278" className="config-color-text" />
-            </div>
-          </div>
+          {[
+            { field: 'color_primary',        label: 'Color principal',         placeholder: '#375f8c' },
+            { field: 'color_primary_strong',  label: 'Color principal fuerte',  placeholder: '#294c74' },
+            { field: 'color_primary_soft',    label: 'Color principal suave',   placeholder: '#e7effa' },
+            { field: 'color_menu_bg',         label: 'Fondo del menú',          placeholder: '#1f2933' },
+            { field: 'color_menu_active',     label: 'Color activo del menú',   placeholder: '#375f8c' },
+            { field: 'color_menu_text',       label: 'Texto del menú',          placeholder: '#e6ecf4' },
+            { field: 'color_text',            label: 'Color de texto',          placeholder: '#1d2b3e' },
+            { field: 'color_text_muted',      label: 'Texto secundario',        placeholder: '#526278' },
+            { field: 'color_logout_bg',       label: 'Botón Cerrar sesión',     placeholder: '#d32f2f' },
+          ].map(({ field, label, placeholder }) => {
+            const dirty = form[field] !== saved[field];
+            const saving = savingSection === field;
+            return (
+              <div key={field} className="config-color-row">
+                <label className="config-field-label">{label}</label>
+                <div className="config-color-input-wrap">
+                  <input type="color" value={form[field]} onChange={set(field)} className="config-color-picker" />
+                  <AppInput value={form[field]} onChange={set(field)} placeholder={placeholder} className="config-color-text" />
+                </div>
+                <div className="config-color-row-actions">
+                  {msgs[field] && <span className="config-section-ok">{msgs[field]}</span>}
+                  {dirty && (
+                    <>
+                      <AppButton type="button" size="sm" tone="ghost" onClick={() => undoSection([field])} disabled={saving}>
+                        ↩
+                      </AppButton>
+                      <AppButton type="button" size="sm" onClick={() => saveSection(field, [field])} disabled={saving}>
+                        {saving ? '...' : 'Guardar'}
+                      </AppButton>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <div className="config-colors-preview">
           <span style={{ background: form.color_primary, color: '#fff', padding: '6px 16px', borderRadius: 6, fontSize: 13 }}>Principal</span>
@@ -418,15 +520,10 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved }) {
           <span style={{ background: form.color_menu_active, color: '#fff', padding: '6px 16px', borderRadius: 6, fontSize: 13 }}>Activo</span>
           <span style={{ color: form.color_text, background: '#f4f7fb', padding: '6px 16px', borderRadius: 6, fontSize: 13, border: '1px solid #ddd' }}>Texto</span>
           <span style={{ color: form.color_text_muted, background: '#f4f7fb', padding: '6px 16px', borderRadius: 6, fontSize: 13, border: '1px solid #ddd' }}>Secundario</span>
+          <span style={{ background: form.color_logout_bg, color: '#fff', padding: '6px 16px', borderRadius: 6, fontSize: 13 }}>Cerrar sesión</span>
         </div>
       </div>
-
-      {err && <p className="config-error">{err}</p>}
-      {msg && <p className="config-ok">{msg}</p>}
-      <div className="config-actions">
-        <AppButton type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Guardar cambios'}</AppButton>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -605,7 +702,7 @@ function ResumenPermisos({ recurso, acciones, permisos }) {
 
 function TabPermisos() {
   const [roles, setRoles] = useState([]);
-  const [rolSeleccionado, setRolSeleccionado] = useState('');
+  const [rolSeleccionado, setRolSeleccionado] = useState(null); // ahora es el ID (number)
   const [permisos, setPermisos] = useState({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
@@ -618,14 +715,14 @@ function TabPermisos() {
     try {
       const rows = await api.getRoles();
       setRoles(rows);
-      if (!rolSeleccionado && rows.length > 0) setRolSeleccionado(rows[0].nombre);
+      if (!rolSeleccionado && rows.length > 0) setRolSeleccionado(rows[0].id);
     } catch { /* ignore */ }
   }, [rolSeleccionado]);
 
-  const loadPermisos = useCallback(async (rol) => {
-    if (!rol) return;
+  const loadPermisos = useCallback(async (rolId) => {
+    if (!rolId) return;
     try {
-      const rows = await api.getPermisos(rol);
+      const rows = await api.getPermisos(rolId);
       const map = {};
       for (const { recurso, accion, habilitado } of rows) {
         map[`${recurso}:${accion}`] = !!habilitado;
@@ -675,10 +772,10 @@ function TabPermisos() {
     if (!nuevoRol.trim()) return;
     setCreandoRol(true); setErr('');
     try {
-      await api.crearRol(nuevoRol.trim());
+      const creado = await api.crearRol(nuevoRol.trim());
       setNuevoRol('');
       await loadRoles();
-      setRolSeleccionado(nuevoRol.trim().toLowerCase());
+      setRolSeleccionado(creado.id);
     } catch (e) {
       setErr(e.message || 'Error al crear rol');
     } finally {
@@ -686,16 +783,19 @@ function TabPermisos() {
     }
   };
 
-  const handleEliminarRol = async (nombre) => {
+  const handleEliminarRol = async (id, nombre) => {
     if (!window.confirm(`¿Eliminar el rol "${nombre}"? Esta acción no se puede deshacer.`)) return;
     try {
-      await api.eliminarRol(nombre);
-      await loadRoles();
-      setRolSeleccionado('propietario');
+      await api.eliminarRol(id);
+      const rows = await api.getRoles();
+      setRoles(rows);
+      setRolSeleccionado(rows[0]?.id ?? null);
     } catch (e) {
       setErr(e.message || 'Error al eliminar rol');
     }
   };
+
+  const rolActual = roles.find((r) => r.id === rolSeleccionado);
 
   return (
     <div className="config-permisos-root">
@@ -705,13 +805,13 @@ function TabPermisos() {
         <p className="config-hint">Seleccioná un rol para ver y editar sus permisos. Los roles del sistema no se pueden eliminar.</p>
         <div className="config-roles-list">
           {roles.map((r) => (
-            <div key={r.nombre} className={`config-rol-chip ${r.nombre === rolSeleccionado ? 'active' : ''}`}>
-              <button type="button" className="config-rol-chip-btn" onClick={() => setRolSeleccionado(r.nombre)}>
+            <div key={r.id} className={`config-rol-chip ${r.id === rolSeleccionado ? 'active' : ''}`}>
+              <button type="button" className="config-rol-chip-btn" onClick={() => setRolSeleccionado(r.id)}>
                 {r.nombre}
                 {r.es_sistema && <span className="config-rol-badge">sistema</span>}
               </button>
               {!r.es_sistema && (
-                <button type="button" className="config-rol-delete" title="Eliminar rol" onClick={() => handleEliminarRol(r.nombre)}>×</button>
+                <button type="button" className="config-rol-delete" title="Eliminar rol" onClick={() => handleEliminarRol(r.id, r.nombre)}>×</button>
               )}
             </div>
           ))}
@@ -733,7 +833,7 @@ function TabPermisos() {
       {rolSeleccionado && (
         <div className="config-section">
           <h3 className="config-section-title">
-            Permisos del rol: <span className="config-rol-nombre">{rolSeleccionado}</span>
+            Permisos del rol: <span className="config-rol-nombre">{rolActual?.nombre ?? ''}</span>
           </h3>
           <p className="config-hint">Tocá cada sección para expandir y configurar sus permisos.</p>
           <div className="config-acordeon">
@@ -802,7 +902,7 @@ function TabPermisos() {
 
 export default function Configuracion() {
   const [tab, setTab] = useState('empresa');
-  const { empresa, reloadConfig } = useConfig();
+  const { empresa, reloadConfig, applyPreview, cancelPreview } = useConfig();
 
   return (
     <div className="config-root">
@@ -819,7 +919,7 @@ export default function Configuracion() {
         ))}
       </div>
       <div className="config-panel">
-        {tab === 'empresa' && <TabEmpresa empresa={empresa} onSaved={reloadConfig} />}
+        {tab === 'empresa' && <TabEmpresa empresa={empresa} onSaved={reloadConfig} applyPreview={applyPreview} cancelPreview={cancelPreview} />}
         {tab === 'modulos' && <TabModulos onSaved={reloadConfig} />}
         {tab === 'ganancias' && <TabGanancias />}
         {tab === 'permisos' && <TabPermisos />}

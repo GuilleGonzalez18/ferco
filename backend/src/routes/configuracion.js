@@ -22,6 +22,8 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
     color_primary, color_primary_strong, color_primary_soft,
     color_menu_bg, color_menu_active,
     color_text, color_text_muted, color_menu_text,
+    color_logout_bg,
+    fondo_opacidad, logo_tamano, logo_bg_color,
     configurado,
   } = req.body;
 
@@ -51,6 +53,10 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         color_menu_text      = COALESCE($16::varchar, color_menu_text),
         fondo_base64         = CASE WHEN $17::text IS NULL THEN fondo_base64 WHEN $17::text = '' THEN '__none__' ELSE $17::text END,
         configurado          = CASE WHEN $18::boolean IS TRUE THEN true ELSE configurado END,
+        color_logout_bg      = COALESCE($19::varchar, color_logout_bg),
+        fondo_opacidad       = COALESCE($20::decimal, fondo_opacidad),
+        logo_tamano          = COALESCE($21::smallint, logo_tamano),
+        logo_bg_color        = COALESCE($22::varchar, logo_bg_color),
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
       RETURNING *`,
@@ -60,7 +66,11 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
        color_menu_bg, color_menu_active,
        color_text, color_text_muted, color_menu_text,
        fondo_base64 === undefined ? null : (fondo_base64 === '' ? '' : (fondo_base64 ?? null)),
-       configurado ?? null]
+       configurado ?? null,
+       color_logout_bg ?? null,
+       fondo_opacidad ?? null,
+       logo_tamano ?? null,
+       logo_bg_color ?? null]
     );
     res.json(result.rows[0]);
   } catch (err) {

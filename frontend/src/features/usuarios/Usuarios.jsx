@@ -10,6 +10,7 @@ import { usePermisos } from '../../core/PermisosContext';
 
 export default function Usuarios({ currentUser, onlySelf = false }) {
   const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -24,7 +25,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
     username: '',
     correo: '',
     password: '',
-    tipo: 'vendedor',
+    rol_id: '',
     telefono: '',
     direccion: '',
   });
@@ -39,8 +40,14 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       setLoading(true);
       setError('');
       try {
-        const rows = await api.getUsuarios();
+        const [rows, rolesRows] = await Promise.all([api.getUsuarios(), api.getRoles()]);
         setUsuarios(rows);
+        setRoles(rolesRows);
+        // Establecer rol por defecto en el form si aún no está seteado
+        if (!nuevo.rol_id && rolesRows.length > 0) {
+          const vendedor = rolesRows.find((r) => r.nombre === 'vendedor') || rolesRows[0];
+          setNuevo((prev) => ({ ...prev, rol_id: String(vendedor.id) }));
+        }
       } catch (err) {
         setError(err.message || 'No se pudieron cargar los usuarios.');
       } finally {
@@ -48,6 +55,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       }
     };
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleSort = (column) => {
@@ -121,6 +129,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         apellido: nuevo.apellido || null,
         telefono: nuevo.telefono || null,
         direccion: nuevo.direccion || null,
+        rol_id: nuevo.rol_id ? parseInt(nuevo.rol_id, 10) : null,
       };
       if (editandoId && !String(payload.password || '').trim()) {
         delete payload.password;
@@ -137,13 +146,14 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         setUsuarios((prev) => [creado, ...prev]);
       }
 
+      const vendedor = roles.find((r) => r.nombre === 'vendedor') || roles[0];
       setNuevo({
         nombre: '',
         apellido: '',
         username: '',
         correo: '',
         password: '',
-        tipo: 'vendedor',
+        rol_id: vendedor ? String(vendedor.id) : '',
         telefono: '',
         direccion: '',
       });
@@ -163,7 +173,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       username: usuario.username || '',
       correo: usuario.correo || '',
       password: '',
-      tipo: usuario.tipo || 'vendedor',
+      rol_id: usuario.rol_id ? String(usuario.rol_id) : '',
       telefono: usuario.telefono || '',
       direccion: usuario.direccion || '',
     });
@@ -200,7 +210,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         username: usuarioPropio.username || '',
         correo: usuarioPropio.correo || '',
         password: '',
-        tipo: usuarioPropio.tipo || 'vendedor',
+        rol_id: usuarioPropio.rol_id ? String(usuarioPropio.rol_id) : '',
         telefono: usuarioPropio.telefono || '',
         direccion: usuarioPropio.direccion || '',
       });
@@ -249,7 +259,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         </button>
       ),
       mobileLabel: 'Tipo',
-      render: (u) => u.tipo || '-',
+      render: (u) => u.rol_nombre || u.tipo || '-',
     },
     {
       key: 'telefono',
@@ -290,13 +300,14 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
             className="icon-btn"
             onClick={() => {
               setEditandoId(null);
+              const vendedor = roles.find((r) => r.nombre === 'vendedor') || roles[0];
               setNuevo({
                 nombre: '',
                 apellido: '',
                 username: '',
                 correo: '',
                 password: '',
-                tipo: 'vendedor',
+                rol_id: vendedor ? String(vendedor.id) : '',
                 telefono: '',
                 direccion: '',
               });
@@ -366,10 +377,11 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
                 placeholder={editandoId ? 'Dejar en blanco para mantener' : ''}
               />
             </label>
-            <label className="field-label">Tipo
-              <AppSelect name="tipo" value={nuevo.tipo} onChange={handleChange} disabled={!esPropietario}>
-                <option value="vendedor">Vendedor</option>
-                <option value="propietario">Propietario</option>
+            <label className="field-label">Rol
+              <AppSelect name="rol_id" value={nuevo.rol_id} onChange={handleChange} disabled={!esPropietario}>
+                {roles.map((r) => (
+                  <option key={r.id} value={String(r.id)}>{r.nombre}</option>
+                ))}
               </AppSelect>
             </label>
             <label className="field-label">Teléfono
