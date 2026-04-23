@@ -8,12 +8,14 @@ import { usuariosRouter } from './routes/usuarios.js';
 import { ventasRouter } from './routes/ventas.js';
 import { auditoriaRouter } from './routes/auditoria.js';
 import { empaquesRouter } from './routes/empaques.js';
+import { configuracionRouter } from './routes/configuracion.js';
+import { permisosRouter } from './routes/permisos.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
-const corsOrigin = process.env.CORS_ORIGIN || '';
+const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '';
 
 function normalizeOrigin(value) {
   return String(value || '')
@@ -42,7 +44,7 @@ app.use(cors({
       return wildcardToRegex(rule).test(requestOrigin);
     });
     if (isAllowed) return callback(null, true);
-    return callback(new Error('Origen no permitido por CORS'));
+    return callback(new Error(`Origen no permitido por CORS: ${requestOrigin}`));
   },
 }));
 app.use(express.json({ limit: '15mb' }));
@@ -62,8 +64,12 @@ app.use('/api/usuarios', usuariosRouter);
 app.use('/api/ventas', ventasRouter);
 app.use('/api/auditoria', auditoriaRouter);
 app.use('/api/empaques', empaquesRouter);
+app.use('/api/configuracion', configuracionRouter);
+app.use('/api/permisos', permisosRouter);
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Backend running on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`CORS origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'all origins allowed'}`);
 });

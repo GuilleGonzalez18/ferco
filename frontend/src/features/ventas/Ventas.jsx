@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
@@ -171,6 +173,7 @@ export default function Ventas({
   onCloseCarritoDrawer,
   onCarritoCountChange,
 }) {
+  const { empresa } = useConfig();
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [vistaProductos, setVistaProductos] = useState('grid');
@@ -683,40 +686,68 @@ export default function Ventas({
     if (!ventaFinalizada) return null;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let cursorY = 12;
+    const marginX = 14;
 
-    try {
-      const logo = await loadImage('/images/encabezadofacturacion.png');
-      const logoWidth = 64;
-      const logoHeight = 12;
-      const x = (pageWidth - logoWidth) / 2;
-      doc.addImage(logo, 'PNG', x, cursorY, logoWidth, logoHeight);
-      cursorY += logoHeight + 4;
-    } catch {
-      cursorY += 2;
+    // ── Layout: logo box (izquierda) + dos columnas de info (derecha) ──
+    const headerY = 10;
+    const titleH = 13;   // más espacio para el título + margen inferior
+    const lineH = 5;     // altura fila datos
+    const dataRows = 4;  // Fecha / Nro ticket / Vendedor+Fecha entrega / (cliente cols)
+    const headerHeight = titleH + dataRows * lineH + 2;
+
+    const logoBoxSize = headerHeight;           // cuadrado del logo = alto del bloque
+    const logoX = marginX;
+    const infoX = marginX + logoBoxSize + 5;    // info comienza tras el logo + gap
+    const infoWidth = pageWidth - infoX - marginX;
+    const col1X = infoX;
+    const col2X = infoX + infoWidth / 2;
+    const colMaxW = infoWidth / 2 - 2;
+
+    // ── Logo (contain dentro del cuadrado, sin distorsión) ──
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (logo) {
+      const nw = logo.naturalWidth  || logoBoxSize;
+      const nh = logo.naturalHeight || logoBoxSize;
+      const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
+      const drawW = nw * scale;
+      const drawH = nh * scale;
+      const drawX = logoX + (logoBoxSize - drawW) / 2;
+      const drawY = headerY + (logoBoxSize - drawH) / 2;
+      doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
     }
 
-    doc.setFontSize(14);
-    doc.text('Ticket de venta', pageWidth / 2, cursorY, { align: 'center' });
-    cursorY += 6;
+    // ── Título ──
+    doc.setFontSize(13);
+    doc.text('Ticket de Venta', col1X, headerY + 9);
 
-    const leftX = 14;
-    const rightX = pageWidth / 2 + 4;
-    const lineH = 4.8;
+    // ── Filas de info: col izquierda (ticket) | col derecha (cliente) ──
     doc.setFontSize(9.5);
-    doc.text(`Fecha Emisión: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`, leftX, cursorY);
-    doc.text(`Cliente: ${ventaFinalizada.clienteNombre || '-'}`, rightX, cursorY);
-    cursorY += lineH;
-    doc.text(`Número de ticket: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`, leftX, cursorY);
-    doc.text(`Número de teléfono: ${ventaFinalizada.clienteTelefono || '-'}`, rightX, cursorY);
-    cursorY += lineH;
-    doc.text(`Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`, leftX, cursorY);
-    doc.text(`Dirección: ${ventaFinalizada.clienteDireccion || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
-    cursorY += lineH;
-    doc.text(`Horarios: ${ventaFinalizada.clienteHorarios || '-'}`, rightX, cursorY, { maxWidth: pageWidth - rightX - 10 });
-    cursorY += lineH;
-    doc.text(`Fecha de entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`, leftX, cursorY);
-    cursorY += 6;
+    let infoY = headerY + titleH;
+    const infoRows = [
+      [
+        `Fecha Emisión: ${new Date(ventaFinalizada.fecha).toLocaleString('es-UY')}`,
+        `Cliente: ${ventaFinalizada.clienteNombre || '-'}`,
+      ],
+      [
+        `Nro. ticket: ${ventaFinalizada.id ? `#${ventaFinalizada.id}` : 'Sin número'}`,
+        `Teléfono: ${ventaFinalizada.clienteTelefono || '-'}`,
+      ],
+      [
+        `Vendedor: ${ventaFinalizada.vendedorNombre || '-'}`,
+        `Dirección: ${ventaFinalizada.clienteDireccion || '-'}`,
+      ],
+      [
+        `Fecha entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`,
+        `Horarios: ${ventaFinalizada.clienteHorarios || '-'}`,
+      ],
+    ];
+    infoRows.forEach(([left, right]) => {
+      doc.text(left, col1X, infoY, { maxWidth: colMaxW });
+      doc.text(right, col2X, infoY, { maxWidth: colMaxW });
+      infoY += lineH;
+    });
+
+    let cursorY = headerY + headerHeight + 5;
 
     autoTable(doc, {
       startY: cursorY,
@@ -730,7 +761,7 @@ export default function Ventas({
         money(item.subtotalBase),
       ]),
       styles: { fontSize: 9 },
-      headStyles: { fillColor: [55, 95, 140] },
+      headStyles: { fillColor: getPrimaryRgb() },
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;

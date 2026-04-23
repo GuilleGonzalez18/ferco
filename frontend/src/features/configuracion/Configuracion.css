@@ -1,0 +1,757 @@
+.config-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  max-width: 720px;
+}
+
+.config-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+.config-tab-btn {
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  font: var(--weight-medium) var(--font-md) var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.config-tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.config-tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.config-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.config-tab-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  animation: configFadeIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes configFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Sub-tabs dentro de TabEmpresa ── */
+.config-subtabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 2px solid var(--color-border);
+  padding: var(--space-md) var(--space-lg) 0;
+  background: color-mix(in srgb, var(--color-primary-soft, #e7effa) 30%, transparent);
+}
+
+.config-subtab-btn {
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.config-subtab-btn:hover {
+  color: var(--color-primary);
+}
+
+.config-subtab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.config-section-title {
+  font: var(--weight-semibold) var(--font-lg) var(--font-heading);
+  color: var(--color-heading);
+  margin: 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-field-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: start;
+  gap: var(--space-sm);
+}
+
+.config-field-label {
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text-muted);
+  padding-top: 10px;
+}
+
+.config-logo-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+/* ── Vista previa del logo en el menú ── */
+.config-logo-menu-preview {
+  margin-bottom: var(--space-sm);
+}
+
+.config-logo-menu-mock {
+  width: 130px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+.config-logo-menu-mock-wrap {
+  padding: 0.9rem 0.8rem 0.7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+}
+
+.config-logo-menu-mock-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+}
+
+.config-logo-menu-mock-empty {
+  font-size: 11px;
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.config-logo-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.config-logo-preview {
+  max-height: 80px;
+  max-width: 220px;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs);
+  background: var(--color-surface);
+}
+
+.config-fondo-preview {
+  max-height: 100px;
+  max-width: 200px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.config-logo-placeholder {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.config-hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.config-fondo-extra {
+  margin-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.config-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.config-range {
+  width: 100%;
+  max-width: 320px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.config-paleta-sugerida {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-paleta-label {
+  font-size: var(--font-sm);
+  color: var(--color-text);
+  margin: 0;
+  font-weight: var(--weight-medium);
+}
+
+.config-paleta-preview {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.config-paleta-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.config-colors-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.config-color-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-color-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.config-color-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-color-picker {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 2px;
+  background: none;
+  flex-shrink: 0;
+}
+
+.config-color-text {
+  width: 120px;
+}
+
+.config-colors-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.config-modulos-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-modulo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.config-modulo-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-modulo-label {
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text);
+}
+
+.config-modulo-badge {
+  font-size: var(--font-xs);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.config-toggle {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.config-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.config-toggle-track {
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: var(--color-border);
+  border-radius: 999px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.config-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.config-toggle-input:checked ~ .config-toggle-track {
+  background: var(--color-primary);
+}
+
+.config-toggle-input:checked ~ .config-toggle-track::after {
+  transform: translateX(20px);
+}
+
+.config-toggle-input:disabled ~ .config-toggle-track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.config-metodo-desc {
+  background: var(--color-primary-soft);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-sm);
+  color: var(--color-text);
+}
+
+.config-metodo-desc p { margin: 0; }
+
+.config-error {
+  color: var(--color-error);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+.config-ok {
+  color: var(--color-success);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+.config-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.config-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.config-section-ok {
+  font-size: var(--font-xs);
+  color: #2e7d32;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-weight: 500;
+  margin-right: auto;
+}
+
+.config-section-pending {
+  font-size: var(--font-xs);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-weight: 500;
+}
+
+.config-loading {
+  padding: var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+}
+
+/* ── TAB PERMISOS ────────────────────────────────────────────────────────── */
+.config-permisos-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+}
+
+/* Roles */
+.config-roles-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.config-rol-chip {
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.config-rol-chip.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.config-rol-chip-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.45rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.config-rol-chip.active .config-rol-chip-btn { color: var(--color-primary); }
+
+.config-rol-badge {
+  font-size: 0.62rem;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 10px;
+  padding: 0.1rem 0.4rem;
+  font-weight: 500;
+}
+
+.config-rol-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  min-height: 36px;
+  color: var(--color-error);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.config-nuevo-rol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+
+.config-nuevo-rol .app-input-wrapper {
+  flex: 1;
+  min-width: 160px;
+}
+
+.config-rol-nombre {
+  color: var(--color-primary);
+  font-style: normal;
+}
+
+/* Acordeón */
+.config-acordeon {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+
+.config-acordeon-item {
+  border-top: 1px solid var(--color-border);
+}
+
+.config-acordeon-item:first-child {
+  border-top: none;
+}
+
+.config-acordeon-item.open > .config-acordeon-header {
+  background: var(--color-primary-soft);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-acordeon-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.75rem 1rem;
+  min-height: 52px;
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.config-acordeon-header:hover {
+  background: var(--color-surface-soft);
+}
+
+.config-acordeon-item.open > .config-acordeon-header:hover {
+  background: var(--color-primary-soft);
+}
+
+.config-acordeon-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+  flex: 1;
+  text-align: left;
+}
+
+.config-acordeon-resumen {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.resumen-ninguno {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.resumen-todos {
+  background: #e6f4ec;
+  color: var(--color-success);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.resumen-parcial {
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.config-acordeon-chevron {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.config-acordeon-body {
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.config-toggle-todos {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.config-toggle-todos:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Chips de permiso */
+.config-permisos-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.config-permiso-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 14px;
+  padding: 0.4rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  user-select: none;
+}
+
+.config-permiso-chip.on {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.config-permiso-chip.off {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  opacity: 0.75;
+}
+
+.config-permiso-chip.off:hover {
+  border-color: var(--color-primary);
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+.config-permiso-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.config-permiso-checkbox { display: none; }
+
+.config-success {
+  color: var(--color-success);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+/* ── Vista previa en documentos PDF ──────────────────────────────────────── */
+.config-pdf-previews-row {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.config-pdf-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-pdf-preview-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.config-pdf-mock {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .config-acordeon-header {
+    padding: 0.85rem 0.75rem;
+    min-height: 56px;
+  }
+
+  .config-acordeon-body {
+    padding: 0.75rem;
+  }
+
+  .config-permiso-chip {
+    min-height: 40px;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.9rem;
+  }
+
+  .config-rol-chip-btn {
+    min-height: 40px;
+    padding: 0.5rem 0.9rem;
+  }
+}

@@ -64,7 +64,7 @@
 .sort-header-btn {
   border: none;
   background: transparent;
-  color: #375f8c;
+  color: var(--color-primary);
   border-radius: 0;
   padding: 0;
   text-align: left;
@@ -114,7 +114,7 @@
 
 .stock-item-info strong {
   font-size: 0.84rem;
-  color: #1f2933;
+  color: var(--color-text);
   font-weight: 700;
   line-height: 1.1;
   text-align: left;
@@ -156,7 +156,7 @@
 .stock-modal button {
   border: none;
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.42rem 0.66rem;
   font-size: 0.8rem;
@@ -169,7 +169,7 @@
   flex-direction: column;
   gap: 0.22rem;
   font-size: 0.82rem;
-  color: #375f8c;
+  color: var(--color-primary);
   margin-top: 0.4rem;
 }
 

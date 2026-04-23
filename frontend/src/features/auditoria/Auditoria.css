@@ -32,7 +32,7 @@
 .audit-btn {
   border: none;
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
@@ -69,7 +69,7 @@
 
 .auditoria-card h4 {
   margin: 0 0 0.55rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.92rem;
 }
 
@@ -145,9 +145,9 @@
 
 .auditoria-list .header {
   font-weight: 700;
-  color: #375f8c;
-  background: #eaf0fa;
-  border-color: #eaf0fa;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-soft);
 }
 
 .auditoria-list .vacio {

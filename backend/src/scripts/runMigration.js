@@ -455,6 +455,306 @@ const statements = [
     OR precio <> ROUND(COALESCE(precio, 0))
     OR precio_empaque <> ROUND(COALESCE(precio_empaque, 0));
   `,
+  // === CONFIGURACIÓN DE EMPRESA ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_empresa (
+    id serial PRIMARY KEY,
+    nombre varchar(180) NOT NULL DEFAULT 'Mi Empresa',
+    razon_social varchar(180) NULL,
+    rut varchar(80) NULL,
+    direccion text NULL,
+    telefono varchar(50) NULL,
+    correo varchar(180) NULL,
+    website varchar(255) NULL,
+    logo_base64 text NULL,
+    color_primary varchar(7) NOT NULL DEFAULT '#cc2222',
+    color_primary_strong varchar(7) NOT NULL DEFAULT '#8f0e0e',
+    color_primary_soft varchar(7) NOT NULL DEFAULT '#fce8e8',
+    color_menu_bg varchar(7) NOT NULL DEFAULT '#3d1a08',
+    color_menu_active varchar(7) NOT NULL DEFAULT '#cc2222',
+    updated_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  INSERT INTO public.config_empresa (nombre)
+  SELECT 'Mi Empresa'
+  WHERE NOT EXISTS (SELECT 1 FROM public.config_empresa);
+  `,
+  // === MÓDULOS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_modulos (
+    id serial PRIMARY KEY,
+    codigo varchar(50) NOT NULL,
+    label varchar(80) NOT NULL,
+    habilitado boolean NOT NULL DEFAULT true,
+    solo_propietario boolean NOT NULL DEFAULT false,
+    orden integer NOT NULL DEFAULT 0
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_config_modulos_codigo ON public.config_modulos (codigo);
+  `,
+  `
+  INSERT INTO public.config_modulos (codigo, label, habilitado, solo_propietario, orden)
+  VALUES
+    ('nueva-venta',   'Nueva venta',      true, false, 1),
+    ('ventas',        'Ventas',           true, false, 2),
+    ('productos',     'Productos',        true, false, 3),
+    ('clientes',      'Clientes',         true, false, 4),
+    ('usuarios',      'Usuarios',         true, true,  5),
+    ('auditoria',     'Auditoría',        true, true,  6),
+    ('control-stock', 'Control de stock', true, true,  7),
+    ('estadisticas',  'Estadísticas',     true, true,  8),
+    ('configuracion', 'Configuración',    true, true,  9)
+  ON CONFLICT (codigo) DO NOTHING;
+  `,
+  // === MÉTODOS DE CÁLCULO DE GANANCIAS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_ganancias_metodos (
+    id serial PRIMARY KEY,
+    codigo varchar(50) NOT NULL,
+    label varchar(120) NOT NULL,
+    descripcion text NULL,
+    activo boolean NOT NULL DEFAULT true
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_config_ganancias_metodos_codigo ON public.config_ganancias_metodos (codigo);
+  `,
+  `
+  INSERT INTO public.config_ganancias_metodos (codigo, label, descripcion)
+  VALUES
+    ('margen_venta', 'Margen por venta',
+     'Ganancia = Σ (precio_unitario_venta − costo_producto) × cantidad. Por cada ítem vendido se descuenta el costo del producto.'),
+    ('flujo_caja',   'Flujo de caja',
+     'Ganancia = Σ total_ventas − Σ (costo × cantidad de entradas de stock). Cada entrada de stock resta su costo total; cada venta suma su total completo.')
+  ON CONFLICT (codigo) DO NOTHING;
+  `,
+  // === CONFIGURACIÓN ACTIVA DE GANANCIAS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_ganancias (
+    id serial PRIMARY KEY,
+    metodo_id integer NOT NULL REFERENCES public.config_ganancias_metodos(id),
+    updated_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  INSERT INTO public.config_ganancias (metodo_id)
+  SELECT id FROM public.config_ganancias_metodos WHERE codigo = 'margen_venta'
+  AND NOT EXISTS (SELECT 1 FROM public.config_ganancias)
+  LIMIT 1;
+  `,
+  // === NUEVAS COLUMNAS CONFIG_EMPRESA (v2) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text varchar(7) DEFAULT '#1d2b3e';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_text_muted varchar(7) DEFAULT '#526278';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_menu_text varchar(7) DEFAULT '#f5e6e6';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS fondo_base64 text NULL;`,
+  // === FLAG WIZARD CONFIGURACIÓN INICIAL (v3) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS configurado boolean NOT NULL DEFAULT false;`,
+  // === ROLES Y PERMISOS (v4) ===
+  `
+  CREATE TABLE IF NOT EXISTS public.roles (
+    id serial PRIMARY KEY,
+    nombre varchar(50) NOT NULL UNIQUE,
+    es_sistema boolean NOT NULL DEFAULT false
+  );
+  `,
+  `
+  INSERT INTO public.roles (nombre, es_sistema) VALUES
+    ('propietario', true),
+    ('vendedor',    true)
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS public.permisos_rol (
+    id serial PRIMARY KEY,
+    rol varchar(50) NOT NULL,
+    recurso varchar(80) NOT NULL,
+    accion varchar(80) NOT NULL,
+    habilitado boolean NOT NULL DEFAULT true,
+    UNIQUE(rol, recurso, accion)
+  );
+  `,
+  // Permisos por defecto para PROPIETARIO (acceso total)
+  `
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'permisos_rol' AND column_name = 'rol'
+    ) THEN
+      INSERT INTO public.permisos_rol (rol, recurso, accion, habilitado) VALUES
+        ('propietario','nueva-venta','usar',true),
+        ('propietario','ventas','ver',true),
+        ('propietario','ventas','eliminar',true),
+        ('propietario','ventas','exportar',true),
+        ('propietario','productos','ver',true),
+        ('propietario','productos','agregar',true),
+        ('propietario','productos','editar',true),
+        ('propietario','productos','eliminar',true),
+        ('propietario','productos','ver_archivados',true),
+        ('propietario','productos','gestionar_empaques',true),
+        ('propietario','productos','ver_costo',true),
+        ('propietario','productos','ver_ganancia',true),
+        ('propietario','productos','exportar',true),
+        ('propietario','clientes','ver',true),
+        ('propietario','clientes','agregar',true),
+        ('propietario','clientes','editar',true),
+        ('propietario','clientes','eliminar',true),
+        ('propietario','clientes','exportar',true),
+        ('propietario','usuarios','ver',true),
+        ('propietario','usuarios','agregar',true),
+        ('propietario','usuarios','editar',true),
+        ('propietario','usuarios','eliminar',true),
+        ('propietario','estadisticas','ver',true),
+        ('propietario','estadisticas','ver_empresa',true),
+        ('propietario','estadisticas','ver_por_usuario',true),
+        ('propietario','estadisticas','exportar',true),
+        ('propietario','stock','ver',true),
+        ('propietario','stock','editar',true),
+        ('propietario','auditoria','ver',true),
+        ('propietario','auditoria','exportar',true),
+        ('propietario','configuracion','ver',true)
+      ON CONFLICT (rol, recurso, accion) DO NOTHING;
+    END IF;
+  END$$;
+  `,
+  // Permisos por defecto para VENDEDOR (acceso limitado)
+  `
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'permisos_rol' AND column_name = 'rol'
+    ) THEN
+      INSERT INTO public.permisos_rol (rol, recurso, accion, habilitado) VALUES
+        ('vendedor','nueva-venta','usar',true),
+        ('vendedor','ventas','ver',true),
+        ('vendedor','ventas','eliminar',false),
+        ('vendedor','ventas','exportar',false),
+        ('vendedor','productos','ver',true),
+        ('vendedor','productos','agregar',false),
+        ('vendedor','productos','editar',false),
+        ('vendedor','productos','eliminar',false),
+        ('vendedor','productos','ver_archivados',false),
+        ('vendedor','productos','gestionar_empaques',false),
+        ('vendedor','productos','ver_costo',false),
+        ('vendedor','productos','ver_ganancia',false),
+        ('vendedor','productos','exportar',false),
+        ('vendedor','clientes','ver',true),
+        ('vendedor','clientes','agregar',false),
+        ('vendedor','clientes','editar',false),
+        ('vendedor','clientes','eliminar',false),
+        ('vendedor','clientes','exportar',false),
+        ('vendedor','usuarios','ver',false),
+        ('vendedor','usuarios','agregar',false),
+        ('vendedor','usuarios','editar',false),
+        ('vendedor','usuarios','eliminar',false),
+        ('vendedor','estadisticas','ver',true),
+        ('vendedor','estadisticas','ver_empresa',false),
+        ('vendedor','estadisticas','ver_por_usuario',false),
+        ('vendedor','estadisticas','exportar',false),
+        ('vendedor','stock','ver',false),
+        ('vendedor','stock','editar',false),
+        ('vendedor','auditoria','ver',false),
+        ('vendedor','auditoria','exportar',false),
+        ('vendedor','configuracion','ver',false)
+      ON CONFLICT (rol, recurso, accion) DO NOTHING;
+    END IF;
+  END$$;
+  `,
+  // === PERMISOS_ROL ROL_ID + DROP TIPO (v6) ===
+  // 1. Agregar rol_id a permisos_rol
+  `ALTER TABLE public.permisos_rol ADD COLUMN IF NOT EXISTS rol_id INT;`,
+  // 2. FK constraint
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'permisos_rol_rol_id_fkey'
+        AND table_name = 'permisos_rol'
+    ) THEN
+      ALTER TABLE public.permisos_rol
+        ADD CONSTRAINT permisos_rol_rol_id_fkey
+        FOREIGN KEY (rol_id) REFERENCES public.roles(id) ON DELETE CASCADE;
+    END IF;
+  END$$;
+  `,
+  // 3. Poblar rol_id desde el nombre (solo si la columna rol aún existe)
+  `
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'permisos_rol' AND column_name = 'rol'
+    ) THEN
+      UPDATE public.permisos_rol pr
+      SET rol_id = r.id
+      FROM public.roles r
+      WHERE r.nombre = pr.rol
+        AND pr.rol_id IS NULL;
+    END IF;
+  END$$;
+  `,
+  // 4. Eliminar UNIQUE constraint viejo (rol, recurso, accion)
+  `
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'permisos_rol_rol_recurso_accion_key'
+        AND table_name = 'permisos_rol'
+    ) THEN
+      ALTER TABLE public.permisos_rol DROP CONSTRAINT permisos_rol_rol_recurso_accion_key;
+    END IF;
+  END$$;
+  `,
+  // 5. Agregar nuevo UNIQUE constraint (rol_id, recurso, accion)
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'permisos_rol_rol_id_recurso_accion_key'
+        AND table_name = 'permisos_rol'
+    ) THEN
+      ALTER TABLE public.permisos_rol
+        ADD CONSTRAINT permisos_rol_rol_id_recurso_accion_key UNIQUE(rol_id, recurso, accion);
+    END IF;
+  END$$;
+  `,
+  // 6. Eliminar columna rol (varchar) de permisos_rol
+  `ALTER TABLE public.permisos_rol DROP COLUMN IF EXISTS rol;`,
+  // 7. Eliminar columna tipo de usuarios (ya no se usa, rol_id es la FK)
+  `ALTER TABLE public.usuarios DROP COLUMN IF EXISTS tipo;`,
+  // === COLOR BOTÓN CERRAR SESIÓN (v7) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS color_logout_bg varchar(7) DEFAULT '#d32f2f';`,
+  // === LOGO Y FONDO AVANZADO (v8) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS fondo_opacidad decimal(3,2) DEFAULT 0.06;`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS logo_tamano smallint DEFAULT 200;`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS logo_bg_color varchar(7) DEFAULT '#ffffff';`,
+  // === CREATED_AT PARA WIDGETS (v9) ===
+  `ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();`,
+  `ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();`,
+
+  // === DASHBOARD WIDGETS PERSONALIZADOS POR USUARIO (v10) ===
+  `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();`,
+  `CREATE TABLE IF NOT EXISTS public.dashboard_widgets (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id integer NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    posicion smallint NOT NULL DEFAULT 0,
+    categoria varchar(30) NOT NULL,
+    tipo varchar(20) NOT NULL,
+    metrica varchar(30) NOT NULL,
+    rango varchar(20),
+    periodo_comparacion varchar(20),
+    etiqueta varchar(60) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_dashboard_widgets_usuario ON public.dashboard_widgets(usuario_id);`,
+  // === CAMBIO DE CONTRASEÑA OBLIGATORIO (v11) ===
+  `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debe_cambiar_password boolean NOT NULL DEFAULT false;`,
 ];
 
 try {

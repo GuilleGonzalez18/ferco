@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Productos from '../productos/Productos';
 import Ventas from '../ventas/Ventas';
 import VentasHistorial from '../ventas/VentasHistorial';
@@ -7,12 +7,490 @@ import Auditoria from '../auditoria/Auditoria';
 import Usuarios from '../usuarios/Usuarios';
 import Estadisticas from '../estadisticas/Estadisticas';
 import ControlStock from '../stock/ControlStock';
+import Configuracion from '../configuracion/Configuracion';
 import './Dashboard.css';
 import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
-import { FiShoppingCart } from 'react-icons/fi';
+import { FiShoppingCart, FiSliders, FiX, FiPlus, FiCheck } from 'react-icons/fi';
+import { RiSettings3Line } from 'react-icons/ri';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
+import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
+
+// ── Widget system ──────────────────────────────────────────────────────────────
+
+const WIDGET_CATALOG = {
+  ventas: {
+    label: 'Ventas', icon: '/dollar.svg', requiresEmpresa: false,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [
+          { id: 'monto', label: 'Monto total', format: 'money' },
+          { id: 'count', label: 'Número de ventas', format: 'count' },
+        ],
+        usaRango: true,
+      },
+      promedio: {
+        label: 'Promedio',
+        metricas: [
+          { id: 'monto_venta', label: 'Promedio por venta', format: 'money' },
+          { id: 'diario',      label: 'Promedio diario',    format: 'decimal' },
+        ],
+        usaRango: true,
+      },
+      comparacion: {
+        label: 'Comparación',
+        metricas: [
+          { id: 'monto', label: 'Monto total', format: 'money' },
+          { id: 'count', label: 'Número de ventas', format: 'count' },
+        ],
+        usaComparacion: true,
+      },
+    },
+  },
+  productos: {
+    label: 'Productos', icon: '/product.svg', requiresEmpresa: false,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [{ id: 'count', label: 'Productos agregados', format: 'count' }],
+        usaRango: true,
+      },
+      promedio: {
+        label: 'Promedio',
+        metricas: [{ id: 'diario', label: 'Promedio diario', format: 'decimal' }],
+        usaRango: true,
+      },
+      comparacion: {
+        label: 'Comparación',
+        metricas: [{ id: 'count', label: 'Productos agregados', format: 'count' }],
+        usaComparacion: true,
+      },
+    },
+  },
+  clientes: {
+    label: 'Clientes', icon: '/client.svg', requiresEmpresa: false,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [{ id: 'count', label: 'Clientes nuevos', format: 'count' }],
+        usaRango: true,
+      },
+      promedio: {
+        label: 'Promedio',
+        metricas: [{ id: 'diario', label: 'Promedio diario', format: 'decimal' }],
+        usaRango: true,
+      },
+      comparacion: {
+        label: 'Comparación',
+        metricas: [{ id: 'count', label: 'Clientes nuevos', format: 'count' }],
+        usaComparacion: true,
+      },
+    },
+  },
+  usuarios: {
+    label: 'Usuarios', icon: '/user.svg', requiresEmpresa: false,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [{ id: 'count', label: 'Usuarios creados', format: 'count' }],
+        usaRango: true,
+      },
+      promedio: {
+        label: 'Promedio',
+        metricas: [{ id: 'diario', label: 'Promedio diario', format: 'decimal' }],
+        usaRango: true,
+      },
+      comparacion: {
+        label: 'Comparación',
+        metricas: [{ id: 'count', label: 'Usuarios creados', format: 'count' }],
+        usaComparacion: true,
+      },
+    },
+  },
+  stock: {
+    label: 'Stock', icon: '/grid-view.svg', requiresEmpresa: false,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [{ id: 'total_unidades', label: 'Unidades en stock', format: 'count' }],
+        usaRango: false,
+      },
+    },
+  },
+  ganancia: {
+    label: 'Ganancia', icon: '/cash.svg', requiresEmpresa: true,
+    tipos: {
+      cantidad: {
+        label: 'Cantidad',
+        metricas: [{ id: 'total', label: 'Ganancia total', format: 'money' }],
+        usaRango: true,
+      },
+      promedio: {
+        label: 'Promedio',
+        metricas: [{ id: 'diario', label: 'Promedio diario', format: 'money' }],
+        usaRango: true,
+      },
+      comparacion: {
+        label: 'Comparación',
+        metricas: [{ id: 'total', label: 'Ganancia total', format: 'money' }],
+        usaComparacion: true,
+      },
+    },
+  },
+};
+
+const RANGE_OPTIONS = [
+  { value: 'today', label: 'Hoy' },
+  { value: 'week',  label: 'Esta semana' },
+  { value: 'month', label: 'Este mes' },
+  { value: 'year',  label: 'Este año' },
+  { value: 'all',   label: 'Siempre' },
+];
+const COMPARISON_OPTIONS = [
+  { value: 'yesterday',   label: 'Ayer' },
+  { value: 'last_week',   label: 'Semana pasada' },
+  { value: 'last_month',  label: 'Mes pasado' },
+  { value: 'last_year',   label: 'Año pasado' },
+];
+const RANGE_LABEL = Object.fromEntries([...RANGE_OPTIONS, ...COMPARISON_OPTIONS].map((r) => [r.value, r.label]));
+
+function formatWidgetValue(raw, format) {
+  if (raw === null || raw === undefined) return '—';
+  if (format === 'money') return `$${Math.round(raw).toLocaleString('es-UY')}`;
+  if (format === 'decimal') return Number(raw).toLocaleString('es-UY', { maximumFractionDigits: 1 });
+  return Math.round(raw).toLocaleString('es-UY');
+}
+
+function getMetricFormat(categoria, tipo, metrica) {
+  return WIDGET_CATALOG[categoria]?.tipos[tipo]?.metricas.find((m) => m.id === metrica)?.format ?? 'count';
+}
+
+function buildDefaultLabel(categoria, tipo, metrica) {
+  const cat = WIDGET_CATALOG[categoria];
+  if (!cat) return 'Widget';
+  const m = cat.tipos[tipo]?.metricas.find((mx) => mx.id === metrica);
+  return m?.label ?? cat.label;
+}
+
+// ── useWidgetPrefs: fetches from DB, saves to DB ──────────────────────────────
+
+function useWidgetPrefs(canVerEmpresa) {
+  const [widgets, setWidgets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getWidgets()
+      .then((data) => { if (!cancelled && Array.isArray(data)) setWidgets(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveWidgets = useCallback((next) => {
+    setWidgets(next);
+    api.saveWidgets(next.map(({ id: _id, ...rest }) => rest)).then((saved) => {
+      if (Array.isArray(saved)) setWidgets(saved);
+    }).catch(() => {});
+  }, []);
+
+  return [widgets, saveWidgets, loading];
+}
+
+// ── WidgetCard ────────────────────────────────────────────────────────────────
+
+function WidgetCard({ widget, editMode, onRemove, onUpdate, idx }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [formLabel, setFormLabel] = useState(widget.etiqueta);
+  const [formRango, setFormRango] = useState(widget.rango || 'month');
+  const [formPeriodo, setFormPeriodo] = useState(widget.periodo_comparacion || 'last_month');
+  const inputRef = useRef(null);
+
+  const tipoConfig = WIDGET_CATALOG[widget.categoria]?.tipos[widget.tipo];
+  const isComparacion = widget.tipo === 'comparacion';
+  const format = getMetricFormat(widget.categoria, widget.tipo, widget.metrica);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const params = isComparacion
+      ? { category: widget.categoria, type: 'comparacion', metric: widget.metrica, comparison_period: widget.periodo_comparacion }
+      : { category: widget.categoria, type: widget.tipo, metric: widget.metrica, range: widget.rango };
+
+    api.getDashboardWidget(params)
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [widget.categoria, widget.tipo, widget.metrica, widget.rango, widget.periodo_comparacion, isComparacion]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  const handleSave = () => {
+    const updated = { ...widget, etiqueta: formLabel };
+    if (isComparacion) updated.periodo_comparacion = formPeriodo;
+    else updated.rango = formRango;
+    onUpdate(updated);
+    setEditing(false);
+  };
+  const handleCancel = () => {
+    setFormLabel(widget.etiqueta);
+    setFormRango(widget.rango || 'month');
+    setFormPeriodo(widget.periodo_comparacion || 'last_month');
+    setEditing(false);
+  };
+
+  const iconSrc = WIDGET_CATALOG[widget.categoria]?.icon ?? '/dollar.svg';
+  const timeLabel = isComparacion
+    ? RANGE_LABEL[widget.periodo_comparacion] || widget.periodo_comparacion
+    : RANGE_LABEL[widget.rango] || widget.rango;
+
+  return (
+    <article
+      className={`dashboard-kpi-card ${isComparacion ? 'is-comparison' : ''} ${editing ? 'is-editing' : ''}`}
+      style={{ animationDelay: `${idx * 100}ms` }}
+    >
+      {editMode && !editing && (
+        <button type="button" className="widget-remove-btn" onClick={onRemove} title="Quitar widget" aria-label="Quitar widget">
+          <FiX />
+        </button>
+      )}
+
+      {!editing ? (
+        <div
+          className={`dashboard-kpi-inner ${editMode ? 'editable' : ''}`}
+          onClick={editMode ? () => setEditing(true) : undefined}
+          role={editMode ? 'button' : undefined}
+          tabIndex={editMode ? 0 : undefined}
+          onKeyDown={editMode ? (e) => e.key === 'Enter' && setEditing(true) : undefined}
+          title={editMode ? 'Clic para editar' : undefined}
+        >
+          <div className="dashboard-kpi-icon-wrap" aria-hidden="true">
+            <img src={iconSrc} alt="" className="dashboard-kpi-icon" />
+          </div>
+          <div className="dashboard-kpi-content">
+            <span className="widget-label">{widget.etiqueta}</span>
+            {loading ? (
+              <strong className="widget-loading">…</strong>
+            ) : isComparacion ? (
+              <>
+                <strong className="widget-comparison-current">{formatWidgetValue(data?.current, format)}</strong>
+                <div className="widget-comparison-row">
+                  <span className="widget-comparison-previous">{formatWidgetValue(data?.previous, format)}</span>
+                  {data?.pct_change !== null && data?.pct_change !== undefined && (
+                    <span className={`widget-pct-badge ${data.pct_change >= 0 ? 'up' : 'down'}`}>
+                      {data.pct_change >= 0 ? '↑' : '↓'} {Math.abs(data.pct_change)}%
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <strong>{formatWidgetValue(data?.raw, format)}</strong>
+            )}
+            <span className="widget-range-tag">{timeLabel}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="widget-edit-form">
+          <div className="widget-edit-row">
+            <label className="widget-edit-label">Nombre</label>
+            <input ref={inputRef} type="text" className="widget-edit-input" value={formLabel}
+              onChange={(e) => setFormLabel(e.target.value)} maxLength={60} />
+          </div>
+          <div className="widget-edit-row">
+            <label className="widget-edit-label">{isComparacion ? 'Período' : 'Rango'}</label>
+            {isComparacion ? (
+              <select className="widget-edit-select" value={formPeriodo} onChange={(e) => setFormPeriodo(e.target.value)}>
+                {COMPARISON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            ) : (
+              <select className="widget-edit-select" value={formRango} onChange={(e) => setFormRango(e.target.value)}>
+                {tipoConfig?.usaRango && RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="widget-edit-actions">
+            <button type="button" className="widget-edit-save" onClick={handleSave}><FiCheck /> Guardar</button>
+            <button type="button" className="widget-edit-cancel" onClick={handleCancel}>Cancelar</button>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+// ── AddWidgetCard — Wizard de 4 pasos ────────────────────────────────────────
+
+const WIZARD_STEPS = { CATEGORY: 0, TYPE: 1, METRIC: 2, RANGE: 3, LABEL: 4 };
+
+function AddWidgetCard({ onAdd, canVerEmpresa }) {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(WIZARD_STEPS.CATEGORY);
+  const [sel, setSel] = useState({ categoria: null, tipo: null, metrica: null, rango: 'today', periodo_comparacion: 'last_month' });
+  const [etiqueta, setEtiqueta] = useState('');
+
+  const reset = () => { setStep(WIZARD_STEPS.CATEGORY); setSel({ categoria: null, tipo: null, metrica: null, rango: 'today', periodo_comparacion: 'last_month' }); setEtiqueta(''); setOpen(false); };
+
+  const categorias = Object.entries(WIDGET_CATALOG).filter(([, v]) => !v.requiresEmpresa || canVerEmpresa);
+
+  const handleSelectCategoria = (catKey) => {
+    setSel((p) => ({ ...p, categoria: catKey, tipo: null, metrica: null }));
+    setStep(WIZARD_STEPS.TYPE);
+  };
+
+  const handleSelectTipo = (tipoKey) => {
+    const metricas = WIDGET_CATALOG[sel.categoria].tipos[tipoKey].metricas;
+    const newSel = { ...sel, tipo: tipoKey, metrica: metricas.length === 1 ? metricas[0].id : null };
+    setSel(newSel);
+    if (metricas.length === 1) {
+      const tipoConfig = WIDGET_CATALOG[sel.categoria].tipos[tipoKey];
+      if (!tipoConfig.usaRango && !tipoConfig.usaComparacion) {
+        const defaultLabel = buildDefaultLabel(sel.categoria, tipoKey, metricas[0].id);
+        setEtiqueta(defaultLabel); setStep(WIZARD_STEPS.LABEL);
+      } else {
+        setStep(WIZARD_STEPS.RANGE);
+      }
+    } else {
+      setStep(WIZARD_STEPS.METRIC);
+    }
+  };
+
+  const handleSelectMetrica = (metricaId) => {
+    const newSel = { ...sel, metrica: metricaId };
+    setSel(newSel);
+    const tipoConfig = WIDGET_CATALOG[sel.categoria].tipos[sel.tipo];
+    if (!tipoConfig.usaRango && !tipoConfig.usaComparacion) {
+      const defaultLabel = buildDefaultLabel(sel.categoria, sel.tipo, metricaId);
+      setEtiqueta(defaultLabel); setStep(WIZARD_STEPS.LABEL);
+    } else {
+      setStep(WIZARD_STEPS.RANGE);
+    }
+  };
+
+  const handleSelectRango = (val, isComparacion) => {
+    const newSel = isComparacion ? { ...sel, periodo_comparacion: val } : { ...sel, rango: val };
+    setSel(newSel);
+    const defaultLabel = buildDefaultLabel(sel.categoria, sel.tipo, sel.metrica);
+    setEtiqueta(defaultLabel);
+    setStep(WIZARD_STEPS.LABEL);
+  };
+
+  const handleAdd = () => {
+    onAdd({
+      categoria: sel.categoria,
+      tipo: sel.tipo,
+      metrica: sel.metrica,
+      rango: sel.tipo !== 'comparacion' ? sel.rango : null,
+      periodo_comparacion: sel.tipo === 'comparacion' ? sel.periodo_comparacion : null,
+      etiqueta: etiqueta.trim() || buildDefaultLabel(sel.categoria, sel.tipo, sel.metrica),
+    });
+    reset();
+  };
+
+  if (!open) {
+    return (
+      <button type="button" className="dashboard-add-widget-btn" onClick={() => setOpen(true)} title="Agregar widget">
+        <FiPlus /><span>Agregar</span>
+      </button>
+    );
+  }
+
+  const tipoConfig = sel.categoria ? WIDGET_CATALOG[sel.categoria]?.tipos[sel.tipo] : null;
+  const isComparacion = sel.tipo === 'comparacion';
+
+  return (
+    <div className="dashboard-add-widget-panel">
+      {/* Paso: Categoría */}
+      {step === WIZARD_STEPS.CATEGORY && (
+        <>
+          <p className="add-widget-title">Elegí una categoría</p>
+          <div className="wizard-step-categories">
+            {categorias.map(([key, cat]) => (
+              <button key={key} type="button" className="wizard-category-btn" onClick={() => handleSelectCategoria(key)}>
+                <img src={cat.icon} alt="" />
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Paso: Tipo */}
+      {step === WIZARD_STEPS.TYPE && sel.categoria && (
+        <>
+          <p className="add-widget-title">Tipo de métrica — <strong>{WIDGET_CATALOG[sel.categoria].label}</strong></p>
+          <div className="wizard-step-types">
+            {Object.entries(WIDGET_CATALOG[sel.categoria].tipos).map(([key, t]) => (
+              <button key={key} type="button" className="wizard-type-btn" onClick={() => handleSelectTipo(key)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.CATEGORY)}>← Atrás</button>
+        </>
+      )}
+
+      {/* Paso: Métrica (solo si hay más de una) */}
+      {step === WIZARD_STEPS.METRIC && sel.tipo && (
+        <>
+          <p className="add-widget-title">¿Qué querés medir?</p>
+          <div className="wizard-step-types">
+            {WIDGET_CATALOG[sel.categoria].tipos[sel.tipo].metricas.map((m) => (
+              <button key={m.id} type="button" className="wizard-type-btn" onClick={() => handleSelectMetrica(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.TYPE)}>← Atrás</button>
+        </>
+      )}
+
+      {/* Paso: Rango / Período */}
+      {step === WIZARD_STEPS.RANGE && tipoConfig && (
+        <>
+          <p className="add-widget-title">{isComparacion ? 'Comparar respecto a...' : 'Período de tiempo'}</p>
+          <div className="wizard-step-types">
+            {isComparacion
+              ? COMPARISON_OPTIONS.map((o) => (
+                  <button key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, true)}>{o.label}</button>
+                ))
+              : RANGE_OPTIONS.map((o) => (
+                  <button key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, false)}>{o.label}</button>
+                ))
+            }
+          </div>
+          <button type="button" className="widget-add-back-btn"
+            onClick={() => setStep(WIDGET_CATALOG[sel.categoria].tipos[sel.tipo].metricas.length > 1 ? WIZARD_STEPS.METRIC : WIZARD_STEPS.TYPE)}>
+            ← Atrás
+          </button>
+        </>
+      )}
+
+      {/* Paso: Etiqueta */}
+      {step === WIZARD_STEPS.LABEL && (
+        <>
+          <p className="add-widget-title">Nombre del widget</p>
+          <input type="text" className="widget-edit-input" value={etiqueta}
+            onChange={(e) => setEtiqueta(e.target.value)} maxLength={60} autoFocus />
+          <div className="widget-edit-actions" style={{ marginTop: '0.6rem' }}>
+            <button type="button" className="widget-edit-save" onClick={handleAdd}><FiCheck /> Agregar</button>
+            <button type="button" className="widget-edit-cancel" onClick={() => setStep(WIZARD_STEPS.RANGE)}>← Atrás</button>
+          </div>
+        </>
+      )}
+
+      <button type="button" className="add-widget-cancel" style={{ marginTop: '0.4rem' }} onClick={reset}>Cancelar</button>
+    </div>
+  );
+}
+
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
@@ -24,6 +502,7 @@ const OPCIONES = [
   { key: 'auditoria', label: 'Auditoría', topbarTitle: 'Auditoría y movimientos de stock', icon: '/auditory.svg' },
   { key: 'control-stock', label: 'Control de stock', topbarTitle: 'Control de stock', icon: 'stock-control' },
   { key: 'estadisticas', label: 'Estadísticas', topbarTitle: 'Estadísticas comerciales', icon: '/stats.svg' },
+  { key: 'configuracion', label: 'Configuración', topbarTitle: 'Configuración del sistema', icon: 'configuracion' },
 ];
 
 function Placeholder({ titulo, icon }) {
@@ -53,12 +532,27 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
-  const [resumen, setResumen] = useState(null);
-  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const [editMode, setEditMode] = useState(false);
+  const { empresa, modulos } = useConfig();
+  const { can, esPropietario } = usePermisos();
+  const canVerEmpresa = can('estadisticas', 'ver_empresa');
+  const [widgets, saveWidgets, widgetsLoading] = useWidgetPrefs(canVerEmpresa);
+
   const opcionesMenu = OPCIONES.filter((op) => {
-    if (op.key === 'usuarios' || op.key === 'control-stock') return esPropietario;
-    if (op.key === 'mi-usuario') return !esPropietario;
-    if (op.key === 'estadisticas') return esPropietario;
+    // Permisos dinámicos por sección
+    if (op.key === 'nueva-venta' && !can('nueva-venta', 'usar')) return false;
+    if (op.key === 'usuarios' && !can('usuarios', 'ver')) return false;
+    if (op.key === 'mi-usuario' && esPropietario) return false;
+    if (op.key === 'mi-usuario' && can('usuarios', 'ver')) return false; // si puede ver usuarios, no necesita "mi usuario"
+    if (op.key === 'control-stock' && !can('stock', 'ver')) return false;
+    if (op.key === 'estadisticas' && !can('estadisticas', 'ver')) return false;
+    if (op.key === 'auditoria' && !can('auditoria', 'ver')) return false;
+    if (op.key === 'configuracion' && !can('configuracion', 'ver')) return false;
+
+    if (modulos.length > 0) {
+      const mod = modulos.find((m) => m.codigo === op.key);
+      if (mod && !mod.habilitado) return false;
+    }
     return true;
   });
 
@@ -102,54 +596,20 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   }, [onNavigate]);
 
   useEffect(() => {
-    const loadResumen = async () => {
-      try {
-        const data = await api.getDashboardResumen();
-        setResumen(data);
-      } catch {
-        setResumen(null);
-      }
-    };
     const onStatsRefresh = () => {
-      loadResumen();
+      window.dispatchEvent(new CustomEvent('ferco:widget-refresh'));
     };
-
-    loadResumen();
     window.addEventListener('ferco:stats-refresh', onStatsRefresh);
     return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
-  }, [user?.id, user?.tipo]);
+  }, []);
 
-  const money = (value) => {
-    const rounded = Math.round(Number(value || 0));
-    return `$${rounded.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
-  };
-  const count = (value) => Number(value || 0).toLocaleString('es-UY');
-  const avgCount = (value) => Math.round(Number(value || 0)).toLocaleString('es-UY');
-
-  const cardsResumen = esPropietario
-    ? [
-        { key: 'ventasHoy', label: 'Ventas hoy', value: money(resumen?.ventasHoy), tone: 'sales-green', icon: '/dollar.svg' },
-        { key: 'ventasMes', label: 'Ventas mes', value: money(resumen?.ventasMes), tone: 'sales-green', icon: '/dollar.svg' },
-        { key: 'cantidadVentasHoy', label: 'Cantidad ventas hoy', value: count(resumen?.cantidadVentasHoy), icon: '/cart.svg' },
-        { key: 'cantidadVentasMes', label: 'Cantidad ventas este mes', value: count(resumen?.cantidadVentasMes), icon: '/cart.svg' },
-        { key: 'promedioVentasMensual', label: 'Promedio ventas al mes', value: avgCount(resumen?.promedioVentasMensual), icon: '/average.svg' },
-        { key: 'gananciaHoy', label: 'Ganancia hoy', value: money(resumen?.gananciaHoy), icon: '/dollar.svg' },
-        { key: 'gananciaTotalEmpresa', label: 'Ganancia total empresa', value: money(resumen?.gananciaTotalEmpresa), icon: '/dollar.svg' },
-      ]
-    : [
-        { key: 'ventasHoy', label: 'Tus ventas hoy', value: money(resumen?.ventasHoy), tone: 'sales-green', icon: '/dollar.svg' },
-        { key: 'ventasMes', label: 'Tus ventas este mes', value: money(resumen?.ventasMes), tone: 'sales-green', icon: '/dollar.svg' },
-        { key: 'cantidadVentasHoy', label: 'Cantidad ventas hoy', value: count(resumen?.cantidadVentasHoy), icon: '/cart.svg' },
-        { key: 'cantidadVentasMes', label: 'Cantidad ventas este mes', value: count(resumen?.cantidadVentasMes), icon: '/cart.svg' },
-        { key: 'promedioVentasMensual', label: 'Promedio ventas al mes', value: avgCount(resumen?.promedioVentasMensual), icon: '/average.svg' },
-      ];
-
-  const tituloActual = OPCIONES.find((o) => o.key === pantalla)?.topbarTitle ?? 'Dashboard';
+  const tituloActual= OPCIONES.find((o) => o.key === pantalla)?.topbarTitle ?? 'Dashboard';
   const esPantallaDashboard = !pantalla;
   const contenidoPantalla = useMemo(
     () => {
       switch (pantalla) {
         case 'nueva-venta':
+          if (!can('nueva-venta', 'usar')) return <Placeholder titulo="Acceso restringido" icon="🔒" />;
           return (
             <Ventas
               user={user}
@@ -168,10 +628,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
         case 'mi-usuario':   return <MiUsuarioView user={user} />;
         case 'auditoria':    return <Auditoria />;
         case 'control-stock':
-          return esPropietario
+          return can('stock', 'ver')
             ? <ControlStock productos={productos} setProductos={setProductos} />
             : <Placeholder titulo="Acceso restringido" icon="X" />;
         case 'estadisticas': return <Estadisticas />;
+        case 'configuracion':
+          return (esPropietario || can('configuracion', 'ver')) ? <Configuracion /> : <Placeholder titulo="Acceso restringido" icon="🔒" />;
         default:             return null;
       }
     },
@@ -180,6 +642,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       user,
       productos,
       setProductos,
+      can,
       esPropietario,
       ventasCarritoAbierto,
       closeVentasCarritoDrawer,
@@ -211,8 +674,22 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             title="Ir al dashboard"
             aria-label="Ir al dashboard"
           >
-            <img src="/images/logo2.png" alt="Logo" className="dashboard-logo" />
+            <img
+              src={empresa.logo_base64 || '/mercatus-logo.png'}
+              alt={empresa.nombre || 'Logo'}
+              className="dashboard-logo"
+            />
           </button>
+        </div>
+        <div className="dashboard-user-greeting">
+          <p className="dashboard-greeting-name">
+            Bienvenido/a, {user?.nombre || user?.username}!
+          </p>
+          {user?.rol_nombre && (
+            <span className="dashboard-role-badge">
+              {user.rol_nombre.charAt(0).toUpperCase() + user.rol_nombre.slice(1)}
+            </span>
+          )}
         </div>
         <nav className="dashboard-nav">
           {opcionesMenu.map(({ key, label, icon }) => (
@@ -224,6 +701,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             >
               {icon === 'stock-control'
                 ? <CgArrowsExchange className="nav-icon-svg" aria-hidden="true" />
+                : icon === 'configuracion'
+                ? <RiSettings3Line className="nav-icon-svg" aria-hidden="true" />
                 : <img src={icon} alt="" className="nav-icon-img" aria-hidden="true" />}
               {label}
             </button>
@@ -234,6 +713,13 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
           Cerrar sesión
         </AppButton>
         <small className="dashboard-version-label">v. {APP_VERSION}</small>
+        <div className="dashboard-brand-watermark">
+          <span className="dashboard-brand-name">
+            <img src="/favicon.png" alt="" className="dashboard-brand-icon" aria-hidden="true" />
+            Mercatus
+          </span>
+          <span className="dashboard-brand-copy">© 2025 RPG Software. Todos los derechos reservados.</span>
+        </div>
       </aside>
 
       <main className="dashboard-content">
@@ -257,27 +743,59 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             </div>
           </div>
         </div>
-        <div className={`dashboard-body ${resumen && esPantallaDashboard ? 'with-kpis' : ''}`}>
-          {resumen && esPantallaDashboard && (
+        <div className={`dashboard-body ${esPantallaDashboard ? 'with-kpis' : ''}`}>
+          {esPantallaDashboard && (
             <section className="dashboard-kpis-strip">
-              {cardsResumen.map((card, idx) => (
-                <article
-                  key={card.key}
-                  className={`dashboard-kpi-card ${card.tone || ''}`}
-                  style={{
-                    animationDelay: `${idx * 140}ms`,
-                    '--icon-delay': `${idx * 140 + 120}ms`,
-                  }}
-                >
-                  <div className="dashboard-kpi-icon-wrap" aria-hidden="true">
-                    <img src={card.icon} alt="" className="dashboard-kpi-icon" />
-                  </div>
-                  <div className="dashboard-kpi-content">
-                    <span>{card.label}</span>
-                    <strong>{card.value}</strong>
-                  </div>
-                </article>
-              ))}
+              <div className="dashboard-kpis-header">
+                {!widgetsLoading && (
+                  <>
+                    <button
+                      type="button"
+                      className={`dashboard-widgets-btn ${editMode ? 'is-active' : ''}`}
+                      onClick={() => setEditMode((v) => !v)}
+                      title={editMode ? 'Salir de edición' : 'Personalizar widgets'}
+                    >
+                      {editMode ? (
+                        <><FiCheck aria-hidden="true" /><span>Listo</span></>
+                      ) : (
+                        <><FiSliders aria-hidden="true" /><span>Personalizar</span></>
+                      )}
+                    </button>
+                    {editMode && (
+                      <button
+                        type="button"
+                        className="dashboard-widgets-reset"
+                        onClick={() => { saveWidgets([]); setEditMode(false); }}
+                        title="Restaurar widgets por defecto"
+                      >
+                        Restaurar
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              {widgetsLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <article key={i} className="dashboard-kpi-card widget-skeleton" style={{ animationDelay: `${i * 100}ms` }} />
+                ))
+              ) : (
+                widgets.map((w, idx) => (
+                  <WidgetCard
+                    key={w.id || `${w.categoria}-${w.tipo}-${w.metrica}-${idx}`}
+                    widget={w}
+                    idx={idx}
+                    editMode={editMode}
+                    onRemove={() => saveWidgets(widgets.filter((_, i) => i !== idx))}
+                    onUpdate={(updated) => saveWidgets(widgets.map((x, i) => i === idx ? updated : x))}
+                  />
+                ))
+              )}
+              {editMode && !widgetsLoading && (
+                <AddWidgetCard
+                  canVerEmpresa={canVerEmpresa}
+                  onAdd={(newWidget) => saveWidgets([...widgets, newWidget])}
+                />
+              )}
             </section>
           )}
           {contenidoPantalla}

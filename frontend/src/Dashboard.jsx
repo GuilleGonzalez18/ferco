@@ -168,7 +168,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             title="Ir al dashboard"
             aria-label="Ir al dashboard"
           >
-            <img src="/images/logo2.png" alt="Logo" className="dashboard-logo" />
+            <img src="/mercatus-logo.png" alt="Logo" className="dashboard-logo" />
           </button>
         </div>
         <nav className="dashboard-nav">

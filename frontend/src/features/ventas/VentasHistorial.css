@@ -44,7 +44,7 @@
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.8rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 400;
 }
 
@@ -73,9 +73,9 @@
 }
 
 .ventas-export-btn {
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.5rem 0.72rem;
   font-size: 0.8rem;
@@ -125,7 +125,7 @@
 
 .export-modal h4 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .export-modal p {
@@ -142,9 +142,9 @@
 
 .export-modal-actions button,
 .export-modal-close {
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.45rem 0.7rem;
   font-size: 0.82rem;
@@ -181,7 +181,7 @@
   border: 1px solid #c7d7ea;
   border-radius: 999px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   padding: 0.26rem 0.58rem;
   font-size: 0.74rem;
   font-weight: 700;
@@ -229,7 +229,7 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.6rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.84rem;
 }
 
@@ -312,8 +312,8 @@
 
 .lista-ventas .header {
   font-weight: 700;
-  color: #375f8c;
-  background: #eaf0fa;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 .lista-ventas .header span {
@@ -325,7 +325,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: inherit;
   text-align: left;
@@ -404,7 +404,7 @@
 .venta-expand-btn {
   border: none;
   background: transparent;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 0.78rem;
   cursor: pointer;
@@ -542,14 +542,14 @@
 }
 
 .reprint-btn {
-  border: 1px solid #375f8c;
+  border: 1px solid var(--color-primary);
   border-radius: 9px;
   min-width: 42px;
   height: 38px;
   padding: 0 0.48rem;
   cursor: pointer;
   color: #fff;
-  background: #375f8c;
+  background: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -575,8 +575,8 @@
 }
 
 .reprint-btn:hover:not(:disabled) {
-  background: #2f5279;
-  border-color: #2f5279;
+  background: var(--color-primary-strong);
+  border-color: var(--color-primary-strong);
   box-shadow: 0 6px 14px rgba(47, 82, 121, 0.35);
   transform: translateY(-1px);
 }

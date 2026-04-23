@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Auditoria.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,6 +32,9 @@ function formatQty(value) {
 }
 
 export default function Auditoria() {
+  const { empresa } = useConfig();
+  const { can } = usePermisos();
+  const puedeExportar = can('auditoria', 'exportar');
   const [eventos, setEventos] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -256,25 +262,17 @@ export default function Auditoria() {
     return `Hasta ${hasta}`;
   };
 
-  const withHeaderLogo = (doc, titulo) =>
-    new Promise((resolve) => {
-      const fecha = new Date().toLocaleDateString();
-      const finish = () => {
-        doc.setFontSize(16);
-        doc.text(titulo, 55, 22);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 55, 28);
-        doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
-        resolve(40);
-      };
-      const logo = new Image();
-      logo.src = '/images/logo2.png';
-      logo.onload = () => {
-        doc.addImage(logo, 'PNG', 10, 10, 40, 20);
-        finish();
-      };
-      logo.onerror = finish;
-    });
+  const withHeaderLogo = async (doc, titulo) => {
+    const fecha = new Date().toLocaleDateString();
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (logo) {
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
+    }
+    doc.setFontSize(10);
+    doc.text(`Emitido: ${fecha}`, 55, 28);
+    doc.text(`Rango: ${getRangoLabel()}`, 55, 33);
+    return 40;
+  };
 
   const exportarStockPDF = async () => {
     const doc = new jsPDF();
@@ -292,7 +290,7 @@ export default function Auditoria() {
         m.usuario_nombre || '-',
       ]),
       styles: { fontSize: 8.8 },
-      headStyles: { fillColor: [55, 95, 140] },
+      headStyles: { fillColor: getPrimaryRgb() },
     });
     doc.save('auditoria-stock.pdf');
   };
@@ -328,7 +326,9 @@ export default function Auditoria() {
           <section className="auditoria-card">
             <div className="auditoria-card-head">
               <h4>Movimientos de stock</h4>
+              {puedeExportar && (
               <AppButton type="button" className="audit-btn" onClick={exportarStockPDF}>PDF stock</AppButton>
+              )}
             </div>
             <div className="auditoria-card-filtros">
               <AppSelect value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>

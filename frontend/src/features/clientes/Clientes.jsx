@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
+import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import './Clientes.css';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -14,6 +17,12 @@ import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitH
 import AppButton from '../../shared/components/button/AppButton';
 
 export default function Clientes() {
+  const { empresa } = useConfig();
+  const { can } = usePermisos();
+  const puedeExportar = can('clientes', 'exportar');
+  const puedeAgregar = can('clientes', 'agregar');
+  const puedeEditar = can('clientes', 'editar');
+  const puedeEliminar = can('clientes', 'eliminar');
   const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const MINUTOS = ['00', '15', '30', '45'];
 
@@ -234,56 +243,50 @@ export default function Clientes() {
     }
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const renderPdf = (logoImage = null) => {
-      let startY = 30;
-      if (logoImage) {
-        doc.addImage(logoImage, 'PNG', 10, 10, 40, 20);
-        doc.setFontSize(16);
-        doc.text('Lista de Clientes', 55, 22);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 55, 28);
-        startY = 35;
-      } else {
-        doc.setFontSize(16);
-        doc.text('Lista de Clientes', 14, 18);
-        doc.setFontSize(10);
-        doc.text(`Emitido: ${fecha}`, 14, 24);
-      }
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    let startY = 30;
+    if (logo) {
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
+      doc.setFontSize(16);
+      doc.text('Lista de Clientes', 55, 22);
+      doc.setFontSize(10);
+      doc.text(`Emitido: ${fecha}`, 55, 28);
+    } else {
+      doc.setFontSize(16);
+      doc.text('Lista de Clientes', 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Emitido: ${fecha}`, 14, 24);
+      startY = 30;
+    }
 
-      autoTable(doc, {
-        startY,
-        head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Horarios']],
-        body: filtrados.map((c) => [
-          c.nombre || '',
-          c.rut || '',
-          c.direccion || '',
-          c.telefono || '',
-          c.correo || '',
-          formatHorarioCliente(c).replace(' y ', '\n'),
-        ]),
-        styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
-        headStyles: { fillColor: [55, 95, 140] },
-        tableWidth: 'wrap',
-        columnStyles: {
-          0: { cellWidth: 28 },
-          1: { cellWidth: 18 },
-          2: { cellWidth: 44 },
-          3: { cellWidth: 20 },
-          4: { cellWidth: 32 },
-          5: { cellWidth: 36 },
-        },
-      });
+    autoTable(doc, {
+      startY,
+      head: [['Nombre', 'Rut/C.I.', 'Dirección', 'Teléfono', 'Mail', 'Horarios']],
+      body: filtrados.map((c) => [
+        c.nombre || '',
+        c.rut || '',
+        c.direccion || '',
+        c.telefono || '',
+        c.correo || '',
+        formatHorarioCliente(c).replace(' y ', '\n'),
+      ]),
+      styles: { fontSize: 8.2, valign: 'middle', cellPadding: 2.2 },
+      headStyles: { fillColor: getPrimaryRgb() },
+      tableWidth: 'wrap',
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 44 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 36 },
+      },
+    });
 
-      doc.save('clientes.pdf');
-    };
-
-    const logo = new Image();
-    logo.src = '/images/logo2.png';
-    logo.onload = () => renderPdf(logo);
-    logo.onerror = () => renderPdf();
+    doc.save('clientes.pdf');
   };
 
   const exportarExcel = () => {
@@ -475,6 +478,7 @@ export default function Clientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        {puedeAgregar && (
         <AppButton
           type="button"
           className="icon-btn"
@@ -484,9 +488,12 @@ export default function Clientes() {
           <img src="/add.svg" alt="" aria-hidden="true" />
           <span>CLIENTE</span>
         </AppButton>
+        )}
+        {puedeExportar && (
         <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
           <img src="/print.svg" alt="" aria-hidden="true" />
         </AppButton>
+        )}
       </div>
 
       {exportModalOpen && (
@@ -527,6 +534,7 @@ export default function Clientes() {
         expandedRowId={clienteExpandidoId}
         renderExpandedRow={(c) => (
           <div className="acciones-cliente-panel">
+            {puedeEditar && (
             <AppButton
               type="button"
               className="edit-btn"
@@ -537,6 +545,8 @@ export default function Clientes() {
             >
               Editar
             </AppButton>
+            )}
+            {puedeEliminar && (
             <AppButton
               type="button"
               className="delete-btn"
@@ -547,6 +557,7 @@ export default function Clientes() {
             >
               Eliminar
             </AppButton>
+            )}
           </div>
         )}
       />

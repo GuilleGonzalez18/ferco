@@ -14,8 +14,8 @@ const RESET_CODE_TTL_MINUTES = Number(process.env.RESET_CODE_TTL_MINUTES || 10);
 
 function normalizeTipo(value) {
   const tipo = String(value || '').trim().toLowerCase();
-  if (tipo === 'admin' || tipo === 'propietario') return 'propietario';
-  return 'vendedor';
+  if (tipo === 'admin') return 'propietario'; // alias legacy
+  return tipo || 'vendedor';
 }
 
 function isPropietario(authUser) {
@@ -45,21 +45,25 @@ usuariosRouter.get('/', async (req, res) => {
 
   if (isPropietario(authUser)) {
     const result = await query(
-      `SELECT id, username, tipo, nombre, apellido, correo, telefono, direccion
-       FROM public.usuarios
-       ORDER BY id DESC`
+      `SELECT u.id, u.username, u.nombre, u.apellido, u.correo, u.telefono, u.direccion,
+              u.rol_id, r.nombre AS rol_nombre
+       FROM public.usuarios u
+       LEFT JOIN public.roles r ON r.id = u.rol_id
+       ORDER BY u.id DESC`
     );
-    return res.json(result.rows.map((u) => ({ ...u, tipo: normalizeTipo(u.tipo) })));
+    return res.json(result.rows);
   }
 
   const result = await query(
-    `SELECT id, username, tipo, nombre, apellido, correo, telefono, direccion
-     FROM public.usuarios
-     WHERE id = $1
+    `SELECT u.id, u.username, u.nombre, u.apellido, u.correo, u.telefono, u.direccion,
+            u.rol_id, r.nombre AS rol_nombre
+     FROM public.usuarios u
+     LEFT JOIN public.roles r ON r.id = u.rol_id
+     WHERE u.id = $1
      LIMIT 1`,
     [authUser.id]
   );
-  return res.json(result.rows.map((u) => ({ ...u, tipo: normalizeTipo(u.tipo) })));
+  return res.json(result.rows);
 });
 
 usuariosRouter.post('/', async (req, res) => {
@@ -72,7 +76,7 @@ usuariosRouter.post('/', async (req, res) => {
   const {
     username,
     password,
-    tipo = 'vendedor',
+    rol_id = null,
     nombre = null,
     apellido = null,
     correo,
@@ -85,6 +89,9 @@ usuariosRouter.post('/', async (req, res) => {
   const passwordValue = String(password || '');
   if (!usernameValue || !passwordValue || !correoValue) {
     return res.status(400).json({ error: 'username, password y correo son requeridos' });
+  }
+  if (!rol_id) {
+    return res.status(400).json({ error: 'rol_id es requerido' });
   }
 
   const usernameExists = await query(
@@ -102,16 +109,18 @@ usuariosRouter.post('/', async (req, res) => {
     return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
   }
 
+  const rolQ = await query('SELECT id, nombre FROM public.roles WHERE id = $1', [parseInt(rol_id, 10)]);
+  if (!rolQ.rows.length) return res.status(400).json({ error: 'Rol no encontrado' });
+
   try {
     const hashedPassword = await hashPassword(passwordValue);
     const result = await query(
-      `INSERT INTO public.usuarios
-        (username, password, tipo, nombre, apellido, correo, telefono, direccion)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-      [usernameValue, hashedPassword, normalizeTipo(tipo), nombre, apellido, correoValue, telefono, direccion]
+      `INSERT INTO public.usuarios (username, password, rol_id, nombre, apellido, correo, telefono, direccion, debe_cambiar_password)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, true)
+       RETURNING id, username, rol_id, nombre, apellido, correo, telefono, direccion, debe_cambiar_password`,
+      [usernameValue, hashedPassword, rolQ.rows[0].id, nombre, apellido, correoValue, telefono, direccion]
     );
-    return res.status(201).json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+    return res.status(201).json({ ...result.rows[0], rol_nombre: rolQ.rows[0].nombre });
   } catch (error) {
     return sendDbError(res, error, 'No se pudo crear el usuario');
   }
@@ -123,7 +132,7 @@ usuariosRouter.put('/:id', async (req, res) => {
   const {
     username,
     password,
-    tipo = 'vendedor',
+    rol_id = null,
     nombre = null,
     apellido = null,
     correo,
@@ -148,31 +157,30 @@ usuariosRouter.put('/:id', async (req, res) => {
 
   const passwordValue = typeof password === 'string' ? password.trim() : '';
   const currentUserQ = await query(
-    `SELECT id, tipo
-     FROM public.usuarios
-     WHERE id = $1
-     LIMIT 1`,
+    `SELECT id, rol_id FROM public.usuarios WHERE id = $1 LIMIT 1`,
     [id]
   );
   if (!currentUserQ.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
-  const tipoActual = normalizeTipo(currentUserQ.rows[0].tipo);
-  const tipoFinal = canManageAll ? normalizeTipo(tipo) : tipoActual;
+
+  let rolIdFinal = currentUserQ.rows[0].rol_id;
+  if (canManageAll && rol_id) {
+    rolIdFinal = parseInt(rol_id, 10);
+  }
+
+  // Validar que el rol existe
+  const rolQ = await query('SELECT id, nombre FROM public.roles WHERE id = $1', [rolIdFinal]);
+  if (!rolQ.rows.length) return res.status(400).json({ error: 'Rol no encontrado' });
+  const rolNombre = rolQ.rows[0].nombre;
 
   const usernameExists = await query(
-    `SELECT id
-     FROM public.usuarios
-     WHERE username = $1 AND id <> $2
-     LIMIT 1`,
+    `SELECT id FROM public.usuarios WHERE username = $1 AND id <> $2 LIMIT 1`,
     [usernameValue, id]
   );
   if (usernameExists.rowCount) {
     return res.status(409).json({ error: 'Ya existe un usuario con ese username' });
   }
   const correoExists = await query(
-    `SELECT id
-     FROM public.usuarios
-     WHERE correo = $1 AND id <> $2
-     LIMIT 1`,
+    `SELECT id FROM public.usuarios WHERE correo = $1 AND id <> $2 LIMIT 1`,
     [correoValue, id]
   );
   if (correoExists.rowCount) {
@@ -189,18 +197,18 @@ usuariosRouter.put('/:id', async (req, res) => {
       `UPDATE public.usuarios
        SET username = $1,
             password = COALESCE(NULLIF($2, ''), password),
-            tipo = $3,
+            rol_id = $3,
             nombre = $4,
             apellido = $5,
             correo = $6,
             telefono = $7,
             direccion = $8
        WHERE id = $9
-       RETURNING id, username, tipo, nombre, apellido, correo, telefono, direccion`,
-      [usernameValue, hashedPassword, tipoFinal, nombre, apellido, correoValue, telefono, direccion, id]
+       RETURNING id, username, rol_id, nombre, apellido, correo, telefono, direccion`,
+      [usernameValue, hashedPassword, rolIdFinal, nombre, apellido, correoValue, telefono, direccion, id]
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
-    return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+    return res.json({ ...result.rows[0], rol_nombre: rolNombre });
   } catch (error) {
     return sendDbError(res, error, 'No se pudo actualizar el usuario');
   }
@@ -232,9 +240,12 @@ usuariosRouter.post('/login', async (req, res) => {
   }
 
   const result = await query(
-    `SELECT id, username, password, tipo, nombre, apellido, correo
-     FROM public.usuarios
-     WHERE correo = $1
+    `SELECT u.id, u.username, u.password, u.nombre, u.apellido, u.correo, u.rol_id,
+            u.debe_cambiar_password,
+            r.nombre AS rol_nombre
+     FROM public.usuarios u
+     LEFT JOIN public.roles r ON r.id = u.rol_id
+     WHERE u.correo = $1
      LIMIT 1`,
     [correo]
   );
@@ -253,19 +264,25 @@ usuariosRouter.post('/login', async (req, res) => {
   }
   if (!passwordOk) return res.status(401).json({ error: 'Credenciales inválidas' });
 
+  const rolNombre = dbUser.rol_nombre || 'vendedor';
+  const tipoNormalizado = normalizeTipo(rolNombre);
   const user = {
     id: dbUser.id,
     username: dbUser.username,
-    tipo: normalizeTipo(dbUser.tipo),
+    tipo: tipoNormalizado,
+    rol_id: dbUser.rol_id,
+    rol_nombre: rolNombre,
     nombre: dbUser.nombre,
     apellido: dbUser.apellido,
     correo: dbUser.correo,
+    debe_cambiar_password: Boolean(dbUser.debe_cambiar_password),
   };
   const token = jwt.sign(
     {
       sub: user.id,
       correo: user.correo,
       tipo: user.tipo,
+      rol_id: user.rol_id,
       username: user.username,
       nombre: user.nombre || null,
       apellido: user.apellido || null,
@@ -274,6 +291,70 @@ usuariosRouter.post('/login', async (req, res) => {
     { expiresIn: JWT_EXPIRES_IN }
   );
   return res.json({ user, token });
+});
+
+// ── Cambiar contraseña (usuario autenticado) ─────────────────────────────────
+usuariosRouter.post('/cambiar-password', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const { passwordActual, passwordNueva } = req.body || {};
+  if (!passwordActual || !passwordNueva) {
+    return res.status(400).json({ error: 'Se requieren la contraseña actual y la nueva' });
+  }
+  if (String(passwordNueva).length < 8) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+  }
+
+  const userQ = await query(
+    `SELECT id, password FROM public.usuarios WHERE id = $1 LIMIT 1`,
+    [authUser.id]
+  );
+  if (!userQ.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const dbUser = userQ.rows[0];
+  let passwordOk = false;
+  if (isBcryptHash(dbUser.password)) {
+    passwordOk = await comparePassword(String(passwordActual), dbUser.password);
+  } else {
+    passwordOk = dbUser.password === String(passwordActual);
+  }
+  if (!passwordOk) return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+
+  const sameAsOld = isBcryptHash(dbUser.password)
+    ? await comparePassword(String(passwordNueva), dbUser.password)
+    : dbUser.password === String(passwordNueva);
+  if (sameAsOld) {
+    return res.status(400).json({ error: 'La nueva contraseña no puede ser igual a la actual' });
+  }
+
+  const newHash = await hashPassword(String(passwordNueva));
+  await query(
+    `UPDATE public.usuarios SET password = $1, debe_cambiar_password = false WHERE id = $2`,
+    [newHash, authUser.id]
+  );
+  return res.json({ ok: true });
+});
+
+// ── Forzar cambio de contraseña (solo propietario) ───────────────────────────
+usuariosRouter.post('/:id/forzar-cambio-password', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+  if (normalizeTipo(authUser.tipo) !== 'propietario') {
+    return res.status(403).json({ error: 'Solo el propietario puede forzar cambio de contraseña' });
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Id de usuario inválido' });
+  }
+
+  const result = await query(
+    `UPDATE public.usuarios SET debe_cambiar_password = true WHERE id = $1 RETURNING id`,
+    [id]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
+  return res.json({ ok: true });
 });
 
 usuariosRouter.post('/forgot-password', async (req, res) => {
@@ -310,7 +391,7 @@ usuariosRouter.post('/forgot-password', async (req, res) => {
     await sendMail({
       from,
       to: correo,
-      subject: 'Recuperar contraseña - Ferco',
+      subject: 'Recuperar contraseña - Mercatus',
       text: `Recibimos una solicitud para restablecer tu contraseña.\n\nTu código de recuperación es: ${plainCode}\n\nEste código vence en ${RESET_CODE_TTL_MINUTES} minutos.`,
     });
   } catch (error) {
@@ -368,14 +449,18 @@ usuariosRouter.get('/me', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, username, tipo, nombre, apellido, correo, telefono, direccion
-       FROM public.usuarios
-       WHERE id = $1
+      `SELECT u.id, u.username, u.nombre, u.apellido, u.correo, u.telefono, u.direccion,
+              u.rol_id, r.nombre AS rol_nombre
+       FROM public.usuarios u
+       LEFT JOIN public.roles r ON r.id = u.rol_id
+       WHERE u.id = $1
        LIMIT 1`,
       [userId]
     );
     if (!result.rowCount) return res.status(401).json({ error: 'Usuario no encontrado' });
-    return res.json({ ...result.rows[0], tipo: normalizeTipo(result.rows[0].tipo) });
+    const row = result.rows[0];
+    const rolNombre = row.rol_nombre || 'vendedor';
+    return res.json({ ...row, tipo: normalizeTipo(rolNombre), rol_nombre: rolNombre });
   } catch {
     return res.status(401).json({ error: 'Token inválido o vencido' });
   }
