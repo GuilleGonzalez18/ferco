@@ -10,6 +10,7 @@ import { auditoriaRouter } from './routes/auditoria.js';
 import { empaquesRouter } from './routes/empaques.js';
 import { configuracionRouter } from './routes/configuracion.js';
 import { permisosRouter } from './routes/permisos.js';
+import { runMigration } from './scripts/runMigration.js';
 
 dotenv.config();
 
@@ -67,9 +68,17 @@ app.use('/api/empaques', empaquesRouter);
 app.use('/api/configuracion', configuracionRouter);
 app.use('/api/permisos', permisosRouter);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   // eslint-disable-next-line no-console
   console.log(`Backend running on http://localhost:${PORT}`);
   // eslint-disable-next-line no-console
   console.log(`CORS origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'all origins allowed'}`);
+  try {
+    await runMigration();
+    // eslint-disable-next-line no-console
+    console.log('Migración aplicada correctamente.');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error de migración al iniciar:', err.message);
+  }
 });
