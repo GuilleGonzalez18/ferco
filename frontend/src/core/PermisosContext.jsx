@@ -62,6 +62,7 @@ export function PermisosProvider({ children, userTipo, userRolId }) {
   return <PermisosContext.Provider value={value}>{children}</PermisosContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePermisos() {
   return useContext(PermisosContext);
 }

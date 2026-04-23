@@ -29,6 +29,7 @@ const ConfigContext = createContext({
   cancelPreview: () => {},
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function applyColors(empresa) {
   const root = document.documentElement;
   root.style.setProperty('--color-primary', empresa.color_primary || DEFAULTS.color_primary);
@@ -104,6 +105,7 @@ export function ConfigProvider({ children }) {
   return <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfig() {
   return useContext(ConfigContext);
 }

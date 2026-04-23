@@ -262,7 +262,7 @@ export default function Auditoria() {
     return `Hasta ${hasta}`;
   };
 
-  const withHeaderLogo = async (doc, titulo) => {
+  const withHeaderLogo = async (doc) => {
     const fecha = new Date().toLocaleDateString();
     const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
     if (logo) {

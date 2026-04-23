@@ -177,7 +177,7 @@ function buildDefaultLabel(categoria, tipo, metrica) {
 
 // ── useWidgetPrefs: fetches from DB, saves to DB ──────────────────────────────
 
-function useWidgetPrefs(canVerEmpresa) {
+function useWidgetPrefs() {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -192,6 +192,7 @@ function useWidgetPrefs(canVerEmpresa) {
 
   const saveWidgets = useCallback((next) => {
     setWidgets(next);
+    // eslint-disable-next-line no-unused-vars
     api.saveWidgets(next.map(({ id: _id, ...rest }) => rest)).then((saved) => {
       if (Array.isArray(saved)) setWidgets(saved);
     }).catch(() => {});
@@ -217,6 +218,7 @@ function WidgetCard({ widget, editMode, onRemove, onUpdate, idx }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const params = isComparacion
       ? { category: widget.categoria, type: 'comparacion', metric: widget.metrica, comparison_period: widget.periodo_comparacion }
@@ -536,7 +538,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const { empresa, modulos } = useConfig();
   const { can, esPropietario } = usePermisos();
   const canVerEmpresa = can('estadisticas', 'ver_empresa');
-  const [widgets, saveWidgets, widgetsLoading] = useWidgetPrefs(canVerEmpresa);
+  const [widgets, saveWidgets, widgetsLoading] = useWidgetPrefs();
 
   const opcionesMenu = OPCIONES.filter((op) => {
     // Permisos dinámicos por sección
@@ -564,6 +566,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
 
   useEffect(() => {
     if (pantalla !== 'nueva-venta' && ventasCarritoCount !== 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVentasCarritoCount(0);
     }
   }, [pantalla, ventasCarritoCount]);

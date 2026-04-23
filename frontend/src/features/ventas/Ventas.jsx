@@ -169,7 +169,6 @@ export default function Ventas({
   productos = [],
   setProductos,
   carritoDrawerOpen = false,
-  onToggleCarritoDrawer,
   onCloseCarritoDrawer,
   onCarritoCountChange,
 }) {
@@ -673,14 +672,6 @@ export default function Ventas({
     ]);
     setObservacion('');
   };
-
-  const loadImage = (src) =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
-    });
 
   const buildTicketPdf = async () => {
     if (!ventaFinalizada) return null;

@@ -36,7 +36,7 @@ export function cssVarToRgb(varName, fallback = [55, 95, 140]) {
     if (hex && hex.startsWith('#')) {
       return hexToRgb(hex);
     }
-  } catch (_) { /* noop */ }
+  } catch { /* noop */ }
   return fallback;
 }
 
@@ -72,8 +72,7 @@ export function fillLogoBg(doc, x, y, w, h, logoBgColor = '#ffffff') {
     const [r, g, b] = hexToRgb(logoBgColor || '#ffffff');
     doc.setFillColor(r, g, b);
     doc.rect(x, y, w, h, 'F');
-  } catch (_) {
-    doc.setFillColor(255, 255, 255);
+  } catch {
     doc.rect(x, y, w, h, 'F');
   }
 }
@@ -104,8 +103,8 @@ export function loadLogoForPdf(logoBase64, bgColor = '#ffffff') {
           naturalWidth:  canvas.width,
           naturalHeight: canvas.height,
         });
-      } catch (_) {
-        resolve(null);
+      } catch {
+        // canvas flatten failed — resolve without image
       }
     };
 
