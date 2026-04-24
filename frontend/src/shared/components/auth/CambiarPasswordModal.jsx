@@ -5,7 +5,6 @@ import AppButton from '../button/AppButton';
 import './CambiarPasswordModal.css';
 
 export default function CambiarPasswordModal({ onSuccess }) {
-  const [passwordActual, setPasswordActual] = useState('');
   const [passwordNueva, setPasswordNueva] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
@@ -26,10 +25,10 @@ export default function CambiarPasswordModal({ onSuccess }) {
 
     setLoading(true);
     try {
-      await api.cambiarPassword({ passwordActual, passwordNueva });
+      await api.cambiarPassword({passwordNueva });
       onSuccess?.();
     } catch (err) {
-      setError(err?.message || 'No se pudo cambiar la contraseña. Verificá la contraseña actual.');
+      setError(err?.message || 'No se pudo cambiar la contraseña. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -48,18 +47,11 @@ export default function CambiarPasswordModal({ onSuccess }) {
 
         <form className="cambiar-pwd-form" onSubmit={handleSubmit}>
           <AppInput
-            label="Contraseña actual"
-            type="password"
-            value={passwordActual}
-            onChange={(e) => setPasswordActual(e.target.value)}
-            required
-            autoFocus
-          />
-          <AppInput
             label="Nueva contraseña"
             type="password"
             value={passwordNueva}
             onChange={(e) => setPasswordNueva(e.target.value)}
+            placeholder="Contraseña nueva"
             required
           />
           <AppInput
@@ -67,6 +59,7 @@ export default function CambiarPasswordModal({ onSuccess }) {
             type="password"
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
+            placeholder="Repetí la contraseña nueva"
             required
           />
 
