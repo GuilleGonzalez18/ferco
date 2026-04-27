@@ -1,0 +1,274 @@
+.config-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  max-width: 720px;
+}
+
+.config-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: var(--space-xs);
+}
+
+.config-tab-btn {
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  font: var(--weight-medium) var(--font-md) var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.config-tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.config-tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.config-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.config-tab-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.config-section-title {
+  font: var(--weight-semibold) var(--font-lg) var(--font-heading);
+  color: var(--color-heading);
+  margin: 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-field-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: start;
+  gap: var(--space-sm);
+}
+
+.config-field-label {
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text-muted);
+  padding-top: 10px;
+}
+
+.config-logo-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.config-logo-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.config-logo-preview {
+  max-height: 80px;
+  max-width: 220px;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs);
+  background: var(--color-surface);
+}
+
+.config-logo-placeholder {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.config-hint {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.config-colors-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.config-color-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-color-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-color-picker {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 2px;
+  background: none;
+  flex-shrink: 0;
+}
+
+.config-color-text {
+  width: 120px;
+}
+
+.config-colors-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.config-modulos-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-modulo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.config-modulo-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.config-modulo-label {
+  font: var(--weight-medium) var(--font-sm) var(--font-sans);
+  color: var(--color-text);
+}
+
+.config-modulo-badge {
+  font-size: var(--font-xs);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.config-toggle {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.config-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.config-toggle-track {
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: var(--color-border);
+  border-radius: 999px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.config-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.config-toggle-input:checked ~ .config-toggle-track {
+  background: var(--color-primary);
+}
+
+.config-toggle-input:checked ~ .config-toggle-track::after {
+  transform: translateX(20px);
+}
+
+.config-toggle-input:disabled ~ .config-toggle-track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.config-metodo-desc {
+  background: var(--color-primary-soft);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-sm);
+  color: var(--color-text);
+}
+
+.config-metodo-desc p { margin: 0; }
+
+.config-error {
+  color: var(--color-error);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+.config-ok {
+  color: var(--color-success);
+  font-size: var(--font-sm);
+  margin: 0;
+}
+
+.config-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.config-loading {
+  padding: var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+}

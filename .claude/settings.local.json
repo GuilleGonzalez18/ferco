@@ -6,7 +6,8 @@
       "Bash(netstat -ano)",
       "Bash(findstr :3001)",
       "Bash(tasklist /fi \"PID eq 15632\" /fo list)",
-      "PowerShell(Stop-Process -Id 15632 -Force)"
+      "PowerShell(Stop-Process -Id 15632 -Force)",
+      "Bash(npx eslint *)"
     ]
   }
 }

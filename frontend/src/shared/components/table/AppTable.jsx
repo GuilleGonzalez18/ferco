@@ -65,7 +65,6 @@ export default function AppTable({
     ? parsedMinWidth
     : Math.max(680, columns.length * 120);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!stickyHeader || stickyMaxHeight) return;
 

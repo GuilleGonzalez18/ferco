@@ -73,8 +73,9 @@ async function main() {
   const familiasProductos = ['Arroz', 'Yerba', 'Aceite', 'Azúcar', 'Fideos', 'Harina', 'Leche', 'Galletas', 'Atún', 'Detergente'];
   const marcas = ['Ferco', 'Nativa', 'Río', 'Sol', 'Campo', 'Premium', 'Del Sur', 'Andes', 'Monte', 'Doña Ana'];
   const unidades = ['unidad', 'kg', 'lt', 'pack', 'caja'];
+  const nombresEmpaques = ['pack', 'caja', 'bolsa', 'bandeja'];
   const imagenesProductos = [
-    '/images/logo2.png',
+    '/mercatus-logo.png',
     '/images/logo.png',
     '/images/background.jpg',
     '/images/Ferco - Logotipo Final WEB PNG (1).png',
@@ -93,6 +94,23 @@ async function main() {
     await client.query('BEGIN');
 
     const prefijo = Date.now().toString().slice(-6);
+    const empaquesResult = await Promise.all(
+      nombresEmpaques.map((nombre) =>
+        client.query(
+          `INSERT INTO public.empaques (nombre, activo)
+           VALUES ($1, true)
+           ON CONFLICT (nombre) DO UPDATE
+             SET activo = true
+           RETURNING id, nombre`,
+          [nombre]
+        )
+      )
+    );
+    const empaques = empaquesResult.map((result) => ({
+      id: Number(result.rows[0].id),
+      nombre: result.rows[0].nombre || 'pack',
+    }));
+
     const productosIds = [];
     for (let i = 0; i < PRODUCTOS_A_CREAR; i += 1) {
       const familia = randomPick(familiasProductos);
@@ -102,14 +120,15 @@ async function main() {
       const precio = toMoney(costo * (1 + randomInt(20, 80) / 100));
       const stock = randomInt(40, 260);
       const cantidadEmpaque = randomInt(4, 24);
+      const empaque = Math.random() < 0.8 ? randomPick(empaques) : null;
       const precioEmpaque = toMoney(precio * cantidadEmpaque * (1 - randomInt(3, 12) / 100));
       const ean = `779${prefijo}${String(i + 1).padStart(6, '0')}`;
 
       const p = await client.query(
         `INSERT INTO public.productos
-          (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque, precio_empaque)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-         RETURNING id, nombre, precio`,
+          (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          RETURNING id, nombre, precio`,
         [
           nombre,
           costo,
@@ -119,7 +138,7 @@ async function main() {
           randomPick(imagenesProductos),
           ean,
           cantidadEmpaque,
-          'pack',
+          empaque?.id || null,
           precioEmpaque,
         ]
       );

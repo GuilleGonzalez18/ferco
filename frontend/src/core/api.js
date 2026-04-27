@@ -76,6 +76,13 @@ export const api = {
     request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteUsuario: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
+  cambiarPassword: ({ passwordNueva }) =>
+    request('/usuarios/cambiar-password', {
+      method: 'POST',
+      body: JSON.stringify({ passwordNueva }),
+    }),
+  forzarCambioPassword: (id) =>
+    request(`/usuarios/${id}/forzar-cambio-password`, { method: 'POST' }),
 
   getProductos: (options = {}) => {
     const q = new URLSearchParams();
@@ -155,6 +162,18 @@ export const api = {
   createVenta: (payload) =>
     request('/ventas', { method: 'POST', body: JSON.stringify(payload) }),
   getDashboardResumen: () => request('/ventas/dashboard/resumen'),
+  getDashboardWidget: ({ category, type, metric, range, comparison_period }) => {
+    const q = new URLSearchParams({ category, type, metric });
+    if (range) q.set('range', range);
+    if (comparison_period) q.set('comparison_period', comparison_period);
+    return request(`/ventas/dashboard/widget?${q}`);
+  },
+  getWidgets: () => request('/ventas/dashboard/widgets'),
+  saveWidgets: (widgets) => request('/ventas/dashboard/widgets', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(widgets),
+  }),
   getEstadisticasResumen: (desde, hasta, usuarioId) => {
     const q = new URLSearchParams();
     if (desde) q.set('desde', desde);
@@ -184,4 +203,26 @@ export const api = {
     const suffix = q.toString();
     return request(`/auditoria/stock-costo-serie${suffix ? `?${suffix}` : ''}`);
   },
+
+  // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────
+  getConfigEmpresa: () => request('/configuracion/empresa'),
+  updateConfigEmpresa: (payload) =>
+    request('/configuracion/empresa', { method: 'PUT', body: JSON.stringify(payload) }),
+  getConfigModulos: () => request('/configuracion/modulos'),
+  updateConfigModulo: (codigo, habilitado) =>
+    request(`/configuracion/modulos/${codigo}`, {
+      method: 'PUT',
+      body: JSON.stringify({ habilitado }),
+    }),
+  getConfigGanancias: () => request('/configuracion/ganancias'),
+  updateConfigGanancias: (payload) =>
+    request('/configuracion/ganancias', { method: 'PUT', body: JSON.stringify(payload) }),
+
+  // ── PERMISOS ────────────────────────────────────────────────────────────────
+  getRoles: () => request('/permisos/roles'),
+  crearRol: (nombre) => request('/permisos/roles', { method: 'POST', body: JSON.stringify({ nombre }) }),
+  eliminarRol: (id) => request(`/permisos/roles/${id}`, { method: 'DELETE' }),
+  getPermisos: (rolId) => request(`/permisos/${rolId}`),
+  updatePermisos: (rolId, permisos) =>
+    request(`/permisos/${rolId}`, { method: 'PUT', body: JSON.stringify(permisos) }),
 };
