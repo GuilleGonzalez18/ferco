@@ -50,7 +50,7 @@ function MiUsuarioView({ user }) {
 export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [resumen, setResumen] = useState(null);
-  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const esPropietario = String(user?.rol_nombre || user?.tipo || '').toLowerCase() === 'propietario';
   const opcionesMenu = OPCIONES.filter((op) => {
     if (op.key === 'usuarios' || op.key === 'control-stock') return esPropietario;
     if (op.key === 'mi-usuario') return !esPropietario;
@@ -95,7 +95,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     loadResumen();
     window.addEventListener('ferco:stats-refresh', onStatsRefresh);
     return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
-  }, [user?.id, user?.tipo]);
+  }, [user?.id, user?.rol_nombre, user?.tipo]);
 
   const money = (value) => {
     const rounded = Math.round(Number(value || 0));

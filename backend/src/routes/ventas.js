@@ -170,7 +170,7 @@ ventasRouter.get('/dashboard/resumen', async (req, res) => {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
-  let esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  let esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   if (!esPropietario && authUser.rol_id) {
     esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
   }
@@ -428,7 +428,7 @@ ventasRouter.get('/dashboard/widget', async (req, res) => {
   if (!ALLOWED_CATEGORIES.includes(category)) return res.status(400).json({ error: `Categoría desconocida: ${category}` });
   if (!ALLOWED_TYPES.includes(type)) return res.status(400).json({ error: `Tipo desconocido: ${type}` });
 
-  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
 
   if (category === 'ganancia' && !canEmpresa) {
@@ -474,7 +474,7 @@ ventasRouter.get('/dashboard/widgets', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
 
-  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
 
   try {
@@ -497,7 +497,7 @@ ventasRouter.put('/dashboard/widgets', async (req, res) => {
   const widgets = req.body;
   if (!Array.isArray(widgets)) return res.status(400).json({ error: 'Se esperaba un array de widgets' });
 
-  let canEmpresa = normalizeTipo(authUser.tipo) === 'propietario';
+  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
 
   // Rechazar widgets de ganancia si no tiene permiso
@@ -537,7 +537,7 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   if (!authUser?.id) {
     return res.status(401).json({ error: 'No autorizado' });
   }
-  let esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  let esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   if (!esPropietario && authUser.rol_id) {
     esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
   }
@@ -1066,7 +1066,7 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
     return res.status(400).json({ error: 'No se pudo calcular el rango de fechas solicitado' });
   }
 
-  const esPropietario = normalizeTipo(authUser.tipo) === 'propietario';
+  const esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
   const params = [range.desde, range.hasta];
   const userFilter = esPropietario ? '' : 'AND v.usuario_id = $3';
   if (!esPropietario) params.push(Number(authUser.id));

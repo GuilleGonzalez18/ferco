@@ -333,21 +333,35 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   const fileRef  = useRef(null);
   const fondoRef = useRef(null);
   const msgTimers = useRef({});
+  // Ref to always have latest cancelPreview in cleanup (avoids stale closure)
+  const cancelPreviewRef = useRef(cancelPreview);
+  useEffect(() => { cancelPreviewRef.current = cancelPreview; }, [cancelPreview]);
+  // Ref tracks the last-saved form so we can preserve dirty fields on external reload
+  const savedRef = useRef(saved);
+  useEffect(() => { savedRef.current = saved; }, [saved]);
 
   useEffect(() => {
     if (initialEmpresa) {
       const f = buildForm(initialEmpresa);
-      setForm(f);
+      setForm((prevForm) => {
+        const prevSaved = savedRef.current;
+        const merged = { ...f };
+        // Preserve fields that the user has changed but not yet saved
+        for (const key of Object.keys(prevForm)) {
+          if (prevForm[key] !== prevSaved[key]) merged[key] = prevForm[key];
+        }
+        return merged;
+      });
       setSaved(f);
+      savedRef.current = f;
     }
   }, [initialEmpresa]);
 
   useEffect(() => {
     return () => {
-      cancelPreview?.();
+      cancelPreviewRef.current?.();
       Object.values(msgTimers.current).forEach(clearTimeout);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isDirty = useCallback((fields) => fields.some((f) => form[f] !== saved[f]), [form, saved]);
@@ -386,25 +400,36 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
     });
   };
 
-  const saveSection = async (sectionKey, fields) => {
-    if (sectionKey === 'datos' && !form.nombre.trim()) {
-      setErr('El nombre de la empresa es requerido');
-      return;
+const saveSection = async (sectionKey, fields) => {
+  if (sectionKey === 'datos' && !form.nombre.trim()) {
+    setErr('El nombre de la empresa es requerido');
+    return;
+  }
+  setSavingSection(sectionKey);
+  setErr('');
+
+  // Si estamos guardando logo, incluir también colores que hayan cambiado
+  let fieldsToSave = fields;
+  if (sectionKey === 'logo') {
+    const coloresDirty = COLORES_FIELDS.filter((f) => form[f] !== saved[f]);
+    if (coloresDirty.length > 0) {
+      fieldsToSave = [...fields, ...coloresDirty];
     }
-    setSavingSection(sectionKey);
-    setErr('');
-    const payload = { ...saved, ...pickFields(form, fields) };
-    try {
-      await api.updateConfigEmpresa(payload);
-      setSaved(payload);
-      showMsg(sectionKey, 'Guardado correctamente.');
-      onSaved?.();
-    } catch (error) {
-      setErr(error.message || 'Error al guardar');
-    } finally {
-      setSavingSection(null);
-    }
-  };
+  }
+
+  const payload = { ...saved, ...pickFields(form, fieldsToSave) };
+  try {
+    await api.updateConfigEmpresa(payload);
+    savedRef.current = payload; // sync before onSaved may trigger initialEmpresa refresh
+    setSaved(payload);
+    showMsg(sectionKey, 'Guardado correctamente.');
+    onSaved?.();
+  } catch (error) {
+    setErr(error.message || 'Error al guardar');
+  } finally {
+    setSavingSection(null);
+  }
+};
 
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
@@ -591,11 +616,9 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
                 type="button"
                 size="sm"
                 onClick={() => {
-                  setForm((prev) => {
-                    const next = { ...prev, ...paletaSugerida };
-                    applyPreview?.(next);
-                    return next;
-                  });
+                  const next = { ...form, ...paletaSugerida };
+                  setForm(next);
+                  applyPreview?.(next);
                   setPaletaSugerida(null);
                 }}
               >
@@ -608,10 +631,10 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
           </div>
         )}
         <SectionActions
-          dirty={isDirty(LOGO_FIELDS)}
+          dirty={isDirty(LOGO_FIELDS) || isDirty(COLORES_FIELDS)}
           saving={savingSection === 'logo'}
           onSave={() => saveSection('logo', LOGO_FIELDS)}
-          onUndo={() => undoSection(LOGO_FIELDS)}
+          onUndo={() => undoSection([...LOGO_FIELDS, ...COLORES_FIELDS])}
           msg={msgs.logo}
         />
       </div>

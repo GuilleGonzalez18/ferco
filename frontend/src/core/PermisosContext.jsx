@@ -25,11 +25,11 @@ function buildMap(permisos) {
   return map;
 }
 
-export function PermisosProvider({ children, userTipo, userRolId }) {
+export function PermisosProvider({ children, userTipo, userRolId, userRolNombre }) {
   const [permisos, setPermisos] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const tipo = String(userTipo || '').toLowerCase().trim();
+  const tipo = String(userRolNombre || userTipo || '').toLowerCase().trim();
   const esPropietario = tipo === 'propietario' || tipo === 'admin';
 
   const loadPermisos = useCallback(async () => {

@@ -19,7 +19,7 @@ function normalizeTipo(value) {
 }
 
 function isPropietario(authUser) {
-  return normalizeTipo(authUser?.tipo) === 'propietario';
+  return authUser?.rol_nombre === 'propietario' || normalizeTipo(authUser?.tipo) === 'propietario';
 }
 
 function isBcryptHash(value) {
@@ -283,6 +283,7 @@ usuariosRouter.post('/login', async (req, res) => {
       correo: user.correo,
       tipo: user.tipo,
       rol_id: user.rol_id,
+      rol_nombre: user.rol_nombre,
       username: user.username,
       nombre: user.nombre || null,
       apellido: user.apellido || null,
@@ -298,9 +299,9 @@ usuariosRouter.post('/cambiar-password', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
 
-  const { passwordActual, passwordNueva } = req.body || {};
-  if (!passwordActual || !passwordNueva) {
-    return res.status(400).json({ error: 'Se requieren la contraseña actual y la nueva' });
+  const {passwordNueva } = req.body || {};
+  if (!passwordNueva) {
+    return res.status(400).json({ error: 'Se requiere la nueva contraseña' });
   }
   if (String(passwordNueva).length < 8) {
     return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
@@ -313,14 +314,7 @@ usuariosRouter.post('/cambiar-password', async (req, res) => {
   if (!userQ.rowCount) return res.status(404).json({ error: 'Usuario no encontrado' });
 
   const dbUser = userQ.rows[0];
-  let passwordOk = false;
-  if (isBcryptHash(dbUser.password)) {
-    passwordOk = await comparePassword(String(passwordActual), dbUser.password);
-  } else {
-    passwordOk = dbUser.password === String(passwordActual);
-  }
-  if (!passwordOk) return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
-
+  
   const sameAsOld = isBcryptHash(dbUser.password)
     ? await comparePassword(String(passwordNueva), dbUser.password)
     : dbUser.password === String(passwordNueva);
@@ -340,7 +334,7 @@ usuariosRouter.post('/cambiar-password', async (req, res) => {
 usuariosRouter.post('/:id/forzar-cambio-password', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
-  if (normalizeTipo(authUser.tipo) !== 'propietario') {
+  if (!isPropietario(authUser)) {
     return res.status(403).json({ error: 'Solo el propietario puede forzar cambio de contraseña' });
   }
 

@@ -76,10 +76,10 @@ export const api = {
     request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteUsuario: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
-  cambiarPassword: ({ passwordActual, passwordNueva }) =>
+  cambiarPassword: ({ passwordNueva }) =>
     request('/usuarios/cambiar-password', {
       method: 'POST',
-      body: JSON.stringify({ passwordActual, passwordNueva }),
+      body: JSON.stringify({ passwordNueva }),
     }),
   forzarCambioPassword: (id) =>
     request(`/usuarios/${id}/forzar-cambio-password`, { method: 'POST' }),
