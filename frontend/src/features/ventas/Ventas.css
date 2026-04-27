@@ -473,6 +473,41 @@
   color: #27496b;
 }
 
+.nuevo-cliente-btn-wrap {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #eef3fa;
+}
+
+.nuevo-cliente-btn {
+  width: 100%;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.nuevo-cliente-form {
+  padding: 0.75rem 0.6rem;
+  border-bottom: 1px solid #eef3fa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.nuevo-cliente-form-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #34506f;
+}
+
+.nuevo-cliente-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
 .ventas-panel {
   background: #fff;
   border-radius: 10px;
@@ -1223,7 +1258,7 @@
 .venta-final-overlay {
   position: fixed;
   inset: 0;
-  z-index: 150;
+  z-index: 999;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;

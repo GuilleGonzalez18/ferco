@@ -19,7 +19,7 @@ function normalizeTipo(value) {
 }
 
 function isPropietario(authUser) {
-  return normalizeTipo(authUser?.tipo) === 'propietario';
+  return authUser?.rol_nombre === 'propietario' || normalizeTipo(authUser?.tipo) === 'propietario';
 }
 
 function isBcryptHash(value) {
@@ -283,6 +283,7 @@ usuariosRouter.post('/login', async (req, res) => {
       correo: user.correo,
       tipo: user.tipo,
       rol_id: user.rol_id,
+      rol_nombre: user.rol_nombre,
       username: user.username,
       nombre: user.nombre || null,
       apellido: user.apellido || null,
@@ -333,7 +334,7 @@ usuariosRouter.post('/cambiar-password', async (req, res) => {
 usuariosRouter.post('/:id/forzar-cambio-password', async (req, res) => {
   const authUser = getAuthUserFromRequest(req);
   if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
-  if (normalizeTipo(authUser.tipo) !== 'propietario') {
+  if (!isPropietario(authUser)) {
     return res.status(403).json({ error: 'Solo el propietario puede forzar cambio de contraseña' });
   }
 

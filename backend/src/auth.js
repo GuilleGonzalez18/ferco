@@ -17,7 +17,8 @@ export function requireAuth(req, res, next) {
 export function requirePropietario(req, res, next) {
   const user = req.authUser ?? getAuthUserFromRequest(req);
   if (!user?.id) return res.status(401).json({ error: 'No autorizado' });
-  if (normalizeTipo(user.tipo) !== 'propietario') {
+  const esProp = user.rol_nombre === 'propietario' || normalizeTipo(user.tipo) === 'propietario';
+  if (!esProp) {
     return res.status(403).json({ error: 'Acceso denegado: se requiere propietario' });
   }
   req.authUser = user;
@@ -40,6 +41,7 @@ export function getAuthUserFromRequest(req) {
       apellido: payload.apellido || null,
       tipo: payload.tipo || null,
       rol_id: payload.rol_id || null,
+      rol_nombre: payload.rol_nombre || null,
     };
   } catch {
     return null;

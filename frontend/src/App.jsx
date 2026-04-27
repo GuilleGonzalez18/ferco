@@ -20,9 +20,8 @@ function AppShell({ user, onLogout }) {
   const [productos, setProductos] = useState([]);
   const [productosError, setProductosError] = useState('');
 
-  const esPropietario = 
-    user?.rol === 'propietario' || user?.rol === 'admin' ||
-    user?.tipo === 'propietario' || user?.tipo === 'admin';
+  const esPropietario =
+    user?.rol_nombre === 'propietario' || user?.tipo === 'propietario' || user?.tipo === 'admin';
 
   // Empresa sin configurar: flag configurado === false en la BD
   const empresaSinConfigurar =
@@ -55,7 +54,7 @@ function AppShell({ user, onLogout }) {
   }
 
   return (
-    <PermisosProvider userTipo={user?.tipo} userRolId={user?.rol_id}>
+    <PermisosProvider userTipo={user?.tipo} userRolId={user?.rol_id} userRolNombre={user?.rol_nombre}>
       {productosError && (
         <div className="app-global-alert app-global-alert-error" role="alert">
           {productosError}

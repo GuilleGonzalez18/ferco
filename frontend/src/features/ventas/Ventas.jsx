@@ -178,6 +178,9 @@ export default function Ventas({
   const [vistaProductos, setVistaProductos] = useState('grid');
   const [selectorClienteAbierto, setSelectorClienteAbierto] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState('');
+  const [nuevoClienteOpen, setNuevoClienteOpen] = useState(false);
+  const [nuevoClienteForm, setNuevoClienteForm] = useState({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+  const [nuevoClienteSaving, setNuevoClienteSaving] = useState(false);
   const [productPicker, setProductPicker] = useState({});
 
   const [carrito, setCarrito] = useState([]);
@@ -346,6 +349,33 @@ export default function Ventas({
     if (!q) return clientes;
     return clientes.filter((c) => c.nombre.toLowerCase().includes(q));
   }, [busquedaCliente, clientes]);
+
+  const handleCrearCliente = async (e) => {
+    e.preventDefault();
+    const nombre = nuevoClienteForm.nombre.trim();
+    if (!nombre) return;
+    setNuevoClienteSaving(true);
+    try {
+      const created = await api.createCliente({
+        nombre,
+        rut: nuevoClienteForm.rut.trim() || null,
+        telefono: nuevoClienteForm.telefono.trim() || null,
+        correo: nuevoClienteForm.correo.trim() || null,
+        direccion: nuevoClienteForm.direccion.trim() || null,
+      });
+      const cliente = { id: created.id, nombre: created.nombre, telefono: created.telefono || '', direccion: created.direccion || '' };
+      setClientes((prev) => [cliente, ...prev]);
+      setClienteId(String(created.id));
+      setNuevoClienteOpen(false);
+      setNuevoClienteForm({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+      setSelectorClienteAbierto(false);
+      setBusquedaCliente('');
+    } catch (err) {
+      await appAlert(err.message || 'No se pudo crear el cliente');
+    } finally {
+      setNuevoClienteSaving(false);
+    }
+  };
 
   const stockReservadoPorProducto = useMemo(() => {
     return carrito.reduce((acc, item) => {
@@ -1307,6 +1337,62 @@ export default function Ventas({
               onChange={(e) => setBusquedaCliente(e.target.value)}
             />
           </div>
+          {nuevoClienteOpen ? (
+            <form className="nuevo-cliente-form" onSubmit={handleCrearCliente}>
+              <p className="nuevo-cliente-form-title">Nuevo cliente</p>
+              <AppInput
+                type="text"
+                placeholder="Nombre *"
+                value={nuevoClienteForm.nombre}
+                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, nombre: e.target.value }))}
+                required
+              />
+              <AppInput
+                type="text"
+                placeholder="RUT / Cédula"
+                value={nuevoClienteForm.rut}
+                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, rut: e.target.value }))}
+              />
+              <AppInput
+                type="text"
+                placeholder="Teléfono"
+                value={nuevoClienteForm.telefono}
+                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, telefono: e.target.value }))}
+              />
+              <AppInput
+                type="email"
+                placeholder="Correo"
+                value={nuevoClienteForm.correo}
+                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, correo: e.target.value }))}
+              />
+              <AppInput
+                type="text"
+                placeholder="Dirección"
+                value={nuevoClienteForm.direccion}
+                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, direccion: e.target.value }))}
+              />
+              <div className="nuevo-cliente-form-actions">
+                <AppButton type="button" tone="ghost" size="sm" onClick={() => setNuevoClienteOpen(false)} disabled={nuevoClienteSaving}>
+                  Cancelar
+                </AppButton>
+                <AppButton type="submit" size="sm" disabled={nuevoClienteSaving || !nuevoClienteForm.nombre.trim()}>
+                  {nuevoClienteSaving ? 'Guardando...' : 'Guardar cliente'}
+                </AppButton>
+              </div>
+            </form>
+          ) : (
+            <div className="nuevo-cliente-btn-wrap">
+              <AppButton
+                type="button"
+                tone="ghost"
+                size="sm"
+                className="nuevo-cliente-btn"
+                onClick={() => { setNuevoClienteOpen(true); setBusquedaCliente(''); }}
+              >
+                + Ingresar nuevo cliente
+              </AppButton>
+            </div>
+          )}
           <div className="cliente-dropdown-list full">
             {clientesFiltrados.length === 0 && (
               <p className="cliente-sin-resultados">Sin resultados</p>
