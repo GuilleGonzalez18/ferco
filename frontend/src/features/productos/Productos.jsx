@@ -3,6 +3,9 @@ import './Productos.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
+import { useConfig } from '../../core/ConfigContext';
+import { usePermisos } from '../../core/PermisosContext';
+import { getPrimaryRgb, detectImageFormat, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import { fromApiProducto, toApiProducto } from '../../shared/lib/productMapper';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
@@ -54,13 +57,8 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function detectImageFormat(url) {
-  const value = String(url || '').toLowerCase();
-  if (value.includes('.jpg') || value.includes('.jpeg')) return 'JPEG';
-  return 'PNG';
-}
-
-export default function Productos({ user, productos = [], setProductos }) {
+export default function Productos({ productos = [], setProductos }) {
+  const { empresa } = useConfig();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -75,7 +73,15 @@ export default function Productos({ user, productos = [], setProductos }) {
   const [empaques, setEmpaques] = useState([]);
   const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
   const mostrarOpcionesCatalogo = false;
-  const esPropietario = String(user?.tipo || '').toLowerCase() === 'propietario';
+  const { can } = usePermisos();
+  const verCosto = can('productos', 'ver_costo');
+  const verGanancia = can('productos', 'ver_ganancia');
+  const puedeAgregar = can('productos', 'agregar');
+  const puedeEditar = can('productos', 'editar');
+  const puedeEliminar = can('productos', 'eliminar');
+  const puedeExportar = can('productos', 'exportar');
+  const verArchivados = can('productos', 'ver_archivados');
+  const gestionarEmpaques = can('productos', 'gestionar_empaques');
   const [nuevo, setNuevo] = useState({
     nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
   });
@@ -268,68 +274,66 @@ export default function Productos({ user, productos = [], setProductos }) {
     }
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    // Logo
-    const logo = new Image();
-    logo.src = '/images/logo2.png';
-    logo.onload = () => {
-      doc.addImage(logo, 'PNG', 10, 10, 40, 20);
-      doc.setFontSize(16);
-      doc.text('Lista de Productos', 55, 22);
-      doc.setFontSize(10);
-      doc.text('Emitido: ' + fecha, 55, 28);
-      autoTable(doc, {
-        startY: 35,
-        head: [[
-          'Nombre',
-          'Stock',
-          ...(esPropietario ? ['Costo'] : []),
-          'Venta',
-          'Empaque',
-          ...(esPropietario ? ['Ganancia x U'] : []),
-        ]],
-        body: sortedProductos.map(p => [
-          p.nombre,
-          p.stock,
-          ...(esPropietario ? [formatMoney(p.costo)] : []),
-          formatMoney(p.venta),
-          `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
-          ...(esPropietario ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
-        ]),
-        didParseCell: function (data) {
-          if (data.section !== 'body') return;
-          const producto = sortedProductos[data.row.index];
-          const state = stockState(producto?.stock);
-          if (state === 'stock-zero') {
-            data.cell.styles.fillColor = [246, 196, 196];
-            data.cell.styles.textColor = [127, 29, 29];
-          } else if (state === 'stock-low') {
-            data.cell.styles.fillColor = [255, 236, 173];
-            data.cell.styles.textColor = [120, 53, 15];
-          }
-        },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [55, 95, 140] },
-      });
-      doc.save('productos.pdf');
-    };
+    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (logo) {
+      doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
+    }
+    doc.setFontSize(16);
+    doc.text('Lista de Productos', 55, 22);
+    doc.setFontSize(10);
+    doc.text('Emitido: ' + fecha, 55, 28);
+    autoTable(doc, {
+      startY: 35,
+      head: [[
+        'Nombre',
+        'Stock',
+        ...(verCosto ? ['Costo'] : []),
+        'Venta',
+        'Empaque',
+        ...(verGanancia ? ['Ganancia x U'] : []),
+      ]],
+      body: sortedProductos.map(p => [
+        p.nombre,
+        p.stock,
+        ...(verCosto ? [formatMoney(p.costo)] : []),
+        formatMoney(p.venta),
+        `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
+        ...(verGanancia ? [formatMoney(calcularGananciaUnidad(p.costo, p.venta))] : []),
+      ]),
+      didParseCell: function (data) {
+        if (data.section !== 'body') return;
+        const producto = sortedProductos[data.row.index];
+        const state = stockState(producto?.stock);
+        if (state === 'stock-zero') {
+          data.cell.styles.fillColor = [246, 196, 196];
+          data.cell.styles.textColor = [127, 29, 29];
+        } else if (state === 'stock-low') {
+          data.cell.styles.fillColor = [255, 236, 173];
+          data.cell.styles.textColor = [120, 53, 15];
+        }
+      },
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: getPrimaryRgb() },
+    });
+    doc.save('productos.pdf');
   };
 
   const exportarExcel = () => {
     const rowsHtml = sortedProductos.map((p, idx) => {
       const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
-      const ganancia = esPropietario ? formatMoney(calcularGananciaUnidad(p.costo, p.venta)) : '';
+      const ganancia = verGanancia ? formatMoney(calcularGananciaUnidad(p.costo, p.venta)) : '';
       return `
         <tr style="background:${zebra}">
           <td>${p.nombre || ''}</td>
           <td>${p.ean || ''}</td>
           <td style="text-align:center">${p.stock || 0}</td>
-          ${esPropietario ? `<td style="text-align:right">${formatMoney(p.costo)}</td>` : ''}
+          ${verCosto ? `<td style="text-align:right">${formatMoney(p.costo)}</td>` : ''}
           <td style="text-align:right">${formatMoney(p.venta)}</td>
           <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
-          ${esPropietario ? `<td style="text-align:right">${ganancia}</td>` : ''}
+          ${verGanancia ? `<td style="text-align:right">${ganancia}</td>` : ''}
         </tr>
       `;
     }).join('');
@@ -344,10 +348,10 @@ export default function Productos({ user, productos = [], setProductos }) {
                 <th>Nombre</th>
                 <th>Código</th>
                 <th>Stock</th>
-                ${esPropietario ? '<th>Costo</th>' : ''}
+                ${verCosto ? '<th>Costo</th>' : ''}
                 <th>Venta</th>
                 <th>Empaque</th>
-                ${esPropietario ? '<th>Ganancia x U</th>' : ''}
+                ${verGanancia ? '<th>Ganancia x U</th>' : ''}
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -373,10 +377,10 @@ export default function Productos({ user, productos = [], setProductos }) {
         <td>${p.nombre || ''}</td>
         <td>${p.ean || '-'}</td>
         <td>${p.stock || 0}</td>
-        ${esPropietario ? `<td>${formatMoney(p.costo)}</td>` : ''}
+        ${verCosto ? `<td>${formatMoney(p.costo)}</td>` : ''}
         <td>${formatMoney(p.venta)}</td>
         <td>${(p.tipoEmpaque || '')} x ${(p.cantidadEmpaque || 0)}</td>
-        ${esPropietario ? `<td>${formatMoney(calcularGananciaUnidad(p.costo, p.venta))}</td>` : ''}
+        ${verGanancia ? `<td>${formatMoney(calcularGananciaUnidad(p.costo, p.venta))}</td>` : ''}
       </tr>
     `).join('');
     const w = window.open('', '_blank', 'noopener,noreferrer,width=980,height=700');
@@ -394,7 +398,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         <h2>Lista de productos</h2>
         <table>
           <thead><tr>
-            <th>Nombre</th><th>Código</th><th>Stock</th>${esPropietario ? '<th>Costo</th>' : ''}<th>Venta</th><th>Empaque</th>${esPropietario ? '<th>Ganancia x U</th>' : ''}
+            <th>Nombre</th><th>Código</th><th>Stock</th>${verCosto ? '<th>Costo</th>' : ''}<th>Venta</th><th>Empaque</th>${verGanancia ? '<th>Ganancia x U</th>' : ''}
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
@@ -438,7 +442,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       </head>
       <body>
         <div class="header">
-          <img class="logo" src="/images/logo2.png" alt="Ferco" />
+          <img class="logo" src="/mercatus-logo.png" alt="Ferco" />
           <div>
             <h1>Catálogo de Productos</h1>
             <div class="meta">Actualizado: ${updatedAt}</div>
@@ -488,16 +492,9 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    try {
-      const logo = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = '/images/logo2.png';
-      });
-      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {
-      // noop
+    const headerLogo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (headerLogo) {
+      doc.addImage(headerLogo.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
 
     doc.setFontSize(16);
@@ -576,16 +573,9 @@ export default function Productos({ user, productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    try {
-      const logo = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = '/images/logo2.png';
-      });
-      doc.addImage(logo, 'PNG', margin, 8, 24, 12);
-    } catch {
-      // noop
+    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    if (headerLogo2) {
+      doc.addImage(headerLogo2.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
 
     doc.setFontSize(16);
@@ -721,7 +711,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         case 'empaque':
           return asText(a.tipoEmpaque).localeCompare(asText(b.tipoEmpaque)) * dir;
         case 'ganancia': {
-          if (!esPropietario) return 0;
+          if (!verGanancia) return 0;
           const ag = calcularGananciaUnidad(a.costo, a.venta);
           const bg = calcularGananciaUnidad(b.costo, b.venta);
           return (ag - bg) * dir;
@@ -742,7 +732,7 @@ export default function Productos({ user, productos = [], setProductos }) {
     });
 
     return list;
-  }, [productosFiltrados, sortBy, sortDir, esPropietario]);
+  }, [productosFiltrados, sortBy, sortDir, verCosto, verGanancia]);
 
   const totalesInventario = useMemo(() => {
     return productos.reduce((acc, p) => {
@@ -839,7 +829,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       cellClassName: (p) => `stock-value ${stockState(p.stock)}`,
       render: (p) => p.stock,
     },
-    ...(esPropietario
+    ...(verCosto
       ? [{
           key: 'costo',
           header: (
@@ -873,7 +863,7 @@ export default function Productos({ user, productos = [], setProductos }) {
       mobileLabel: 'Empaque',
       render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
     },
-    ...(esPropietario
+    ...(verGanancia
       ? [{
           key: 'ganancia',
           header: (
@@ -933,10 +923,13 @@ export default function Productos({ user, productos = [], setProductos }) {
             onChange={(e) => setBusqueda(e.target.value)}
           />
           <div className="productos-toolbar-actions">
+            {puedeAgregar && (
             <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
               <img src="/add.svg" alt="" aria-hidden="true" />
               <span>PRODUCTO</span>
             </AppButton>
+            )}
+            {verArchivados && (
             <AppButton
               className="agregar-btn toolbar-add"
               title="Ver archivados"
@@ -947,28 +940,37 @@ export default function Productos({ user, productos = [], setProductos }) {
             >
               <span>ARCHIVADOS</span>
             </AppButton>
+            )}
+            {gestionarEmpaques && (
             <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
               <span>EMPAQUES</span>
             </AppButton>
+            )}
+            {puedeExportar && (
             <AppButton className="exportar-pdf" title="Exportar" onClick={() => setExportModalOpen(true)}>
               <img src="/print.svg" alt="" aria-hidden="true" />
             </AppButton>
+            )}
           </div>
         </div>
 
         <div className="productos-totales">
-          <div className="productos-total-card">
-            <span>Total Costo</span>
-            <strong>{formatMoney(totalesInventario.totalCosto)}</strong>
-          </div>
+          {verCosto && (
+            <div className="productos-total-card">
+              <span>Total Costo</span>
+              <strong>{formatMoney(totalesInventario.totalCosto)}</strong>
+            </div>
+          )}
           <div className="productos-total-card">
             <span>Total Venta</span>
             <strong>{formatMoney(totalesInventario.totalVenta)}</strong>
           </div>
-          <div className="productos-total-card">
-            <span>Total Ganancia</span>
-            <strong>{formatMoney(totalesInventario.totalGanancia)}</strong>
-          </div>
+          {verGanancia && (
+            <div className="productos-total-card">
+              <span>Total Ganancia</span>
+              <strong>{formatMoney(totalesInventario.totalGanancia)}</strong>
+            </div>
+          )}
         </div>
 
         {exportModalOpen && (
@@ -1081,6 +1083,7 @@ export default function Productos({ user, productos = [], setProductos }) {
           expandedRowId={productoExpandidoId}
           renderExpandedRow={(p) => (
             <div className="acciones-producto-panel">
+              {puedeEditar && (
               <AppButton
                 className="edit-btn"
                 onClick={(e) => {
@@ -1091,6 +1094,8 @@ export default function Productos({ user, productos = [], setProductos }) {
               >
                 Editar
               </AppButton>
+              )}
+              {puedeEliminar && (
               <AppButton
                 className="delete-btn"
                 onClick={(e) => {
@@ -1101,6 +1106,7 @@ export default function Productos({ user, productos = [], setProductos }) {
               >
                 Archivar
               </AppButton>
+              )}
             </div>
           )}
         />

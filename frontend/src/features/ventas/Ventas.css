@@ -38,9 +38,9 @@
 }
 
 .ventas-step.active {
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #375f8c;
+  border-color: var(--color-primary);
 }
 
 .ventas-step.done {
@@ -94,7 +94,7 @@
 .ventas-carrito-close {
   border: 1px solid #d7e2f0;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   border-radius: 7px;
   width: 30px;
   height: 30px;
@@ -103,7 +103,7 @@
 
 .ventas-carrito-title {
   margin: 0 0 0.55rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
@@ -202,7 +202,7 @@
 .descuento-action-link {
   border: none;
   background: transparent;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -264,7 +264,7 @@
 .carrito-totales h4 {
   margin: 0;
   font-size: 0.82rem;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .carrito-totales p {
@@ -325,7 +325,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 0.8rem;
 }
@@ -335,7 +335,7 @@
   border: 1px solid #d3dbe8;
   border-radius: 8px;
   background: #f8fbff;
-  color: #375f8c;
+  color: var(--color-primary);
   text-align: left;
   font-size: 0.82rem;
   font-weight: 700;
@@ -359,7 +359,7 @@
 .cliente-dropdown-head h4 {
   margin: 0 0 0.35rem;
   font-size: 0.78rem;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .cliente-dropdown-head input {
@@ -440,7 +440,7 @@
   width: 28px;
   height: 28px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -471,6 +471,41 @@
 .cliente-opcion.active {
   background: #edf4ff;
   color: #27496b;
+}
+
+.nuevo-cliente-btn-wrap {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #eef3fa;
+}
+
+.nuevo-cliente-btn {
+  width: 100%;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.nuevo-cliente-form {
+  padding: 0.75rem 0.6rem;
+  border-bottom: 1px solid #eef3fa;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.nuevo-cliente-form-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #34506f;
+}
+
+.nuevo-cliente-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
 }
 
 .ventas-panel {
@@ -536,7 +571,7 @@
 .ventas-panel h3 {
   margin: 0 0 0.65rem;
   font-size: 0.95rem;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .catalogo-top {
@@ -713,7 +748,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -745,7 +780,7 @@
   border: 1px solid #d3dbe8;
   border-radius: 999px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   padding: 0.24rem 0.46rem;
   font-size: 0.72rem;
   font-weight: 700;
@@ -753,9 +788,9 @@
 }
 
 .picker-mode-btn.active {
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #375f8c;
+  border-color: var(--color-primary);
 }
 
 .picker-qty {
@@ -769,7 +804,7 @@
   border: 1px solid #cfd9e8;
   border-radius: 6px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   width: 30px;
   min-width: 30px;
   height: 30px;
@@ -817,7 +852,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -836,7 +871,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 600;
   font-size: 0.84rem;
 }
@@ -857,7 +892,7 @@
 }
 
 .pagos-label {
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 0.83rem;
 }
@@ -872,7 +907,7 @@
   border: 1px solid #d6e1f1;
   border-radius: 12px;
   background: #ffffff;
-  color: #375f8c;
+  color: var(--color-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -920,7 +955,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -969,7 +1004,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 700;
 }
@@ -1013,7 +1048,7 @@
 
 .ticket-resumen h4 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 1rem;
 }
 
@@ -1034,7 +1069,7 @@
 }
 
 .ticket-total-chip {
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
   padding: 0.32rem 0.58rem;
   border-radius: 999px;
@@ -1057,7 +1092,7 @@
 
 .ticket-grid p span {
   font-weight: 700;
-  color: #375f8c;
+  color: var(--color-primary);
 }
 
 .ticket-items {
@@ -1159,7 +1194,7 @@
 
 .descuento-modal h4 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
@@ -1180,7 +1215,7 @@
   border: 1px solid #d3dbe8;
   border-radius: 8px;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: 0.8rem;
   padding: 0.42rem 0.5rem;
@@ -1188,9 +1223,9 @@
 }
 
 .descuento-modal-tipos button.active {
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #375f8c;
+  border-color: var(--color-primary);
 }
 
 .descuento-modal input {
@@ -1213,7 +1248,7 @@
   font-weight: 700;
   cursor: pointer;
   color: #fff;
-  background: #375f8c;
+  background: var(--color-primary);
 }
 
 .descuento-modal-actions .secundario {
@@ -1223,7 +1258,7 @@
 .venta-final-overlay {
   position: fixed;
   inset: 0;
-  z-index: 150;
+  z-index: 999;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -1267,7 +1302,7 @@
 
 .venta-final-cliente {
   margin: 0 0 0.5rem;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.86rem;
 }
 
@@ -1366,7 +1401,7 @@
   font-weight: 700;
   cursor: pointer;
   color: #fff;
-  background: #375f8c;
+  background: var(--color-primary);
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -1450,7 +1485,7 @@
 
   .ventas-carrito-mobile-head h3 {
     margin: 0;
-    color: #375f8c;
+    color: var(--color-primary);
     font-size: 0.95rem;
   }
 

@@ -11,12 +11,12 @@
   min-width: var(--app-table-min-width, 680px);
   border-collapse: collapse;
   font-size: 0.82rem;
-  color: #1f2933;
+  color: var(--color-text);
 }
 
 .app-table thead th {
-  background: #eaf0fa;
-  color: #375f8c;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-weight: 700;
   text-align: left;
   border-bottom: 1px solid #d7e1ef;
@@ -151,11 +151,11 @@
 }
 
 .app-table-expanded-content .edit-btn {
-  background: #375f8c;
+  background: var(--color-primary);
 }
 
 .app-table-expanded-content .edit-btn:hover {
-  background: #2f5279;
+  background: var(--color-primary-strong);
 }
 
 .app-table-expanded-content .delete-btn {
@@ -171,7 +171,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-weight: 700;
   font-size: inherit;
   text-align: left;

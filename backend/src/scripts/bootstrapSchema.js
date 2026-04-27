@@ -446,6 +446,95 @@ const statements = [
      OR TRIM(medio_pago) = ''
      OR LOWER(TRIM(medio_pago)) NOT IN ('efectivo', 'debito', 'credito', 'transferencia');
   `,
+  // === CONFIGURACIÓN DE EMPRESA ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_empresa (
+    id serial PRIMARY KEY,
+    nombre varchar(180) NOT NULL DEFAULT 'Mi Empresa',
+    razon_social varchar(180) NULL,
+    rut varchar(80) NULL,
+    direccion text NULL,
+    telefono varchar(50) NULL,
+    correo varchar(180) NULL,
+    website varchar(255) NULL,
+    logo_base64 text NULL,
+    color_primary varchar(7) NOT NULL DEFAULT '#375f8c',
+    color_primary_strong varchar(7) NOT NULL DEFAULT '#294c74',
+    color_primary_soft varchar(7) NOT NULL DEFAULT '#e7effa',
+    color_menu_bg varchar(7) NOT NULL DEFAULT '#1f2933',
+    color_menu_active varchar(7) NOT NULL DEFAULT '#375f8c',
+    updated_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  INSERT INTO public.config_empresa (nombre)
+  SELECT 'Mi Empresa'
+  WHERE NOT EXISTS (SELECT 1 FROM public.config_empresa);
+  `,
+  // === MÓDULOS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_modulos (
+    id serial PRIMARY KEY,
+    codigo varchar(50) NOT NULL,
+    label varchar(80) NOT NULL,
+    habilitado boolean NOT NULL DEFAULT true,
+    solo_propietario boolean NOT NULL DEFAULT false,
+    orden integer NOT NULL DEFAULT 0
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_config_modulos_codigo ON public.config_modulos (codigo);
+  `,
+  `
+  INSERT INTO public.config_modulos (codigo, label, habilitado, solo_propietario, orden)
+  VALUES
+    ('nueva-venta',   'Nueva venta',      true, false, 1),
+    ('ventas',        'Ventas',           true, false, 2),
+    ('productos',     'Productos',        true, false, 3),
+    ('clientes',      'Clientes',         true, false, 4),
+    ('usuarios',      'Usuarios',         true, true,  5),
+    ('auditoria',     'Auditoría',        true, true,  6),
+    ('control-stock', 'Control de stock', true, true,  7),
+    ('estadisticas',  'Estadísticas',     true, true,  8),
+    ('configuracion', 'Configuración',    true, true,  9)
+  ON CONFLICT (codigo) DO NOTHING;
+  `,
+  // === MÉTODOS DE CÁLCULO DE GANANCIAS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_ganancias_metodos (
+    id serial PRIMARY KEY,
+    codigo varchar(50) NOT NULL,
+    label varchar(120) NOT NULL,
+    descripcion text NULL,
+    activo boolean NOT NULL DEFAULT true
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_config_ganancias_metodos_codigo ON public.config_ganancias_metodos (codigo);
+  `,
+  `
+  INSERT INTO public.config_ganancias_metodos (codigo, label, descripcion)
+  VALUES
+    ('margen_venta', 'Margen por venta',
+     'Ganancia = Σ (precio_unitario_venta − costo_producto) × cantidad. Por cada ítem vendido se descuenta el costo del producto.'),
+    ('flujo_caja',   'Flujo de caja',
+     'Ganancia = Σ total_ventas − Σ (costo × cantidad de entradas de stock). Cada entrada de stock resta su costo total; cada venta suma su total completo.')
+  ON CONFLICT (codigo) DO NOTHING;
+  `,
+  // === CONFIGURACIÓN ACTIVA DE GANANCIAS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.config_ganancias (
+    id serial PRIMARY KEY,
+    metodo_id integer NOT NULL REFERENCES public.config_ganancias_metodos(id),
+    updated_at timestamp without time zone NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  INSERT INTO public.config_ganancias (metodo_id)
+  SELECT id FROM public.config_ganancias_metodos WHERE codigo = 'margen_venta'
+  AND NOT EXISTS (SELECT 1 FROM public.config_ganancias)
+  LIMIT 1;
+  `,
 ];
 
 try {
