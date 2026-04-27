@@ -13,6 +13,7 @@ import { CgArrowsExchange } from 'react-icons/cg';
 import { FiRotateCcw, FiShoppingCart } from 'react-icons/fi';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
+import { FilterPanelProvider, useFilterPanel } from '../../shared/lib/filterPanel';
 
 const OPCIONES = [
   { key: 'nueva-venta', label: 'Nueva venta', topbarTitle: 'Nueva venta', icon: '/newsale.svg' },
@@ -49,7 +50,16 @@ function MiUsuarioView({ user }) {
   );
 }
 
-export default function Dashboard({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
+export default function Dashboard(props) {
+  return (
+    <FilterPanelProvider>
+      <DashboardInner {...props} />
+    </FilterPanelProvider>
+  );
+}
+
+function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, onLogout }) {
+  const { isOpen: filterPanelOpen, setIsOpen: setFilterPanelOpen, hasContent: filterHasContent, containerRefCb } = useFilterPanel();
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
@@ -71,7 +81,12 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
     setStockDrawerAbierto(false);
+    setFilterPanelOpen(false);
   };
+
+  useEffect(() => {
+    setFilterPanelOpen(false);
+  }, [pantalla, setFilterPanelOpen]);
 
   useEffect(() => {
     if (pantalla !== 'nueva-venta' && ventasCarritoCount !== 0) {
@@ -314,6 +329,24 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
                   <span>Limpiar</span>
                 </button>
               )}
+              {filterHasContent && (
+                <button
+                  type="button"
+                  className={`dashboard-mobile-fab filter-panel-btn ${filterPanelOpen ? 'is-open' : ''}`}
+                  onClick={() => setFilterPanelOpen((prev) => !prev)}
+                  aria-label={filterPanelOpen ? 'Cerrar panel' : 'Abrir filtros y acciones'}
+                  aria-expanded={filterPanelOpen}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                    <line x1="2" y1="4.5" x2="16" y2="4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="2" y1="13.5" x2="16" y2="13.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <circle cx="6" cy="4.5" r="2.2" fill="currentColor" />
+                    <circle cx="12" cy="9" r="2.2" fill="currentColor" />
+                    <circle cx="7.5" cy="13.5" r="2.2" fill="currentColor" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -341,6 +374,34 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
             </section>
           )}
           {contenidoPantalla}
+        </div>
+
+        {/* Panel de filtros y acciones */}
+        <div
+          className={`filter-panel-overlay ${filterPanelOpen ? 'open' : ''}`}
+          onClick={() => setFilterPanelOpen(false)}
+          aria-hidden={!filterPanelOpen}
+        >
+          <aside
+            className="filter-panel-drawer"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filtros y acciones"
+          >
+            <div className="filter-panel-head">
+              <h3>Filtros y acciones</h3>
+              <button
+                type="button"
+                className="filter-panel-close"
+                onClick={() => setFilterPanelOpen(false)}
+                aria-label="Cerrar panel"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="filter-panel-body" ref={containerRefCb} />
+          </aside>
         </div>
       </main>
     </div>

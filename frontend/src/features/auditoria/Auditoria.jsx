@@ -176,6 +176,7 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
       key: 'origen',
       header: 'Origen',
       mobileLabel: 'Origen',
+      mobileHide: true,
       accessor: 'origen',
     },
     {
@@ -189,6 +190,7 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
       key: 'stock',
       header: 'Stock',
       mobileLabel: 'Stock',
+      mobileHide: true,
       render: (m) => `${formatQty(m.stock_anterior)} -> ${formatQty(m.stock_nuevo)}`,
     },
     {

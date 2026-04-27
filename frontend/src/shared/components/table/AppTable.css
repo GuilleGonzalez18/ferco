@@ -193,3 +193,110 @@
     padding: 0.46rem 0.55rem;
   }
 }
+
+@media (max-width: 599px) {
+  .app-table-wrap {
+    border: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .app-table-wrap.is-sticky-header {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .app-table,
+  .app-table tbody {
+    display: block;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .app-table thead {
+    display: none;
+  }
+
+  .app-table tbody tr.app-table-row {
+    display: block;
+    border: 1px solid #e4ebf4;
+    border-radius: 10px;
+    background: #fff;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+
+  .app-table tbody tr.app-table-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .app-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #f0f4fa;
+    padding: 0.42rem 0.65rem;
+    text-align: right;
+    font-size: 0.82rem;
+  }
+
+  .app-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .app-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #375f8c;
+    font-size: 0.73rem;
+    flex-shrink: 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  /* Celdas sin etiqueta (imágenes, acciones) */
+  .app-table tbody td[data-label=''] {
+    justify-content: flex-end;
+  }
+
+  .app-table tbody td[data-label='']::before {
+    display: none;
+  }
+
+  /* Columnas marcadas como mobileHide */
+  .app-table tbody td[data-mobile-hide='true'] {
+    display: none;
+  }
+
+  /* Fila expandida */
+  .app-table-expanded-row td {
+    display: block;
+    border-bottom: none;
+    padding: 0;
+  }
+
+  .app-table-expanded-row td::before {
+    display: none;
+  }
+
+  /* Fila vacía */
+  .app-table-empty-row td {
+    display: block;
+    border: 1px solid #e4ebf4;
+    border-radius: 10px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .app-table-empty-row td::before {
+    display: none;
+  }
+
+  /* Colores de fila preservados */
+  .app-table-row.producto-row.stock-low { background: #ffecad; }
+  .app-table-row.producto-row.stock-zero { background: #f6c4c4; }
+  .app-table-row.venta-row-entregada { background: #e4f6ea; }
+  .app-table-row.venta-row-cancelada { background: #fff3f3; }
+  .app-table-row.is-expanded { background: #e6eef9; }
+}

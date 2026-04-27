@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import './VentasHistorial.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -919,6 +920,7 @@ export default function VentasHistorial() {
         </button>
       ),
       mobileLabel: 'Vendedor',
+      mobileHide: true,
       render: (v) => v.usuario_nombre || '-',
     },
     {
@@ -936,6 +938,7 @@ export default function VentasHistorial() {
       key: 'pago',
       header: 'Pago',
       mobileLabel: 'Pago',
+      mobileHide: true,
       render: (v) => <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>,
     },
     {
@@ -1067,6 +1070,7 @@ export default function VentasHistorial() {
 
   return (
     <div className="ventas-historial-main">
+      <FilterSlot>
       <div className="ventas-historial-toolbar">
         <div className="ventas-filtros-group">
           <div className="ventas-range-stack">
@@ -1122,7 +1126,7 @@ export default function VentasHistorial() {
                 Este mes
               </AppButton>
             </div>
-            <div className="ventas-range-inputs">
+            <div className="ventas-date-estado-row">
               <label className="ventas-fecha-filter">
                 <span>Desde</span>
                 <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -1131,17 +1135,17 @@ export default function VentasHistorial() {
                 <span>Hasta</span>
                 <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </label>
+              <label className="ventas-fecha-filter">
+                <span>Estado</span>
+                <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+                  <option value="todos">Todos</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="entregado">Entregadas</option>
+                  <option value="canceladas">Canceladas</option>
+                </AppSelect>
+              </label>
             </div>
           </div>
-          <label className="ventas-fecha-filter">
-            <span>Estado</span>
-            <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
-              <option value="todos">Todos</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="entregado">Entregadas</option>
-              <option value="canceladas">Canceladas</option>
-            </AppSelect>
-          </label>
         </div>
         <div className="ventas-export-group">
           <AppButton
@@ -1149,9 +1153,10 @@ export default function VentasHistorial() {
             className="ventas-export-btn"
             onClick={() => setModalTicketsOpen(true)}
             disabled={printingBatch || loading}
+            title="Tickets para entrega"
           >
             <AiFillPrinter />
-            {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega'}
+            <span className="btn-label">{printingBatch ? 'Procesando...' : 'Tickets para entrega'}</span>
           </AppButton>
           <AppButton
             type="button"
@@ -1163,11 +1168,14 @@ export default function VentasHistorial() {
               setModalExportOpen(true);
             }}
             disabled={exportingEntregas}
+            title="Imprimir entregas"
           >
-            {exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}
+            <PiFilePdfBold />
+            <span className="btn-label">{exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}</span>
           </AppButton>
         </div>
       </div>
+      </FilterSlot>
 
       {modalTicketsOpen && (
         <div className="export-modal-overlay" role="dialog" aria-modal="true">

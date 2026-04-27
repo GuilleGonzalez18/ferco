@@ -148,6 +148,7 @@ export default function AppTable({
                         key={`${column.key || column.label || column.header}-${key}`}
                         className={`${alignClass} ${cellClassName}`.trim()}
                         data-label={getHeaderLabel(column)}
+                        data-mobile-hide={column.mobileHide ? 'true' : undefined}
                       >
                         {value}
                       </td>

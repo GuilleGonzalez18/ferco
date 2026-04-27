@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
@@ -431,6 +432,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Dirección',
+      mobileHide: true,
       render: (c) => c.direccion || '-',
     },
     {
@@ -451,6 +453,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Mail',
+      mobileHide: true,
       render: (c) => c.correo || '-',
     },
     {
@@ -461,6 +464,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Horarios',
+      mobileHide: true,
       render: (c) => formatHorarioCliente(c),
     },
   ];
@@ -475,18 +479,22 @@ export default function Clientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <AppButton
-          type="button"
-          className="icon-btn"
-          title="Agregar cliente"
-          onClick={abrirAlta}
-        >
-          <img src="/add.svg" alt="" aria-hidden="true" />
-          <span>CLIENTE</span>
-        </AppButton>
-        <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
-          <img src="/print.svg" alt="" aria-hidden="true" />
-        </AppButton>
+        <FilterSlot>
+          <>
+            <AppButton
+              type="button"
+              className="icon-btn"
+              title="Agregar cliente"
+              onClick={abrirAlta}
+            >
+              <img src="/add.svg" alt="" aria-hidden="true" />
+              <span>CLIENTE</span>
+            </AppButton>
+            <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
+              <img src="/print.svg" alt="" aria-hidden="true" />
+            </AppButton>
+          </>
+        </FilterSlot>
       </div>
 
       {exportModalOpen && (

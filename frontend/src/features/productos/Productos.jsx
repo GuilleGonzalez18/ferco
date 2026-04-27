@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './Productos.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
@@ -871,6 +872,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Empaque',
+      mobileHide: true,
       render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
     },
     ...(esPropietario
@@ -894,6 +896,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Costo',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney((Number(p.stock || 0) * Number(p.costo || 0))),
     },
@@ -905,6 +908,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Venta',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney((Number(p.stock || 0) * Number(p.venta || 0))),
     },
@@ -916,6 +920,7 @@ export default function Productos({ user, productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Ganancia',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta)),
     },
@@ -932,6 +937,7 @@ export default function Productos({ user, productos = [], setProductos }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+          <FilterSlot>
           <div className="productos-toolbar-actions">
             <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
               <img src="/add.svg" alt="" aria-hidden="true" />
@@ -954,6 +960,7 @@ export default function Productos({ user, productos = [], setProductos }) {
               <img src="/print.svg" alt="" aria-hidden="true" />
             </AppButton>
           </div>
+          </FilterSlot>
         </div>
 
         <div className="productos-totales">
