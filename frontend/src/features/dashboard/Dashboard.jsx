@@ -17,6 +17,7 @@ import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
+import AvisoBanner from '../../shared/components/avisos/AvisoBanner';
 
 // ── Widget system ──────────────────────────────────────────────────────────────
 
@@ -726,6 +727,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       </aside>
 
       <main className="dashboard-content">
+        <AvisoBanner app="mercatus" />
         <div className="dashboard-topbar">
           <div className="dashboard-topbar-content">
             <span className="dashboard-topbar-title">{tituloActual}</span>

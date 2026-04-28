@@ -735,6 +735,94 @@
 
 /* Mobile */
 @media (max-width: 600px) {
+  .config-root {
+    padding: var(--space-sm);
+    gap: var(--space-md);
+  }
+
+  /* Tabs principales: scroll horizontal */
+  .config-tabs {
+    overflow-x: auto;
+    overflow-y: visible;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0;
+  }
+  .config-tabs::-webkit-scrollbar { display: none; }
+
+  .config-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: var(--space-sm) var(--space-sm);
+    font-size: var(--font-sm);
+  }
+
+  /* Sub-tabs: scroll horizontal */
+  .config-subtabs {
+    overflow-x: auto;
+    overflow-y: visible;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: var(--space-sm) var(--space-sm) 0;
+  }
+  .config-subtabs::-webkit-scrollbar { display: none; }
+
+  .config-subtab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: var(--space-sm) var(--space-sm);
+  }
+
+  /* Form padding reducido */
+  .config-tab-form {
+    padding: var(--space-md);
+    gap: var(--space-md);
+  }
+
+  /* Filas de campo: label encima del input */
+  .config-field-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+  }
+
+  .config-field-label {
+    padding-top: 0;
+  }
+
+  /* Filas de color: stack */
+  .config-color-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: var(--space-xs);
+  }
+
+  .config-color-row > .config-field-label {
+    grid-column: 1 / -1;
+  }
+
+  .config-color-input-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .config-color-text {
+    width: 100%;
+  }
+
+  /* Logo preview */
+  .config-logo-preview-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Paleta de colores actions */
+  .config-paleta-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Acordeón de permisos */
   .config-acordeon-header {
     padding: 0.85rem 0.75rem;
     min-height: 56px;
@@ -753,5 +841,18 @@
   .config-rol-chip-btn {
     min-height: 40px;
     padding: 0.5rem 0.9rem;
+  }
+
+  /* Actions de sección */
+  .config-section-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .config-section-ok,
+  .config-section-pending {
+    margin-right: 0;
+    width: 100%;
+    text-align: center;
   }
 }

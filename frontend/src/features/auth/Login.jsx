@@ -1,10 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './Login.css';
 import { api } from '../../core/api';
 import { APP_VERSION } from '../../core/version';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppButton from '../../shared/components/button/AppButton';
 import { useConfig } from '../../core/ConfigContext';
+
+function useIsInstalled() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function isIos() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function InstallSection() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const installed = useIsInstalled();
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  if (installed) return null;
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+  };
+
+  return (
+    <div className="login-install-section">
+      <span className="login-install-icon">📲</span>
+      {deferredPrompt ? (
+        <>
+          <span className="login-install-text">Instalá la app para acceso rápido</span>
+          <button className="login-install-btn" type="button" onClick={handleInstall}>
+            Instalar
+          </button>
+        </>
+      ) : isIos() ? (
+        <span className="login-install-text">
+          Tocá <strong>Compartir</strong> → <strong>Agregar a inicio</strong> para instalar la app
+        </span>
+      ) : (
+        <span className="login-install-text">
+          Para instalar la app, usá el menú del navegador → <strong>Instalar aplicación</strong>
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function Login({ onLogin }) {
   const { empresa } = useConfig();
@@ -139,6 +195,7 @@ export default function Login({ onLogin }) {
               Olvidé mi contraseña
             </AppButton>
             <small className="app-version-label">{APP_VERSION}</small>
+            <InstallSection />
             <div className="login-brand-watermark">
               <span className="login-brand-name">
                 <img src="/favicon.png" alt="" className="login-brand-icon" aria-hidden="true" />

@@ -59,6 +59,15 @@ export function applyColors(empresa) {
     (fondoVal && fondoVal !== '__none__' && fondoVal !== '') ? 'cover' : 'contain'
   );
   document.title = empresa.nombre ? `${empresa.nombre} | Mercatus` : 'Mercatus';
+  // Actualizar meta application-name para reflejar la empresa sin tocar el manifest
+  // (modificar el link[rel=manifest] rompe la instalabilidad PWA en Chromium)
+  let metaAppName = document.querySelector('meta[name="application-name"]');
+  if (!metaAppName) {
+    metaAppName = document.createElement('meta');
+    metaAppName.name = 'application-name';
+    document.head.appendChild(metaAppName);
+  }
+  metaAppName.content = empresa.nombre || 'Mercatus';
 }
 
 export function ConfigProvider({ children }) {

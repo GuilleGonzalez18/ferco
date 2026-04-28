@@ -663,6 +663,60 @@ const statements = [
     END IF;
   END$$;
   `,
+  // === USUARIOS ROL_ID FK (v5) ===
+  // 1. Agregar col rol_id a usuarios
+  `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS rol_id INT;`,
+  // 2. FK constraint
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'usuarios_rol_id_fkey'
+        AND table_name = 'usuarios'
+    ) THEN
+      ALTER TABLE public.usuarios
+        ADD CONSTRAINT usuarios_rol_id_fkey
+        FOREIGN KEY (rol_id) REFERENCES public.roles(id) ON DELETE SET NULL;
+    END IF;
+  END$$;
+  `,
+  // 3. Poblar rol_id desde tipo (si tipo todavía existe)
+  `
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'usuarios' AND column_name = 'tipo'
+    ) THEN
+      UPDATE public.usuarios u
+      SET rol_id = r.id
+      FROM public.roles r
+      WHERE r.nombre = CASE WHEN u.tipo = 'propietario' THEN 'propietario' ELSE 'vendedor' END
+        AND u.rol_id IS NULL;
+    END IF;
+  END$$;
+  `,
+  // 4. Para usuarios sin rol_id (tipo ya fue eliminado): vendedor por defecto,
+  //    y si no hay ningún propietario, el usuario con menor id se convierte en propietario
+  `
+  DO $$
+  BEGIN
+    UPDATE public.usuarios
+    SET rol_id = (SELECT id FROM public.roles WHERE nombre = 'vendedor')
+    WHERE rol_id IS NULL;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.usuarios u
+      JOIN public.roles r ON r.id = u.rol_id
+      WHERE r.nombre = 'propietario'
+    ) THEN
+      UPDATE public.usuarios
+      SET rol_id = (SELECT id FROM public.roles WHERE nombre = 'propietario')
+      WHERE id = (SELECT MIN(id) FROM public.usuarios);
+    END IF;
+  END$$;
+  `,
   // === PERMISOS_ROL ROL_ID + DROP TIPO (v6) ===
   // 1. Agregar rol_id a permisos_rol
   `ALTER TABLE public.permisos_rol ADD COLUMN IF NOT EXISTS rol_id INT;`,

@@ -4,7 +4,6 @@ import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 import SetupWizard from './features/setup/SetupWizard';
 import AppDialogHost from './shared/components/dialog/AppDialogHost';
-import InstallPwaPrompt from './shared/components/pwa/InstallPwaPrompt';
 import CambiarPasswordModal from './shared/components/auth/CambiarPasswordModal';
 import './App.css';
 import { api } from './core/api';
@@ -116,7 +115,6 @@ function App() {
   return (
     <ConfigProvider>
       <AppDialogHost />
-      <InstallPwaPrompt />
       {authReady && (
         !user ? (
           <Login onLogin={setUser} />
