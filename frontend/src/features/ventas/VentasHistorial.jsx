@@ -182,6 +182,8 @@ export default function VentasHistorial() {
   const [printingBatch, setPrintingBatch] = useState(false);
   const [ticketsDesde, setTicketsDesde] = useState(todayISO());
   const [ticketsHasta, setTicketsHasta] = useState(todayISO());
+  const [ticketsTipo, setTicketsTipo] = useState('factura');
+  const [modalTipoImpresionVentaId, setModalTipoImpresionVentaId] = useState(null);
   const [entregasDesde, setEntregasDesde] = useState(todayISO());
   const [entregasHasta, setEntregasHasta] = useState(todayISO());
 
@@ -424,17 +426,153 @@ export default function VentasHistorial() {
     return doc;
   };
 
-  const imprimirVenta = async (ventaId) => {
+  const buildRemitoPdf = async (venta) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const marginX = 14;
+
+    const headerY = 10;
+    const titleH = 18;
+    const lineH = 5;
+    const dataRows = 4;
+    const headerHeight = titleH + dataRows * lineH + 2;
+
+    const logoBoxSize = headerHeight;
+    const logoX = marginX;
+    const infoX = marginX + logoBoxSize + 5;
+    const infoWidth = pageWidth - infoX - marginX;
+    const col1X = infoX;
+    const col2X = infoX + infoWidth / 2;
+    const colMaxW = infoWidth / 2 - 2;
+
+    try {
+      const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+      if (logo) {
+        const nw = logo.naturalWidth  || logoBoxSize;
+        const nh = logo.naturalHeight || logoBoxSize;
+        const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
+        const drawW = nw * scale;
+        const drawH = nh * scale;
+        const drawX = logoX + (logoBoxSize - drawW) / 2;
+        const drawY = headerY + (logoBoxSize - drawH) / 2;
+        doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+      }
+    } catch {
+      // sin logo
+    }
+
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('REMITO', col1X, headerY + 9);
+    doc.setFontSize(9.5);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Remito de Factura N° ${venta.id}`, col1X, headerY + 15);
+
+    let infoY = headerY + titleH;
+    const infoRows = [
+      [
+        `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
+        `Cliente: ${venta.cliente_nombre || 'Consumidor final'}`,
+      ],
+      [
+        `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
+        `Teléfono: ${venta.cliente_telefono || '-'}`,
+      ],
+      [
+        `Vendedor: ${venta.usuario_nombre || '-'}`,
+        `Dirección: ${venta.cliente_direccion || '-'}`,
+      ],
+      [
+        '',
+        `Horarios: ${formatHorarioClienteEntrega(venta)}`,
+      ],
+    ];
+    infoRows.forEach(([left, right]) => {
+      if (left) doc.text(left, col1X, infoY, { maxWidth: colMaxW });
+      doc.text(right, col2X, infoY, { maxWidth: colMaxW });
+      infoY += lineH;
+    });
+
+    let cursorY = headerY + headerHeight + 5;
+
+    autoTable(doc, {
+      startY: cursorY,
+      head: [['Producto', 'Cantidad']],
+      body: (venta.detalle || []).map((item) => {
+        const cant = Number(item.cantidad || 0);
+        const presentacion = item.embalaje_nombre
+          ? `${cant} (${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre})`
+          : `${cant} u.`;
+        return [
+          item.producto_nombre || `Producto #${item.producto_id}`,
+          presentacion,
+        ];
+      }),
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: getPrimaryRgb() },
+      columnStyles: { 1: { halign: 'center', cellWidth: 40 } },
+    });
+
+    const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
+    const firmaY = finalY + 20;
+    const firmaLineX1 = marginX + 10;
+    const firmaLineX2 = pageWidth / 2 - 10;
+
+    doc.setDrawColor(0);
+    doc.line(firmaLineX1, firmaY, firmaLineX2, firmaY);
+    doc.setFontSize(9);
+    doc.text('Firma y aclaración del receptor', firmaLineX1, firmaY + 5);
+
+    return doc;
+  };
+
+  const printDocToIframe = (doc) => {
+    const pdfBlob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = blobUrl;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      }
+    };
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 7000);
+  };
+
+  const imprimirSegun = async (ventaId, tipo) => {
     setPrintingId(ventaId);
     try {
       const venta = await api.getVentaById(ventaId);
-      const doc = await buildVentaPdf(venta);
-      doc.save(`ticket-venta-${venta.id}.pdf`);
+      if (tipo === 'factura' || tipo === 'ambos') {
+        const doc = await buildVentaPdf(venta);
+        doc.save(`ticket-venta-${venta.id}.pdf`);
+      }
+      if (tipo === 'remito' || tipo === 'ambos') {
+        const doc = await buildRemitoPdf(venta);
+        doc.save(`remito-venta-${venta.id}.pdf`);
+      }
     } catch (err) {
-      await appAlert(err.message || 'No se pudo generar el ticket.');
+      await appAlert(err.message || 'No se pudo generar el documento.');
     } finally {
       setPrintingId(null);
     }
+  };
+
+  const imprimirVenta = (ventaId) => {
+    setModalTipoImpresionVentaId(ventaId);
   };
 
   const reenviarFactura = async (ventaId) => {
@@ -890,35 +1028,24 @@ export default function VentasHistorial() {
       }
       for (const v of ventasActivas) {
         const venta = await api.getVentaById(v.id);
-        const doc = await buildVentaPdf(venta);
-        if (mode === 'pdf') {
-          doc.save(`ticket-venta-${venta.id}.pdf`);
-        } else {
-          const pdfBlob = doc.output('blob');
-          const blobUrl = URL.createObjectURL(pdfBlob);
-          const iframe = document.createElement('iframe');
-          iframe.style.position = 'fixed';
-          iframe.style.right = '0';
-          iframe.style.bottom = '0';
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-          iframe.style.border = '0';
-          iframe.src = blobUrl;
-          iframe.onload = () => {
-            try {
-              iframe.contentWindow?.focus();
-              iframe.contentWindow?.print();
-            } catch {
-              window.open(blobUrl, '_blank', 'noopener,noreferrer');
-            }
-          };
-          document.body.appendChild(iframe);
-          setTimeout(() => {
-            URL.revokeObjectURL(blobUrl);
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-          }, 7000);
+        if (ticketsTipo === 'factura' || ticketsTipo === 'ambos') {
+          const doc = await buildVentaPdf(venta);
+          if (mode === 'pdf') {
+            doc.save(`ticket-venta-${venta.id}.pdf`);
+          } else {
+            printDocToIframe(doc);
+          }
+          await delay(350);
         }
-        await delay(350);
+        if (ticketsTipo === 'remito' || ticketsTipo === 'ambos') {
+          const doc = await buildRemitoPdf(venta);
+          if (mode === 'pdf') {
+            doc.save(`remito-venta-${venta.id}.pdf`);
+          } else {
+            printDocToIframe(doc);
+          }
+          await delay(350);
+        }
       }
       setModalTicketsOpen(false);
     } catch (err) {
@@ -1219,7 +1346,7 @@ export default function VentasHistorial() {
             disabled={printingBatch || loading}
           >
             <AiFillPrinter />
-            {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega'}
+            {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega + Remito'}
           </AppButton>
           <AppButton
             type="button"
@@ -1241,11 +1368,28 @@ export default function VentasHistorial() {
         <div className="export-modal-overlay" role="dialog" aria-modal="true">
           <div className="export-modal-backdrop" onClick={() => !printingBatch && setModalTicketsOpen(false)} />
           <div className="export-modal">
-            <h4>Tickets para entrega</h4>
+            <h4>Tickets para entrega + Remito</h4>
             <p>
               Se imprimirán o descargarán los tickets activos del rango seleccionado, uno por uno.
               Para cada día de entrega, se respeta el orden en que se creó la venta (más antigua primero).
             </p>
+            <div className="tickets-tipo-row">
+              {[
+                { value: 'factura', label: 'Solo Factura' },
+                { value: 'remito',  label: 'Solo Remito'  },
+                { value: 'ambos',   label: 'Factura + Remito' },
+              ].map((op) => (
+                <AppButton
+                  key={op.value}
+                  type="button"
+                  className={`ticket-tipo-btn${ticketsTipo === op.value ? ' active' : ''}`}
+                  onClick={() => setTicketsTipo(op.value)}
+                  disabled={printingBatch}
+                >
+                  {op.label}
+                </AppButton>
+              ))}
+            </div>
             <div className="tickets-presets-row">
               <AppButton
                 type="button"
@@ -1415,6 +1559,60 @@ export default function VentasHistorial() {
               disabled={exportingEntregas}
             >
               Cerrar
+            </AppButton>
+          </div>
+        </div>
+      )}
+
+      {modalTipoImpresionVentaId !== null && (
+        <div className="export-modal-overlay" role="dialog" aria-modal="true">
+          <div className="export-modal-backdrop" onClick={() => setModalTipoImpresionVentaId(null)} />
+          <div className="export-modal">
+            <h4>¿Qué deseas imprimir?</h4>
+            <div className="export-modal-actions">
+              <AppButton
+                type="button"
+                onClick={() => {
+                  const id = modalTipoImpresionVentaId;
+                  setModalTipoImpresionVentaId(null);
+                  imprimirSegun(id, 'factura');
+                }}
+                disabled={printingId === modalTipoImpresionVentaId}
+              >
+                <PiFilePdfBold />
+                <span>Solo Factura</span>
+              </AppButton>
+              <AppButton
+                type="button"
+                onClick={() => {
+                  const id = modalTipoImpresionVentaId;
+                  setModalTipoImpresionVentaId(null);
+                  imprimirSegun(id, 'remito');
+                }}
+                disabled={printingId === modalTipoImpresionVentaId}
+              >
+                <PiFilePdfBold />
+                <span>Solo Remito</span>
+              </AppButton>
+              <AppButton
+                type="button"
+                onClick={() => {
+                  const id = modalTipoImpresionVentaId;
+                  setModalTipoImpresionVentaId(null);
+                  imprimirSegun(id, 'ambos');
+                }}
+                disabled={printingId === modalTipoImpresionVentaId}
+              >
+                <PiFilePdfBold />
+                <span>Factura + Remito</span>
+              </AppButton>
+            </div>
+            <AppButton
+              type="button"
+              className="export-modal-close"
+              onClick={() => setModalTipoImpresionVentaId(null)}
+            >
+              Cancelar
             </AppButton>
           </div>
         </div>
