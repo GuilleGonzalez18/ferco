@@ -274,9 +274,11 @@
 }
 
 .acciones-cliente-panel {
-  display: inline-flex;
-  gap: 0.35rem;
-  justify-content: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: stretch;
+  width: 100%;
 }
 
 .side-panel-overlay {

@@ -544,8 +544,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
-  const [stockDrawerAbierto, setStockDrawerAbierto] = useState(false);
-  const [stockProductoSeleccionado, setStockProductoSeleccionado] = useState(null);
   const [auditoriaDateFiltersActivos, setAuditoriaDateFiltersActivos] = useState(false);
   const [auditoriaClearSignal, setAuditoriaClearSignal] = useState(0);
   const [carritoIconAnim, setCarritoIconAnim] = useState(0);
@@ -586,7 +584,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
     onNavigate(seccion);
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
-    setStockDrawerAbierto(false);
     setFilterPanelOpen(false);
   };
 
@@ -602,11 +599,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
   }, [pantalla, ventasCarritoCount]);
 
   useEffect(() => {
-    if (pantalla !== 'control-stock') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStockDrawerAbierto(false);
-      setStockProductoSeleccionado(null);
-    }
     if (pantalla !== 'auditoria') {
       setAuditoriaDateFiltersActivos(false);
     }
@@ -619,7 +611,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
   const handleLogout = () => {
     setMenuMovilAbierto(false);
     setVentasCarritoAbierto(false);
-    setStockDrawerAbierto(false);
     onLogout();
   };
 
@@ -635,7 +626,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
       onNavigate(target);
       setMenuMovilAbierto(false);
       setVentasCarritoAbierto(false);
-      setStockDrawerAbierto(false);
     };
     window.addEventListener('ferco:navigate', onNavigateEvent);
     return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
@@ -685,9 +675,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
               <ControlStock
                 productos={productos}
                 setProductos={setProductos}
-                stockDrawerOpen={stockDrawerAbierto}
-                onCloseStockDrawer={() => setStockDrawerAbierto(false)}
-                onSelectedProductoChange={setStockProductoSeleccionado}
               />
             )
             : <Placeholder titulo="Acceso restringido" icon="X" />;
@@ -706,7 +693,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
       esPropietario,
       ventasCarritoAbierto,
       closeVentasCarritoDrawer,
-      stockDrawerAbierto,
       auditoriaClearSignal,
     ]
   );
@@ -802,21 +788,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
                   <FiShoppingCart aria-hidden="true" />
                   <span>Carrito</span>
                   {ventasCarritoCount > 0 && <span className="ventas-carrito-count">{ventasCarritoCount}</span>}
-                </button>
-              )}
-              {pantalla === 'control-stock' && stockProductoSeleccionado && (
-                <button
-                  type="button"
-                  className={`dashboard-topbar-action stock-drawer-btn ${stockDrawerAbierto ? 'active' : ''}`}
-                  onClick={() => setStockDrawerAbierto((prev) => !prev)}
-                  aria-label={stockDrawerAbierto
-                    ? `Cerrar panel de stock de ${stockProductoSeleccionado.nombre}`
-                    : `Abrir panel de stock de ${stockProductoSeleccionado.nombre}`}
-                  aria-expanded={stockDrawerAbierto}
-                >
-                  <CgArrowsExchange aria-hidden="true" />
-                  <span>Stock</span>
-                  <span className="ventas-carrito-count">{stockProductoSeleccionado.stock}</span>
                 </button>
               )}
               {pantalla === 'auditoria' && (

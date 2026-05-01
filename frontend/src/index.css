@@ -130,6 +130,15 @@ textarea {
   font: inherit;
 }
 
+button {
+  text-align: center;
+}
+
+button span,
+button small {
+  text-align: center;
+}
+
 button,
 a,
 input,

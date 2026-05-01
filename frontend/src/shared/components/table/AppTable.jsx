@@ -56,6 +56,7 @@ export default function AppTable({
   stickyHeader = false,
   minWidth,
   stickyMaxHeight,
+  mobileLayout = 'cards',
 }) {
   const wrapRef = useRef(null);
   const [viewportHeight, setViewportHeight] = useState(null);
@@ -64,6 +65,7 @@ export default function AppTable({
   const computedMinWidth = Number.isFinite(parsedMinWidth) && parsedMinWidth > 0
     ? parsedMinWidth
     : Math.max(680, columns.length * 120);
+  const useCardLayoutOnMobile = mobileLayout !== 'table';
 
   useEffect(() => {
     if (!stickyHeader || stickyMaxHeight) return;
@@ -73,15 +75,20 @@ export default function AppTable({
       if (!el) return;
       const { top } = el.getBoundingClientRect();
       const bottomGap = 16;
-      const available = Math.floor(window.innerHeight - top - bottomGap);
+      const viewport = window.visualViewport?.height || window.innerHeight;
+      const available = Math.floor(viewport - top - bottomGap);
       setViewportHeight(Math.max(220, available));
     };
 
     updateHeight();
     window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', updateHeight);
+    window.visualViewport?.addEventListener('resize', updateHeight);
 
     return () => {
       window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('orientationchange', updateHeight);
+      window.visualViewport?.removeEventListener('resize', updateHeight);
     };
   }, [stickyHeader, stickyMaxHeight, columns.length, rows.length]);
 
@@ -101,7 +108,7 @@ export default function AppTable({
   return (
     <div
       ref={wrapRef}
-      className={`app-table-wrap ${stickyHeader ? 'is-sticky-header' : ''} ${className}`.trim()}
+      className={`app-table-wrap ${stickyHeader ? 'is-sticky-header' : ''} ${useCardLayoutOnMobile ? '' : 'mobile-table'} ${className}`.trim()}
       style={wrapperStyle}
     >
       <table className={`app-table ${tableClassName}`.trim()}>
@@ -135,7 +142,7 @@ export default function AppTable({
             return (
               <Fragment key={key}>
                 <tr
-                  className={`app-table-row ${isExpanded ? 'is-expanded' : ''} ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
+                  className={`app-table-row ${isExpanded ? 'is-expanded app-table-row-expanded-anchor' : ''} ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
                   onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
                 >
                   {columns.map((column) => {

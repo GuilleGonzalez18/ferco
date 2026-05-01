@@ -406,6 +406,7 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
               columns={movimientosColumns}
               rows={movimientosPaginados}
               rowKey="id"
+              minWidth={980}
               emptyMessage="No hay movimientos para los filtros seleccionados."
             />
             <div className="auditoria-pager">
@@ -500,6 +501,7 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
               columns={eventosColumns}
               rows={eventosPaginados}
               rowKey="id"
+              minWidth={860}
               emptyMessage="No hay eventos para los filtros seleccionados."
             />
             <div className="auditoria-pager">

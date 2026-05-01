@@ -1833,6 +1833,7 @@ export default function VentasHistorial() {
           rows={ventasOrdenadas}
           rowKey="id"
           stickyHeader
+          minWidth={980}
           emptyMessage="No hay ventas para los filtros seleccionados."
           onRowClick={(v) => toggleDetalleVenta(v.id)}
           rowClassName={(v) => (v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : ''))}
