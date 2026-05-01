@@ -298,19 +298,202 @@
   }
 }
 
+/* Imagen del producto en el panel de detalle */
+.stock-panel-imagen-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+}
+
+.stock-panel-imagen {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #dce5f1;
+}
+
+/* Chevron — solo visible en mobile */
+.stock-row-chevron {
+  display: none;
+}
+
+/* Handle del drawer */
+.stock-detalle-handle {
+  display: none;
+}
+
+/* Cabecera del drawer (título + botón cerrar) */
+.stock-detalle-mobile-head {
+  display: none;
+}
+
+/* Overlay del detalle — solo mobile */
+.stock-detalle-overlay {
+  display: none;
+}
+
 @media (max-width: 900px) {
+  .control-stock-main {
+    padding: 0.6rem 0.6rem 0;
+  }
+
+  .control-stock-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control-stock-head input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Layout de una sola columna en mobile */
   .control-stock-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 44vw);
-    gap: 0.55rem;
-    align-items: start;
+    display: block;
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .control-stock-list {
+    height: calc(100dvh - 130px);
+  }
+
+  /* Ocultar thumbnail en mobile para más espacio al nombre */
+  .stock-item-image {
+    display: none;
+  }
+
+  /* Nombre hasta 2 líneas en mobile */
+  .stock-item-info strong {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Chevron visible en mobile */
+  .stock-row-chevron {
+    display: block;
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    color: var(--color-primary, #375f8c);
+    padding-left: 0.4rem;
+    line-height: 1;
+  }
+
+  /* Filas con altura mínima touch-friendly */
+  .control-stock-table td {
+    min-height: 52px;
+    cursor: pointer;
+  }
+
+  /* Overlay oscuro */
+  .stock-detalle-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 31, 46, 0.45);
+    z-index: 199;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+
+  .stock-detalle-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Panel detalle como drawer desde abajo */
+  .control-stock-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 85dvh;
+    z-index: 200;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    overflow-y: auto;
+    padding: 0 1rem 1.5rem;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -4px 28px rgba(20, 30, 45, 0.18);
+  }
+
+  .control-stock-panel.detalle-open {
+    transform: translateY(0);
   }
 
   .control-stock-panel.is-active {
-    position: sticky;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 25;
     animation: none;
+    position: fixed;
+  }
+
+  /* Handle drag visual */
+  .stock-detalle-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-border, #d0dae8);
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* Cabecera mobile del drawer */
+  .stock-detalle-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0 0.6rem;
+    border-bottom: 1px solid var(--color-border, #e4ebf4);
+    margin-bottom: 0.7rem;
+  }
+
+  .stock-detalle-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text, #1d2b3e);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .stock-detalle-close-btn {
+    flex-shrink: 0;
+    color: var(--color-muted, #6f7f93);
+    font-size: 1rem;
+  }
+
+  /* Ocultar título repetido en el drawer (ya está en la cabecera) */
+  .control-stock-panel .stock-producto {
+    display: none;
+  }
+
+  /* Imagen más grande en el drawer mobile */
+  .stock-panel-imagen {
+    width: 120px;
+    height: 120px;
+  }
+
+  /* Inputs y botones touch-friendly */
+  .stock-actions button,
+  .stock-history-btn,
+  .stock-cantidad input {
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+
+  .stock-actions {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 }
 
