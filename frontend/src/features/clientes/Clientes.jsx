@@ -16,6 +16,7 @@ import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
 import AppButton from '../../shared/components/button/AppButton';
+import { PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 export default function Clientes() {
   const { empresa } = useConfig();
@@ -344,7 +345,7 @@ export default function Clientes() {
     w.document.write(`
       <html><head><title>Clientes</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:16px}
+        body{font-family:${PRINT_FONT_FAMILY_CSS};padding:16px}
         h2{color:#375f8c}
         table{border-collapse:collapse;width:100%}
         th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}

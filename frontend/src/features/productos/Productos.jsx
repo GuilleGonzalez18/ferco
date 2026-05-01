@@ -16,6 +16,7 @@ import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import AppButton from '../../shared/components/button/AppButton';
+import { PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -390,7 +391,7 @@ export default function Productos({ productos = [], setProductos }) {
     w.document.write(`
       <html><head><title>Productos</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:16px}
+        body{font-family:${PRINT_FONT_FAMILY_CSS};padding:16px}
         h2{color:#375f8c}
         table{border-collapse:collapse;width:100%}
         th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}
@@ -427,7 +428,7 @@ export default function Productos({ productos = [], setProductos }) {
         <meta charset="UTF-8" />
         <title>Catálogo de Productos</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 18px; color: #1f2933; }
+          body { font-family: ${PRINT_FONT_FAMILY_CSS}; padding: 18px; color: #1f2933; }
           .header { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
           .logo { width: 88px; height: auto; object-fit: contain; }
           h1 { margin: 0; font-size: 24px; color: #375f8c; }

@@ -36,8 +36,8 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
 
-  --font-sans: 'Source Sans 3', 'Segoe UI', Tahoma, sans-serif;
-  --font-heading: 'Lora', 'Source Sans 3', 'Segoe UI', serif;
+  --font-sans: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+  --font-heading: 'Inter', 'Segoe UI', Tahoma, sans-serif;
   --font-mono: 'Consolas', 'Courier New', monospace;
 
   --font-xs: 0.75rem;

@@ -17,6 +17,7 @@ import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { PDF_FONT_FAMILY, PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function todayISO() {
   const now = new Date();
@@ -301,7 +302,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -465,7 +466,7 @@ export default function VentasHistorial() {
           formatCurrency(subtotal),
         ];
       }),
-      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
     });
 
@@ -537,7 +538,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -614,10 +615,10 @@ export default function VentasHistorial() {
     }
 
     doc.setFontSize(14);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'bold');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'bold');
     doc.text('REMITO', col1X, contentStartY + 9);
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
     doc.text(`Remito de Factura N° ${venta.id}`, col1X, contentStartY + 15);
 
     // Datos de empresa bajo el título
@@ -635,7 +636,7 @@ export default function VentasHistorial() {
       empresaY2 += lineH - 1;
     });
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
 
     let infoY = contentStartY + titleH;
     const leftRows = [
@@ -682,7 +683,7 @@ export default function VentasHistorial() {
       startY: cursorY,
       head: tableHead,
       body: tableBody,
-      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
       columnStyles: cfg.mostrarCosto
         ? { 1: { halign: 'center', cellWidth: 40 }, 2: { halign: 'right', cellWidth: 35 } }
@@ -1053,7 +1054,7 @@ export default function VentasHistorial() {
           <head>
             <meta charset="UTF-8" />
             <style>
-              body { font-family: Arial, sans-serif; }
+              body { font-family: ${PRINT_FONT_FAMILY_CSS}; }
               .title { font-size: 18px; font-weight: 700; color: #375f8c; margin-bottom: 8px; }
               .meta { font-size: 13px; margin-bottom: 4px; color: #1f2933; }
               table { border-collapse: collapse; width: 100%; table-layout: fixed; margin-top: 10px; }
