@@ -33,14 +33,14 @@ export function toApiProducto(producto) {
   const imagen = isSupportedImageUrl(producto.imagenPreview) ? String(producto.imagenPreview).trim() : null;
   return {
     nombre: producto.nombre,
-    costo: Math.round(Number(producto.costo || 0)),
-    precio: Math.round(Number(producto.venta || 0)),
+    costo: Math.round(Number(producto.costo || 0) * 100) / 100,
+    precio: Math.round(Number(producto.venta || 0) * 100) / 100,
     stock: Number(producto.stock || 0),
     unidad: producto.categoria || null,
     imagen,
     ean: producto.ean || '',
     cantidad_empaque: producto.cantidadEmpaque ? Number(producto.cantidadEmpaque) : null,
     empaque_id: producto.empaqueId ? Number(producto.empaqueId) : null,
-    precio_empaque: Math.round(Number(producto.precioEmpaque || 0)),
+    precio_empaque: Math.round(Number(producto.precioEmpaque || 0) * 100) / 100,
   };
 }

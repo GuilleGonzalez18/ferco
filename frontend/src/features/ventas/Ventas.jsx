@@ -83,15 +83,39 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
   pickerModo,
   pickerCantidad,
   stockDisponible,
+  unidadesEnCarrito,
   onSetPickerModo,
   onSetPickerCantidad,
   onAddToCart,
 }) {
   const unidadesPorEmpaque = getEmpaqueUnits(producto);
   const precioEmpaque = roundMoney(producto.precioEmpaque);
+  const enCarrito = unidadesEnCarrito > 0;
+  const cardRef = useRef(null);
+
+  const handleAdd = () => {
+    // Lanzar partícula desde el centro de la card hacia el carrito
+    const card = cardRef.current;
+    if (card) {
+      const dot = document.createElement('span');
+      dot.className = 'carrito-fly-dot';
+      const rect = card.getBoundingClientRect();
+      dot.style.left = `${rect.left + rect.width / 2}px`;
+      dot.style.top = `${rect.top + rect.height / 2}px`;
+      document.body.appendChild(dot);
+      setTimeout(() => dot.remove(), 700);
+    }
+    onAddToCart(producto, pickerModo, pickerCantidad);
+  };
 
   return (
-    <article className={`producto-card ${vistaProductos === 'list' ? 'list' : ''}`}>
+    <article
+      ref={cardRef}
+      className={`producto-card ${vistaProductos === 'list' ? 'list' : ''} ${enCarrito ? 'en-carrito' : ''}`}
+    >
+      {enCarrito && (
+        <span key={unidadesEnCarrito} className="producto-carrito-badge">{unidadesEnCarrito}</span>
+      )}
       <div className="producto-image-wrap">
         {producto.imagenPreview ? (
           <img src={producto.imagenPreview} alt={producto.nombre} className="producto-image" />
@@ -154,7 +178,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
           <AppButton
             type="button"
             className="picker-add-btn"
-            onClick={() => onAddToCart(producto, pickerModo, pickerCantidad)}
+            onClick={handleAdd}
           >
             Agregar
           </AppButton>
@@ -210,7 +234,39 @@ export default function Ventas({
   const [ventaFinalizada, setVentaFinalizada] = useState(null);
   const [ticketImpreso, setTicketImpreso] = useState(false);
   const [clientes, setClientes] = useState([]);
+  const [carritoRestaurado, setCarritoRestaurado] = useState(false);
   const clienteDropdownRef = useRef(null);
+  // Flag para evitar que el save sobreescriba el storage antes del primer restore
+  const carritoRestoreAttempted = useRef(false);
+
+  // Clave única por empresa+usuario para aislamiento multitenancy y multiusuario
+  const carritoKey = empresa?.id && user?.id
+    ? `ferco_carrito_${empresa.id}_${user.id}`
+    : null;
+
+  // Persistir carrito en localStorage al cambiar state relevante
+  useEffect(() => {
+    if (!carritoKey) return;
+    // No persistir hasta que se haya intentado el restore (evita borrar datos guardados en el mount inicial)
+    if (!carritoRestoreAttempted.current) return;
+    // No persistir si hay una venta finalizada (carrito vacío post-confirmación)
+    if (ventaFinalizada) return;
+    const snapshot = {
+      carrito,
+      clienteId,
+      fechaEntrega,
+      pagos,
+      observacion,
+      descuentoTotalTipo,
+      descuentoTotalValor,
+    };
+    // Solo guardar si hay algo en el carrito
+    if (carrito.length > 0 || clienteId || fechaEntrega || observacion) {
+      localStorage.setItem(carritoKey, JSON.stringify(snapshot));
+    } else {
+      localStorage.removeItem(carritoKey);
+    }
+  }, [carritoKey, carrito, clienteId, fechaEntrega, pagos, observacion, descuentoTotalTipo, descuentoTotalValor, ventaFinalizada]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -335,6 +391,33 @@ export default function Ventas({
     });
     sessionStorage.removeItem('ferco_replicar_venta');
   }, [productos]);
+
+  // Restaurar carrito guardado (solo si no hay replicar_venta y carritoKey disponible)
+  useEffect(() => {
+    if (!carritoKey) return;
+    // Marcar que el restore fue intentado (habilita el save useEffect)
+    carritoRestoreAttempted.current = true;
+    // Si hay una replicación pendiente, no restaurar (el otro useEffect lo maneja)
+    if (sessionStorage.getItem('ferco_replicar_venta')) return;
+    const raw = localStorage.getItem(carritoKey);
+    if (!raw) return;
+    let snapshot = null;
+    try { snapshot = JSON.parse(raw); } catch { return; }
+    if (!snapshot || !Array.isArray(snapshot.carrito) || snapshot.carrito.length === 0) return;
+
+    queueMicrotask(() => {
+      setCarrito(snapshot.carrito);
+      if (snapshot.clienteId) setClienteId(snapshot.clienteId);
+      if (snapshot.fechaEntrega) setFechaEntrega(snapshot.fechaEntrega);
+      if (snapshot.observacion) setObservacion(snapshot.observacion);
+      if (snapshot.descuentoTotalTipo) setDescuentoTotalTipo(snapshot.descuentoTotalTipo);
+      if (snapshot.descuentoTotalValor) setDescuentoTotalValor(snapshot.descuentoTotalValor);
+      if (Array.isArray(snapshot.pagos)) setPagos(snapshot.pagos);
+      setPaso(1); // siempre volver al paso 1 al restaurar
+      setCarritoRestaurado(true);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carritoKey]); // solo al montar (carritoKey es estable)
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -475,6 +558,12 @@ export default function Ventas({
   const catalogoCards = useMemo(() => {
     if (productosFiltrados.length === 0) return null;
 
+    // Suma total de unidades por productoId en carrito
+    const unidadesPorProducto = carrito.reduce((acc, item) => {
+      acc[item.productoId] = (acc[item.productoId] || 0) + toNumber(item.unidadesSolicitadas);
+      return acc;
+    }, {});
+
     return productosFiltrados.map((producto) => {
       const saved = productPicker[producto.id];
       const pickerModo = saved?.modo === 'empaque' ? 'empaque' : 'unidad';
@@ -489,6 +578,7 @@ export default function Ventas({
           pickerModo={pickerModo}
           pickerCantidad={pickerCantidad}
           stockDisponible={stockDisponible}
+          unidadesEnCarrito={unidadesPorProducto[producto.id] || 0}
           onSetPickerModo={setPickerModo}
           onSetPickerCantidad={setPickerCantidad}
           onAddToCart={addToCartFromPicker}
@@ -497,6 +587,7 @@ export default function Ventas({
     });
   }, [
     addToCartFromPicker,
+    carrito,
     productosFiltrados,
     productPicker,
     setPickerCantidad,
@@ -684,6 +775,7 @@ export default function Ventas({
   const goBack = () => setPaso(1);
 
   const resetVenta = () => {
+    if (carritoKey) localStorage.removeItem(carritoKey);
     setPaso(1);
     setBusqueda('');
     setCarrito([]);
@@ -962,6 +1054,8 @@ export default function Ventas({
       );
 
       const cliente = clientes.find((c) => String(c.id) === String(clienteId));
+      // Limpiar carrito guardado ya que la venta se confirmó exitosamente
+      if (carritoKey) localStorage.removeItem(carritoKey);
       setVentaFinalizada({
         id: ventaCreada?.id ?? null,
         fecha: new Date().toISOString(),
@@ -998,6 +1092,41 @@ export default function Ventas({
         onClick={closeCarritoDrawer}
         aria-hidden={!carritoDrawerOpen}
       />
+
+      {/* Banner de carrito restaurado */}
+      {carritoRestaurado && (
+        <div className="ventas-carrito-restaurado-banner">
+          <span>🛒 Tenés una venta en progreso guardada.</span>
+          <button
+            type="button"
+            className="ventas-carrito-restaurado-descartar"
+            onClick={() => {
+              appConfirm('¿Descartás el carrito guardado y empezás desde cero?', {
+                title: 'Descartar carrito',
+                confirmText: 'Sí, descartar',
+                cancelText: 'Mantener',
+              }).then((ok) => {
+                if (ok) {
+                  resetVenta();
+                  setCarritoRestaurado(false);
+                }
+              });
+            }}
+          >
+            Descartar
+          </button>
+          <button
+            type="button"
+            className="ventas-carrito-restaurado-cerrar"
+            onClick={() => setCarritoRestaurado(false)}
+            aria-label="Cerrar aviso"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+
       <div className="ventas-layout">
         <section className={`ventas-contenido ${paso === 1 ? 'paso-productos' : paso === 2 ? 'paso-preventa' : ''}`}>
 
