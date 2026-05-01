@@ -52,7 +52,7 @@ function extractPaletteFromDataUrl(dataUrl) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const size = 96;
+      const size = 128;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -65,19 +65,42 @@ function extractPaletteFromDataUrl(dataUrl) {
         if (a < 100) continue;
         const r = data[i], g = data[i + 1], b = data[i + 2];
         const brightness = (r + g + b) / 3;
-        if (brightness > 230 || brightness < 25) continue;
+        if (brightness > 235 || brightness < 20) continue;
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        if (max === 0 || (max - min) / max < 0.2) continue;
-        const br = Math.round(r / 24) * 24;
-        const bg = Math.round(g / 24) * 24;
-        const bb = Math.round(b / 24) * 24;
+        if (max === 0) continue;
+        const saturation = (max - min) / max;
+        if (saturation < 0.25) continue;  // ignorar grises y colores apagados
+        // Buckets más finos para mejor separación de colores
+        const step = 16;
+        const br = Math.round(r / step) * step;
+        const bg = Math.round(g / step) * step;
+        const bb = Math.round(b / step) * step;
         const key = `${br},${bg},${bb}`;
-        buckets[key] = (buckets[key] || 0) + 1;
+        if (!buckets[key]) buckets[key] = { count: 0, saturation, r: br, g: bg, b: bb };
+        buckets[key].count += 1;
+        buckets[key].saturation = Math.max(buckets[key].saturation, saturation);
       }
-      const sorted = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
-      if (!sorted.length) { resolve(null); return; }
-      const [rv, gv, bv] = sorted[0][0].split(',').map(Number);
-      const primary = toHex(rv, gv, bv);
+      if (!Object.keys(buckets).length) { resolve(null); return; }
+
+      // Puntaje: frecuencia × saturación^2 para priorizar colores vibrantes
+      const scored = Object.values(buckets)
+        .map((b) => ({ ...b, score: b.count * b.saturation * b.saturation }))
+        .sort((a, b) => b.score - a.score);
+
+      // Seleccionar top candidatos que sean visualmente distintos entre sí (distancia mínima en RGB)
+      const MIN_DIST = 80;
+      const picks = [];
+      for (const c of scored) {
+        const tooClose = picks.some((p) => {
+          const dr = c.r - p.r, dg = c.g - p.g, db = c.b - p.b;
+          return Math.sqrt(dr * dr + dg * dg + db * db) < MIN_DIST;
+        });
+        if (!tooClose) picks.push(c);
+        if (picks.length >= 5) break;
+      }
+
+      // El color primario es el más vibrante de los candidatos (mayor saturación)
+      const primary = toHex(picks[0].r, picks[0].g, picks[0].b);
       resolve({
         color_primary: primary,
         color_primary_strong: scaleColor(primary, 0.75),
@@ -380,7 +403,7 @@ function StepLogoColores({ form, set, fileRef, paletaSugerida, setPaletaSugerida
           </div>
         )}
         {form.logo_base64 && (
-          <AppButton tone="ghost" onClick={() => { set('logo_base64', null); setPaletaSugerida(null); }}>
+          <AppButton tone="ghost" onClick={() => { set('logo_base64', null); setPaletaSugerida(null); if (fileRef.current) fileRef.current.value = ''; }}>
             Quitar logo
           </AppButton>
         )}

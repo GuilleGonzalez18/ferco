@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
+import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
 import './VentasHistorial.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -293,76 +294,153 @@ export default function VentasHistorial() {
     setSortDir('asc');
   };
 
-  const buildVentaPdf = async (venta) => {
+  const buildVentaPdf = async (venta, pdfConfig) => {
+    const cfg = pdfConfig || getPdfConfig('factura', empresa.pdf_factura);
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    // ── Layout: logo box (izquierda) + dos columnas de info (derecha) ──
+    doc.setFont(cfg.fontFamily || 'helvetica');
+
     const headerY = 10;
-    const titleH = 13;
     const lineH = 5;
-    const dataRows = 4;
-    const headerHeight = titleH + dataRows * lineH + 2;
+    const logoSize = Math.max(10, Math.min(cfg.logoTamano || 40, 60));
+    const posicion = cfg.logoPosicion || 'izquierda';
 
-    const logoBoxSize = headerHeight;
-    const logoX = marginX;
-    const infoX = marginX + logoBoxSize + 5;
-    const infoWidth = pageWidth - infoX - marginX;
-    const col1X = infoX;
-    const col2X = infoX + infoWidth / 2;
-    const colMaxW = infoWidth / 2 - 2;
+    // Calcular layout según posición del logo
+    let infoX, infoWidth, col1X, col2X, colMaxW, contentStartY, titleH, dataRows;
+    titleH  = posicion === 'cabecera' || posicion === 'centro' ? 10 : 13;
+    dataRows = 4;
 
-    // ── Logo (contain, sin distorsión) ──
-    try {
-      const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
-      if (logo) {
-        const nw = logo.naturalWidth  || logoBoxSize;
-        const nh = logo.naturalHeight || logoBoxSize;
-        const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
-        const drawW = nw * scale;
-        const drawH = nh * scale;
-        const drawX = logoX + (logoBoxSize - drawW) / 2;
-        const drawY = headerY + (logoBoxSize - drawH) / 2;
-        doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+    let headerHeight;
+
+    if (posicion === 'cabecera') {
+      // Logo como banda completa arriba — ancho disponible
+      const maxLogoW = pageWidth - marginX * 2;
+      const maxLogoH = logoSize;
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth || maxLogoW;
+          const nh = logo.naturalHeight || maxLogoH;
+          const scale = Math.min(maxLogoW / nw, maxLogoH / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          const drawX = marginX + (maxLogoW - drawW) / 2;
+          doc.addImage(logo.dataUrl, 'JPEG', drawX, headerY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
+      contentStartY = headerY + logoSize + 4;
+      infoX     = marginX;
+      infoWidth = pageWidth - marginX * 2;
+      col1X     = infoX;
+      col2X     = infoX + infoWidth / 2;
+      colMaxW   = infoWidth / 2 - 2;
+      headerHeight = logoSize + titleH + dataRows * lineH + 8;
+    } else if (posicion === 'centro') {
+      // Logo centrado, info a ancho completo debajo
+      const drawSize = logoSize;
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth || drawSize;
+          const nh = logo.naturalHeight || drawSize;
+          const scale = Math.min(drawSize / nw, drawSize / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          const drawX = (pageWidth - drawW) / 2;
+          doc.addImage(logo.dataUrl, 'JPEG', drawX, headerY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
+      contentStartY = headerY + drawSize + 4;
+      infoX     = marginX;
+      infoWidth = pageWidth - marginX * 2;
+      col1X     = infoX;
+      col2X     = infoX + infoWidth / 2;
+      colMaxW   = infoWidth / 2 - 2;
+      headerHeight = drawSize + titleH + dataRows * lineH + 8;
+    } else {
+      // izquierda / derecha: layout en 2 columnas
+      const logoBoxSize = logoSize;
+      let logoX;
+      if (posicion === 'derecha') {
+        logoX  = pageWidth - marginX - logoBoxSize;
+        infoX  = marginX;
+        infoWidth = logoX - marginX - 5;
+      } else {
+        // izquierda (default)
+        logoX  = marginX;
+        infoX  = marginX + logoBoxSize + 5;
+        infoWidth = pageWidth - infoX - marginX;
       }
-    } catch {
-      // sin logo
+      col1X   = infoX;
+      col2X   = infoX + infoWidth / 2;
+      colMaxW = infoWidth / 2 - 2;
+      titleH  = 13;
+      headerHeight = titleH + dataRows * lineH + 2;
+      contentStartY = headerY;
+
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth  || logoBoxSize;
+          const nh = logo.naturalHeight || logoBoxSize;
+          const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          const drawX = logoX + (logoBoxSize - drawW) / 2;
+          const drawY = headerY + (logoBoxSize - drawH) / 2;
+          doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
     }
 
-    // ── Título ──
     doc.setFontSize(13);
-    doc.text('Ticket de Venta', col1X, headerY + 9);
+    doc.text('Ticket de Venta', col1X, contentStartY + 9);
 
-    // ── Filas de info: col izquierda | col derecha (cliente) ──
-    doc.setFontSize(9.5);
-    let infoY = headerY + titleH;
+    // Datos de empresa bajo el título
+    doc.setFontSize(Math.max(7, (cfg.fontSizeBase || 10) - 2));
+    let empresaY = contentStartY + 14;
+    const empresaLines = [
+      cfg.mostrarRazonSocial !== false && empresa.razon_social ? empresa.razon_social : null,
+      cfg.mostrarRut         !== false && empresa.rut          ? `RUT: ${empresa.rut}` : null,
+      cfg.mostrarDireccion   !== false && empresa.direccion    ? empresa.direccion : null,
+      cfg.mostrarTelefono    !== false && empresa.telefono     ? `Tel: ${empresa.telefono}` : null,
+      cfg.mostrarEmail       !== false && empresa.correo       ? empresa.correo : null,
+    ].filter(Boolean);
+    empresaLines.forEach((line) => {
+      doc.text(line, col1X, empresaY, { maxWidth: infoWidth });
+      empresaY += lineH - 1;
+    });
+
+    doc.setFontSize(cfg.fontSizeBase || 10);
+    let infoY = contentStartY + titleH;
     const pagosLabel = Array.isArray(venta.pagos) && venta.pagos.length > 0
       ? formatPagosResumen(venta.pagos)
       : formatMedioPago(venta.medio_pago);
-    const infoRows = [
-      [
-        `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
-        `Cliente: ${venta.cliente_nombre || 'Consumidor final'}`,
-      ],
-      [
-        `Nro. ticket: #${venta.id}`,
-        `Teléfono: ${venta.cliente_telefono || '-'}`,
-      ],
-      [
-        `Vendedor: ${venta.usuario_nombre || '-'}`,
-        `Dirección: ${venta.cliente_direccion || '-'}`,
-      ],
-      [
-        `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
-        `Horarios: ${formatHorarioClienteEntrega(venta)}`,
-      ],
+
+    // Columna izquierda: datos del ticket
+    const leftRows = [
+      `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
+      `Nro. ticket: #${venta.id}`,
+      `Vendedor: ${venta.usuario_nombre || '-'}`,
+      `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
     ];
-    infoRows.forEach(([left, right]) => {
-      doc.text(left, col1X, infoY, { maxWidth: colMaxW });
-      doc.text(right, col2X, infoY, { maxWidth: colMaxW });
+
+    // Columna derecha: datos del cliente (respetando toggles)
+    const rightRows = [
+      cfg.mostrarClienteNombre    !== false ? `Cliente: ${venta.cliente_nombre || 'Consumidor final'}` : null,
+      cfg.mostrarClienteTelefono  !== false ? `Teléfono: ${venta.cliente_telefono || '-'}` : null,
+      cfg.mostrarClienteDireccion !== false ? `Dirección: ${venta.cliente_direccion || '-'}` : null,
+      cfg.mostrarClienteHorarios  !== false ? `Horarios: ${formatHorarioClienteEntrega(venta)}` : null,
+    ].filter(Boolean);
+
+    const maxRows = Math.max(leftRows.length, rightRows.length);
+    for (let i = 0; i < maxRows; i++) {
+      if (leftRows[i])  doc.text(leftRows[i],  col1X, infoY, { maxWidth: colMaxW });
+      if (rightRows[i]) doc.text(rightRows[i], col2X, infoY, { maxWidth: colMaxW });
       infoY += lineH;
-    });
+    }
 
     let cursorY = headerY + headerHeight + 5;
 
@@ -386,7 +464,7 @@ export default function VentasHistorial() {
           formatCurrency(subtotal),
         ];
       }),
-      styles: { fontSize: 9 },
+      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || 'helvetica' },
       headStyles: { fillColor: getPrimaryRgb() },
     });
 
@@ -396,15 +474,24 @@ export default function VentasHistorial() {
     const pagosValueX = pageWidth - 14;
     let totalsY = finalY + 8;
 
-    doc.setFontSize(10);
+    doc.setFontSize(cfg.fontSizeBase || 10);
     doc.text(`Subtotal: ${formatCurrency(venta.subtotal)}`, totalsRightX, totalsY, { align: 'right' });
     totalsY += 5;
     doc.text(`Descuentos: -${formatCurrency(venta.descuento_total_valor)}`, totalsRightX, totalsY, { align: 'right' });
     totalsY += 5;
-    doc.setFontSize(12);
+
+    // ── IVA (solo si está habilitado en config) ──
+    if (cfg.mostrarIva) {
+      const ivaBase = Number(venta.subtotal || 0) - Number(venta.descuento_total_valor || 0);
+      const ivaAmount = ivaBase * 0.22;
+      doc.text(`IVA (22%): ${formatCurrency(ivaAmount)}`, totalsRightX, totalsY, { align: 'right' });
+      totalsY += 5;
+    }
+
+    doc.setFontSize((cfg.fontSizeBase || 10) + 2);
     doc.text(`Total: ${formatCurrency(venta.total)}`, totalsRightX, totalsY, { align: 'right' });
     totalsY += 6;
-    doc.setFontSize(10);
+    doc.setFontSize(cfg.fontSizeBase || 10);
     doc.text('Pagos:', totalsRightX, totalsY, { align: 'right' });
     totalsY += 4;
     if (Array.isArray(venta.pagos) && venta.pagos.length > 0) {
@@ -419,109 +506,214 @@ export default function VentasHistorial() {
     }
 
     if (venta.observacion) {
-      doc.setFontSize(9);
+      doc.setFontSize((cfg.fontSizeBase || 10) - 1);
       doc.text(`Observación: ${venta.observacion}`, 14, totalsY + 4);
+      totalsY += 9;
+    }
+
+    // ── Notas ──
+    if (cfg.notas) {
+      doc.setFontSize((cfg.fontSizeBase || 10) - 1);
+      doc.text(cfg.notas, marginX, totalsY + 6, { maxWidth: pageWidth - marginX * 2 });
+      totalsY += 10;
+    }
+
+    // ── Pie de página ──
+    if (cfg.piePagina) {
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize((cfg.fontSizeBase || 10) - 1);
+      doc.setTextColor(120, 120, 120);
+      doc.text(cfg.piePagina, pageWidth / 2, pageHeight - 8, { align: 'center', maxWidth: pageWidth - marginX * 2 });
+      doc.setTextColor(0, 0, 0);
     }
 
     return doc;
   };
 
-  const buildRemitoPdf = async (venta) => {
+  const buildRemitoPdf = async (venta, pdfConfig) => {
+    const cfg = pdfConfig || getPdfConfig('remito', empresa.pdf_remito);
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
+    doc.setFont(cfg.fontFamily || 'helvetica');
+
     const headerY = 10;
-    const titleH = 18;
     const lineH = 5;
+    const titleH = 18;
     const dataRows = 4;
-    const headerHeight = titleH + dataRows * lineH + 2;
+    const logoSize = Math.max(10, Math.min(cfg.logoTamano || 40, 60));
+    const posicion = cfg.logoPosicion || 'izquierda';
 
-    const logoBoxSize = headerHeight;
-    const logoX = marginX;
-    const infoX = marginX + logoBoxSize + 5;
-    const infoWidth = pageWidth - infoX - marginX;
-    const col1X = infoX;
-    const col2X = infoX + infoWidth / 2;
-    const colMaxW = infoWidth / 2 - 2;
+    let infoX, infoWidth, col1X, col2X, colMaxW, contentStartY, headerHeight;
 
-    try {
-      const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
-      if (logo) {
-        const nw = logo.naturalWidth  || logoBoxSize;
-        const nh = logo.naturalHeight || logoBoxSize;
-        const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
-        const drawW = nw * scale;
-        const drawH = nh * scale;
-        const drawX = logoX + (logoBoxSize - drawW) / 2;
-        const drawY = headerY + (logoBoxSize - drawH) / 2;
-        doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+    if (posicion === 'cabecera') {
+      const maxLogoW = pageWidth - marginX * 2;
+      const maxLogoH = logoSize;
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth || maxLogoW;
+          const nh = logo.naturalHeight || maxLogoH;
+          const scale = Math.min(maxLogoW / nw, maxLogoH / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          doc.addImage(logo.dataUrl, 'JPEG', marginX + (maxLogoW - drawW) / 2, headerY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
+      contentStartY = headerY + logoSize + 4;
+      infoX = marginX; infoWidth = pageWidth - marginX * 2;
+      col1X = infoX; col2X = infoX + infoWidth / 2; colMaxW = infoWidth / 2 - 2;
+      headerHeight = logoSize + titleH + dataRows * lineH + 8;
+    } else if (posicion === 'centro') {
+      const drawSize = logoSize;
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth || drawSize;
+          const nh = logo.naturalHeight || drawSize;
+          const scale = Math.min(drawSize / nw, drawSize / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          doc.addImage(logo.dataUrl, 'JPEG', (pageWidth - drawW) / 2, headerY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
+      contentStartY = headerY + drawSize + 4;
+      infoX = marginX; infoWidth = pageWidth - marginX * 2;
+      col1X = infoX; col2X = infoX + infoWidth / 2; colMaxW = infoWidth / 2 - 2;
+      headerHeight = drawSize + titleH + dataRows * lineH + 8;
+    } else {
+      const logoBoxSize = logoSize;
+      let logoX;
+      if (posicion === 'derecha') {
+        logoX  = pageWidth - marginX - logoBoxSize;
+        infoX  = marginX;
+        infoWidth = logoX - marginX - 5;
+      } else {
+        logoX  = marginX;
+        infoX  = marginX + logoBoxSize + 5;
+        infoWidth = pageWidth - infoX - marginX;
       }
-    } catch {
-      // sin logo
+      col1X = infoX; col2X = infoX + infoWidth / 2; colMaxW = infoWidth / 2 - 2;
+      headerHeight = titleH + dataRows * lineH + 2;
+      contentStartY = headerY;
+      try {
+        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        if (logo) {
+          const nw = logo.naturalWidth  || logoBoxSize;
+          const nh = logo.naturalHeight || logoBoxSize;
+          const scale = Math.min(logoBoxSize / nw, logoBoxSize / nh);
+          const drawW = nw * scale;
+          const drawH = nh * scale;
+          const drawX = logoX + (logoBoxSize - drawW) / 2;
+          const drawY = headerY + (logoBoxSize - drawH) / 2;
+          doc.addImage(logo.dataUrl, 'JPEG', drawX, drawY, drawW, drawH);
+        }
+      } catch { /* sin logo */ }
     }
 
     doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text('REMITO', col1X, headerY + 9);
-    doc.setFontSize(9.5);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Remito de Factura N° ${venta.id}`, col1X, headerY + 15);
+    doc.setFont(cfg.fontFamily || 'helvetica', 'bold');
+    doc.text('REMITO', col1X, contentStartY + 9);
+    doc.setFontSize(cfg.fontSizeBase || 10);
+    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.text(`Remito de Factura N° ${venta.id}`, col1X, contentStartY + 15);
 
-    let infoY = headerY + titleH;
-    const infoRows = [
-      [
-        `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
-        `Cliente: ${venta.cliente_nombre || 'Consumidor final'}`,
-      ],
-      [
-        `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
-        `Teléfono: ${venta.cliente_telefono || '-'}`,
-      ],
-      [
-        `Vendedor: ${venta.usuario_nombre || '-'}`,
-        `Dirección: ${venta.cliente_direccion || '-'}`,
-      ],
-      [
-        '',
-        `Horarios: ${formatHorarioClienteEntrega(venta)}`,
-      ],
-    ];
-    infoRows.forEach(([left, right]) => {
-      if (left) doc.text(left, col1X, infoY, { maxWidth: colMaxW });
-      doc.text(right, col2X, infoY, { maxWidth: colMaxW });
-      infoY += lineH;
+    // Datos de empresa bajo el título
+    doc.setFontSize(Math.max(7, (cfg.fontSizeBase || 10) - 2));
+    let empresaY2 = contentStartY + 20;
+    const empresaLines2 = [
+      cfg.mostrarRazonSocial !== false && empresa.razon_social ? empresa.razon_social : null,
+      cfg.mostrarRut         !== false && empresa.rut          ? `RUT: ${empresa.rut}` : null,
+      cfg.mostrarDireccion   !== false && empresa.direccion    ? empresa.direccion : null,
+      cfg.mostrarTelefono    !== false && empresa.telefono     ? `Tel: ${empresa.telefono}` : null,
+      cfg.mostrarEmail       !== false && empresa.correo       ? empresa.correo : null,
+    ].filter(Boolean);
+    empresaLines2.forEach((line) => {
+      doc.text(line, col1X, empresaY2, { maxWidth: infoWidth });
+      empresaY2 += lineH - 1;
     });
+    doc.setFontSize(cfg.fontSizeBase || 10);
+    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+
+    let infoY = contentStartY + titleH;
+    const leftRows = [
+      `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
+      `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
+      `Vendedor: ${venta.usuario_nombre || '-'}`,
+    ];
+    const rightRows = [
+      cfg.mostrarClienteNombre    !== false ? `Cliente: ${venta.cliente_nombre || 'Consumidor final'}` : null,
+      cfg.mostrarClienteTelefono  !== false ? `Teléfono: ${venta.cliente_telefono || '-'}` : null,
+      cfg.mostrarClienteDireccion !== false ? `Dirección: ${venta.cliente_direccion || '-'}` : null,
+      cfg.mostrarClienteHorarios  !== false ? `Horarios: ${formatHorarioClienteEntrega(venta)}` : null,
+    ].filter(Boolean);
+    const maxRows2 = Math.max(leftRows.length, rightRows.length);
+    for (let i = 0; i < maxRows2; i++) {
+      if (leftRows[i])  doc.text(leftRows[i],  col1X, infoY, { maxWidth: colMaxW });
+      if (rightRows[i]) doc.text(rightRows[i], col2X, infoY, { maxWidth: colMaxW });
+      infoY += lineH;
+    }
 
     let cursorY = headerY + headerHeight + 5;
 
+    // ── Tabla: mostrar precio si cfg.mostrarCosto ──
+    const tableHead = cfg.mostrarCosto
+      ? [['Producto', 'Cantidad', 'P. Unitario']]
+      : [['Producto', 'Cantidad']];
+
+    const tableBody = (venta.detalle || []).map((item) => {
+      const cant = Number(item.cantidad || 0);
+      const presentacion = item.embalaje_nombre
+        ? `${cant} (${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre})`
+        : `${cant} u.`;
+      const row = [
+        item.producto_nombre || `Producto #${item.producto_id}`,
+        presentacion,
+      ];
+      if (cfg.mostrarCosto) {
+        row.push(formatCurrency(Number(item.precio_unitario || 0)));
+      }
+      return row;
+    });
+
     autoTable(doc, {
       startY: cursorY,
-      head: [['Producto', 'Cantidad']],
-      body: (venta.detalle || []).map((item) => {
-        const cant = Number(item.cantidad || 0);
-        const presentacion = item.embalaje_nombre
-          ? `${cant} (${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre})`
-          : `${cant} u.`;
-        return [
-          item.producto_nombre || `Producto #${item.producto_id}`,
-          presentacion,
-        ];
-      }),
-      styles: { fontSize: 10 },
+      head: tableHead,
+      body: tableBody,
+      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || 'helvetica' },
       headStyles: { fillColor: getPrimaryRgb() },
-      columnStyles: { 1: { halign: 'center', cellWidth: 40 } },
+      columnStyles: cfg.mostrarCosto
+        ? { 1: { halign: 'center', cellWidth: 40 }, 2: { halign: 'right', cellWidth: 35 } }
+        : { 1: { halign: 'center', cellWidth: 40 } },
     });
 
     const finalY = doc.lastAutoTable?.finalY ?? cursorY + 8;
-    const firmaY = finalY + 20;
+    let footerY = finalY + 20;
+
     const firmaLineX1 = marginX + 10;
     const firmaLineX2 = pageWidth / 2 - 10;
 
     doc.setDrawColor(0);
-    doc.line(firmaLineX1, firmaY, firmaLineX2, firmaY);
-    doc.setFontSize(9);
-    doc.text('Firma y aclaración del receptor', firmaLineX1, firmaY + 5);
+    doc.line(firmaLineX1, footerY, firmaLineX2, footerY);
+    doc.setFontSize((cfg.fontSizeBase || 10) - 1);
+    doc.text('Firma y aclaración del receptor', firmaLineX1, footerY + 5);
+    footerY += 10;
+
+    // ── Notas ──
+    if (cfg.notas) {
+      doc.setFontSize((cfg.fontSizeBase || 10) - 1);
+      doc.text(cfg.notas, marginX, footerY + 6, { maxWidth: pageWidth - marginX * 2 });
+    }
+
+    // ── Pie de página ──
+    if (cfg.piePagina) {
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize((cfg.fontSizeBase || 10) - 1);
+      doc.setTextColor(120, 120, 120);
+      doc.text(cfg.piePagina, pageWidth / 2, pageHeight - 8, { align: 'center', maxWidth: pageWidth - marginX * 2 });
+      doc.setTextColor(0, 0, 0);
+    }
 
     return doc;
   };

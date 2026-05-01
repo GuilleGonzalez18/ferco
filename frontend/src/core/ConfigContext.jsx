@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './api';
+import { getPdfConfig } from '../shared/lib/pdfConfigDefaults';
 
 const DEFAULTS = {
   nombre: '',
@@ -27,6 +28,8 @@ const ConfigContext = createContext({
   reloadConfig: () => {},
   applyPreview: () => {},
   cancelPreview: () => {},
+  pdfFacturaConfig: null,
+  pdfRemitoConfig: null,
 });
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -39,6 +42,12 @@ export function applyColors(empresa) {
   root.style.setProperty('--menu-hover', empresa.color_menu_bg || DEFAULTS.color_menu_bg);
   root.style.setProperty('--menu-active', empresa.color_menu_active || DEFAULTS.color_menu_active);
   root.style.setProperty('--field-focus-border', empresa.color_primary || DEFAULTS.color_primary);
+  // Focus ring: color primario con 18% de opacidad
+  const primaryHex = (empresa.color_primary || DEFAULTS.color_primary).replace('#', '');
+  const pr = parseInt(primaryHex.substring(0, 2), 16);
+  const pg = parseInt(primaryHex.substring(2, 4), 16);
+  const pb = parseInt(primaryHex.substring(4, 6), 16);
+  root.style.setProperty('--field-focus-ring', `rgba(${pr}, ${pg}, ${pb}, 0.22)`);
   root.style.setProperty('--color-text', empresa.color_text || DEFAULTS.color_text);
   root.style.setProperty('--color-text-muted', empresa.color_text_muted || DEFAULTS.color_text_muted);
   root.style.setProperty('--menu-text', empresa.color_menu_text || DEFAULTS.color_menu_text);
@@ -107,7 +116,16 @@ export function ConfigProvider({ children }) {
   }, [empresa]);
 
   const value = useMemo(
-    () => ({ empresa, modulos, loading, reloadConfig: loadConfig, applyPreview, cancelPreview }),
+    () => ({
+      empresa,
+      modulos,
+      loading,
+      reloadConfig: loadConfig,
+      applyPreview,
+      cancelPreview,
+      pdfFacturaConfig: getPdfConfig('factura', empresa.pdf_factura),
+      pdfRemitoConfig: getPdfConfig('remito', empresa.pdf_remito),
+    }),
     [empresa, modulos, loading, loadConfig, applyPreview, cancelPreview]
   );
 

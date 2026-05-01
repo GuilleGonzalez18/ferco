@@ -809,6 +809,9 @@ const statements = [
   `CREATE INDEX IF NOT EXISTS idx_dashboard_widgets_usuario ON public.dashboard_widgets(usuario_id);`,
   // === CAMBIO DE CONTRASEÑA OBLIGATORIO (v11) ===
   `ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS debe_cambiar_password boolean NOT NULL DEFAULT false;`,
+  // === CONFIGURACIÓN DE PDFs POR DOCUMENTO (v12) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS pdf_factura jsonb NOT NULL DEFAULT '{}'::jsonb;`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS pdf_remito jsonb NOT NULL DEFAULT '{}'::jsonb;`,
 ];
 
 export async function runMigration() {
