@@ -16,6 +16,7 @@ export default function ControlStock({ productos = [], setProductos }) {
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [productoIdActivo, setProductoIdActivo] = useState(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
   const [cantidad, setCantidad] = useState('');
   const [cargando, setCargando] = useState(false);
   const [historialOpen, setHistorialOpen] = useState(false);
@@ -23,6 +24,15 @@ export default function ControlStock({ productos = [], setProductos }) {
   const [historial, setHistorial] = useState([]);
   const [historialLoading, setHistorialLoading] = useState(false);
   const closeTimerRef = useRef(null);
+
+  const handleSelectProducto = useCallback((p) => {
+    setProductoIdActivo(p.id);
+    setDetalleOpen(true);
+  }, []);
+
+  const handleCerrarDetalle = useCallback(() => {
+    setDetalleOpen(false);
+  }, []);
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -82,6 +92,7 @@ export default function ControlStock({ productos = [], setProductos }) {
               <strong>{p.nombre}</strong>
               <small>Código: {p.ean || '-'}</small>
             </span>
+            <span className="stock-row-chevron" aria-hidden="true">›</span>
           </span>
         ),
       },
@@ -184,14 +195,40 @@ export default function ControlStock({ productos = [], setProductos }) {
             emptyMessage="Sin productos para mostrar."
             stickyHeader
             expandedRowId={productoIdActivo}
-            onRowClick={(p) => setProductoIdActivo(p.id)}
+            onRowClick={handleSelectProducto}
           />
         </section>
 
-        <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''}`}>
+        {/* Overlay para cerrar el drawer en mobile */}
+        <div
+          className={`stock-detalle-overlay ${detalleOpen ? 'open' : ''}`}
+          onClick={handleCerrarDetalle}
+          aria-hidden="true"
+        />
+
+        <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''} ${detalleOpen ? 'detalle-open' : ''}`}>
+          <div className="stock-detalle-handle" aria-hidden="true" />
+          <div className="stock-detalle-mobile-head">
+            <span className="stock-detalle-title">{productoActivo?.nombre || 'Detalle'}</span>
+            <AppButton
+              type="button"
+              tone="ghost"
+              iconOnly
+              className="stock-detalle-close-btn"
+              onClick={handleCerrarDetalle}
+              aria-label="Cerrar detalle"
+            >
+              ✕
+            </AppButton>
+          </div>
           {!productoActivo && <p className="stock-empty">Selecciona un producto para gestionar su stock.</p>}
           {productoActivo && (
             <>
+              {productoActivo.imagenPreview && (
+                <div className="stock-panel-imagen-wrap">
+                  <img src={productoActivo.imagenPreview} alt={productoActivo.nombre} className="stock-panel-imagen" />
+                </div>
+              )}
               <p className="stock-producto">{productoActivo.nombre}</p>
               <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
               <label className="stock-cantidad">
