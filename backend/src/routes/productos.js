@@ -5,8 +5,8 @@ import { sendDbError } from '../dbErrors.js';
 
 export const productosRouter = Router();
 
-function toMoneyInt(value) {
-  return Math.round(Number(value || 0));
+function toMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
 }
 
 function actorName(authUser) {
@@ -16,10 +16,10 @@ function actorName(authUser) {
 
 async function getProductoRowById(id) {
   const result = await query(
-    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
+    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
             p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
      FROM public.productos p
      LEFT JOIN public.empaques e ON e.id = p.empaque_id
      WHERE p.id = $1`,
@@ -31,10 +31,10 @@ async function getProductoRowById(id) {
 productosRouter.get('/', async (req, res) => {
   const includeArchived = String(req.query.includeArchived || '').toLowerCase() === 'true';
   const result = await query(
-    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0))::int AS costo, ROUND(COALESCE(p.precio, 0))::int AS precio,
+    `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
             p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0))::int AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
        FROM public.productos p
        LEFT JOIN public.empaques e ON e.id = p.empaque_id
       WHERE ($1::boolean = true OR p.activo = true)
@@ -58,9 +58,9 @@ productosRouter.post('/', async (req, res) => {
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
-  const costoInt = toMoneyInt(costo);
-  const precioInt = toMoneyInt(precio);
-  const precioEmpaqueInt = toMoneyInt(precio_empaque);
+  const costoInt = toMoney(costo);
+  const precioInt = toMoney(precio);
+  const precioEmpaqueInt = toMoney(precio_empaque);
 
   const empaqueIdSafe = empaque_id == null || empaque_id === '' ? null : Number(empaque_id);
   if (empaqueIdSafe !== null && (!Number.isInteger(empaqueIdSafe) || empaqueIdSafe <= 0)) {
@@ -139,9 +139,9 @@ productosRouter.put('/:id', async (req, res) => {
     precio_empaque = 0,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
-  const costoInt = toMoneyInt(costo);
-  const precioInt = toMoneyInt(precio);
-  const precioEmpaqueInt = toMoneyInt(precio_empaque);
+  const costoInt = toMoney(costo);
+  const precioInt = toMoney(precio);
+  const precioEmpaqueInt = toMoney(precio_empaque);
   const empaqueIdSafe = empaque_id == null || empaque_id === '' ? null : Number(empaque_id);
   if (empaqueIdSafe !== null && (!Number.isInteger(empaqueIdSafe) || empaqueIdSafe <= 0)) {
     return res.status(400).json({ error: 'Empaque inválido' });

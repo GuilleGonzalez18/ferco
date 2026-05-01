@@ -22,6 +22,7 @@ export default function ControlStock({
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [productoIdActivo, setProductoIdActivo] = useState(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
   const [cantidad, setCantidad] = useState('');
   const [cargando, setCargando] = useState(false);
   const [historialOpen, setHistorialOpen] = useState(false);
@@ -29,6 +30,15 @@ export default function ControlStock({
   const [historial, setHistorial] = useState([]);
   const [historialLoading, setHistorialLoading] = useState(false);
   const closeTimerRef = useRef(null);
+
+  const handleSelectProducto = useCallback((p) => {
+    setProductoIdActivo(p.id);
+    setDetalleOpen(true);
+  }, []);
+
+  const handleCerrarDetalle = useCallback(() => {
+    setDetalleOpen(false);
+  }, []);
 
   const productosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -101,6 +111,7 @@ export default function ControlStock({
               <strong>{p.nombre}</strong>
               <small>Código: {p.ean || '-'}</small>
             </span>
+            <span className="stock-row-chevron" aria-hidden="true">›</span>
           </span>
         ),
       },
@@ -210,9 +221,65 @@ export default function ControlStock({
             stickyHeader
             minWidth={420}
             expandedRowId={productoIdActivo}
-            onRowClick={(p) => setProductoIdActivo(p.id)}
+            onRowClick={handleSelectProducto}
           />
         </section>
+
+        {/* Overlay para cerrar el drawer en mobile */}
+        <div
+          className={`stock-detalle-overlay ${detalleOpen ? 'open' : ''}`}
+          onClick={handleCerrarDetalle}
+          aria-hidden="true"
+        />
+
+        <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''} ${detalleOpen ? 'detalle-open' : ''}`}>
+          <div className="stock-detalle-handle" aria-hidden="true" />
+          <div className="stock-detalle-mobile-head">
+            <span className="stock-detalle-title">{productoActivo?.nombre || 'Detalle'}</span>
+            <AppButton
+              type="button"
+              tone="ghost"
+              iconOnly
+              className="stock-detalle-close-btn"
+              onClick={handleCerrarDetalle}
+              aria-label="Cerrar detalle"
+            >
+              ✕
+            </AppButton>
+          </div>
+          {!productoActivo && <p className="stock-empty">Selecciona un producto para gestionar su stock.</p>}
+          {productoActivo && (
+            <>
+              {productoActivo.imagenPreview && (
+                <div className="stock-panel-imagen-wrap">
+                  <img src={productoActivo.imagenPreview} alt={productoActivo.nombre} className="stock-panel-imagen" />
+                </div>
+              )}
+              <p className="stock-producto">{productoActivo.nombre}</p>
+              <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
+              <label className="stock-cantidad">
+                Cantidad
+                <AppInput
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                />
+              </label>
+              <div className="stock-actions">
+                <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
+                <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
+                <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
+              </div>
+              <div className="stock-history-row">
+                <AppButton type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
+                  Historial de stock
+                </AppButton>
+              </div>
+            </>
+          )}
+        </aside>
       </div>
 
       <aside

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
+import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
 import AppButton from '../../shared/components/button/AppButton';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppTextarea from '../../shared/components/fields/AppTextarea';
@@ -148,6 +149,8 @@ function buildForm(emp) {
     logo_tamano:          emp.logo_tamano ?? 200,
     logo_bg_color:        emp.logo_bg_color || '#ffffff',
     fondo_base64:         emp.fondo_base64 === '__none__' ? '' : (emp.fondo_base64 || null),
+    pdf_factura:          emp.pdf_factura  || {},
+    pdf_remito:           emp.pdf_remito   || {},
   };
 }
 
@@ -169,14 +172,25 @@ const PDF_PRODUCTOS_ROWS = [
   ['Arroz Gallo 1kg',      '75',  '$130,00', '$185,00', 'Caja x 10', '$55,00'],
 ];
 
-function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor }) {
+function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor, pdfConfig }) {
   const primary = primaryColor || '#375f8c';
   const bgLogo  = logoBgColor  || '#ffffff';
+
+  // Map jsPDF font names to CSS font families
+  const fontMap = {
+    helvetica: 'Arial, sans-serif',
+    times:     'Times New Roman, serif',
+    courier:   'Courier New, monospace',
+  };
+  const cssFont    = fontMap[pdfConfig?.fontFamily] || 'Arial, sans-serif';
+  const baseFontSz = pdfConfig?.fontSizeBase || 10;
+  const notas      = pdfConfig?.notas    || '';
+  const piePagina  = pdfConfig?.piePagina || '';
 
   // El mock interno mide 680px de ancho (simula hoja A4), se escala al 38%
   const SCALE    = 0.38;
   const MOCK_W   = 680;
-  const MOCK_H   = tipo === 'ticket' ? 440 : 320;
+  const MOCK_H   = tipo === 'ticket' ? 560 : tipo === 'remito' ? 520 : 320;
   const boxW     = Math.round(MOCK_W * SCALE);
   const boxH     = Math.round(MOCK_H * SCALE);
 
@@ -188,9 +202,11 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor }
     minHeight:       MOCK_H,
     transform:       `scale(${SCALE})`,
     transformOrigin: 'top left',
+    // transform: scale no expande el layout — reservar espacio con height explícito
+    height:          MOCK_H,
     background:      '#fff',
-    fontFamily:      'Arial, sans-serif',
-    fontSize:        11,
+    fontFamily:      cssFont,
+    fontSize:        baseFontSz,
     color:           '#222',
     padding:         24,
     boxSizing:       'border-box',
@@ -201,42 +217,133 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor }
     background: primary,
     color: '#fff',
     padding: '4px 6px',
-    fontSize: 10,
+    fontSize: baseFontSz - 1,
     fontWeight: 600,
     textAlign: 'left',
   };
 
-  const tdStyle = { padding: '3px 6px', fontSize: 9.5, borderBottom: '1px solid #eee' };
+  const tdStyle    = { padding: '3px 6px', fontSize: baseFontSz - 1.5, borderBottom: '1px solid #eee' };
   const tdAltStyle = { ...tdStyle, background: '#f7f9fc' };
 
+  const logoBox = (height = 80) => (
+    <div style={{ width: height, height, background: bgLogo, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #ddd' }}>
+      {logoSrc ? (
+        <img src={logoSrc} alt="logo" style={{ maxWidth: logoMaxPx, maxHeight: height - 8, objectFit: 'contain', display: 'block' }} />
+      ) : (
+        <div style={{ width: 40, height: 20, background: '#ddd', borderRadius: 3 }} />
+      )}
+    </div>
+  );
+
+  const empresaInfoBlock = (
+    <div style={{ fontSize: baseFontSz - 2, color: '#666', lineHeight: 1.5, marginBottom: 4 }}>
+      {pdfConfig?.mostrarRazonSocial !== false && <div>Ferco Distribuciones S.A.</div>}
+      {pdfConfig?.mostrarRut         !== false && <div>RUT: 21-123456-7</div>}
+      {pdfConfig?.mostrarDireccion   !== false && <div>Av. Rivera 2400, Montevideo</div>}
+      {pdfConfig?.mostrarTelefono    !== false && <div>Tel: 099 000 111</div>}
+      {pdfConfig?.mostrarEmail       !== false && <div>ventas@ferco.com</div>}
+    </div>
+  );
+
+  const posicion = pdfConfig?.logoPosicion || 'izquierda';
+
+  const notasBlock = notas ? (
+    <div style={{ marginTop: 8, fontSize: baseFontSz - 1, color: '#555', fontStyle: 'italic' }}>{notas}</div>
+  ) : null;
+
+  const pieBlock = piePagina ? (
+    <div style={{ position: 'absolute', bottom: 16, left: 24, right: 24, textAlign: 'center', fontSize: baseFontSz - 2, color: '#888', borderTop: '1px solid #eee', paddingTop: 4 }}>{piePagina}</div>
+  ) : null;
+
+  // Helper: tamaño del logo box en mock (proporcional a logoTamano mm, escala 2px/mm)
+  const logoBoxH = Math.max(30, Math.min((pdfConfig?.logoTamano || 40) * 2, 120));
+
+  // Renderiza el header del mock según posición del logo
+  const renderMockHeader = (titulo, subtitulo, infoBlock) => {
+    if (posicion === 'cabecera') {
+      return (
+        <>
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+            {logoBox(logoBoxH)}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: baseFontSz + 3, marginBottom: 2 }}>{titulo}</div>
+            {subtitulo && <div style={{ fontSize: baseFontSz, marginBottom: 4 }}>{subtitulo}</div>}
+            {empresaInfoBlock}
+            {infoBlock}
+          </div>
+        </>
+      );
+    }
+    if (posicion === 'centro') {
+      return (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            {logoBox(logoBoxH)}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: baseFontSz + 3, marginBottom: 2 }}>{titulo}</div>
+            {subtitulo && <div style={{ fontSize: baseFontSz, marginBottom: 4 }}>{subtitulo}</div>}
+            {empresaInfoBlock}
+            {infoBlock}
+          </div>
+        </>
+      );
+    }
+    if (posicion === 'derecha') {
+      return (
+        <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: baseFontSz + 3, marginBottom: 2 }}>{titulo}</div>
+            {subtitulo && <div style={{ fontSize: baseFontSz, marginBottom: 4 }}>{subtitulo}</div>}
+            {empresaInfoBlock}
+            {infoBlock}
+          </div>
+          {logoBox(logoBoxH)}
+        </div>
+      );
+    }
+    // izquierda (default)
+    return (
+      <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+        {logoBox(logoBoxH)}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: baseFontSz + 3, marginBottom: 2 }}>{titulo}</div>
+          {subtitulo && <div style={{ fontSize: baseFontSz, marginBottom: 4 }}>{subtitulo}</div>}
+          {empresaInfoBlock}
+          {infoBlock}
+        </div>
+      </div>
+    );
+  };
+
   if (tipo === 'ticket') {
-    const logoBoxH = 80;
+    const leftInfo = [
+      'Fecha Emisión: 23/04/2026',
+      'Nro. ticket: #932',
+      'Vendedor: María González',
+      'Fecha entrega: 24/04/2026',
+    ];
+    const rightInfo = [
+      pdfConfig?.mostrarClienteNombre    !== false ? 'Cliente: Juan Pérez'          : null,
+      pdfConfig?.mostrarClienteTelefono  !== false ? 'Teléfono: 091 234 567'        : null,
+      pdfConfig?.mostrarClienteDireccion !== false ? 'Dirección: Av. 18 de Julio'   : null,
+      pdfConfig?.mostrarClienteHorarios  !== false ? 'Horarios: 9:00–18:00'         : null,
+    ].filter(Boolean);
+    const maxInfoR = Math.max(leftInfo.length, rightInfo.length);
+    const infoItems = Array.from({ length: maxInfoR }, (_, i) => [leftInfo[i] || '', rightInfo[i] || '']).flat();
+    const clienteGrid = (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px' }}>
+        {infoItems.map((t, i) => (
+          <div key={i} style={{ fontSize: baseFontSz - 1, color: '#444', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div>
+        ))}
+      </div>
+    );
+
     return (
       <div style={{ width: boxW, height: boxH, overflow: 'hidden', position: 'relative' }}>
-        <div style={inner}>
-          {/* Header: logo izquierda + info derecha */}
-          <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
-            <div style={{ width: logoBoxH, height: logoBoxH, background: bgLogo, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #ddd' }}>
-              {logoSrc ? (
-                <img src={logoSrc} alt="logo" style={{ maxWidth: logoMaxPx, maxHeight: logoBoxH - 8, objectFit: 'contain', display: 'block' }} />
-              ) : (
-                <div style={{ width: 40, height: 20, background: '#ddd', borderRadius: 3 }} />
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Ticket de Venta</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px' }}>
-                {[
-                  'Fecha Emisión: 23/04/2026', 'Cliente: Juan Pérez',
-                  'Nro. ticket: #932',          'Teléfono: 091 234 567',
-                  'Vendedor: María González',   'Dirección: Av. 18 de Julio 1234',
-                  'Fecha entrega: 24/04/2026',  'Horarios: 9:00–18:00',
-                ].map((t, i) => (
-                  <div key={i} style={{ fontSize: 9, color: '#444', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div style={{ ...inner, position: 'relative' }}>
+          {renderMockHeader('Ticket de Venta', null, clienteGrid)}
           {/* Tabla */}
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 10 }}>
             <thead>
@@ -252,14 +359,68 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor }
               ))}
             </tbody>
           </table>
-          {/* Totales alineados derecha */}
-          <div style={{ textAlign: 'right', fontSize: 9.5, lineHeight: 1.8 }}>
+          {/* Totales */}
+          <div style={{ textAlign: 'right', fontSize: baseFontSz - 0.5, lineHeight: 1.8 }}>
             <div>Subtotal: $500,00</div>
             <div>Descuentos: -$5,00</div>
-            <div style={{ fontWeight: 700, fontSize: 11 }}>Total: $495,00</div>
+            {pdfConfig?.mostrarIva && <div>IVA (22%): $108,90</div>}
+            <div style={{ fontWeight: 700, fontSize: baseFontSz + 1 }}>Total: $495,00</div>
             <div style={{ marginTop: 4 }}>Pagos:</div>
             <div>- Efectivo: $495,00</div>
           </div>
+          {notasBlock}
+          {pieBlock}
+        </div>
+      </div>
+    );
+  }
+
+  if (tipo === 'remito') {
+    const remitoCols = pdfConfig?.mostrarCosto
+      ? ['Producto', 'Cantidad', 'P. Unitario']
+      : ['Producto', 'Cantidad'];
+    const remitoRows = pdfConfig?.mostrarCosto
+      ? [['Aceite Del Sur 1L', '2 (12 caja)', '$340,00'], ['Fideos 500g', '1 u.', '$90,00'], ['Arroz 1kg', '3 u.', '$130,00']]
+      : [['Aceite Del Sur 1L', '2 (12 caja)'], ['Fideos 500g', '1 u.'], ['Arroz 1kg', '3 u.']];
+    const rLeftInfo = [
+      'Fecha Emisión: 23/04/2026',
+      'Fecha entrega: 24/04/2026',
+      'Vendedor: María González',
+    ];
+    const rRightInfo = [
+      pdfConfig?.mostrarClienteNombre    !== false ? 'Cliente: Juan Pérez'        : null,
+      pdfConfig?.mostrarClienteTelefono  !== false ? 'Teléfono: 091 234 567'      : null,
+      pdfConfig?.mostrarClienteDireccion !== false ? 'Dirección: Av. 18 de Julio' : null,
+      pdfConfig?.mostrarClienteHorarios  !== false ? 'Horarios: 9:00–18:00'       : null,
+    ].filter(Boolean);
+    const maxRR = Math.max(rLeftInfo.length, rRightInfo.length);
+    const rInfoItems = Array.from({ length: maxRR }, (_, i) => [rLeftInfo[i] || '', rRightInfo[i] || '']).flat();
+    const rClienteGrid = (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px' }}>
+        {rInfoItems.map((t, i) => (
+          <div key={i} style={{ fontSize: baseFontSz - 1, color: '#444', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div>
+        ))}
+      </div>
+    );
+    return (
+      <div style={{ width: boxW, height: boxH, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ ...inner, position: 'relative' }}>
+          {renderMockHeader('REMITO', 'Remito de Factura N° 932', rClienteGrid)}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 14 }}>
+            <thead>
+              <tr>{remitoCols.map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {remitoRows.map((row, i) => (
+                <tr key={i}>{row.map((cell, j) => <td key={j} style={i % 2 === 0 ? tdStyle : tdAltStyle}>{cell}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginTop: 16 }}>
+            <div style={{ borderTop: '1px solid #333', width: 160, paddingTop: 4, fontSize: baseFontSz - 1, color: '#555' }}>Firma y aclaración del receptor</div>
+          </div>
+          {notasBlock}
+          {pieBlock}
         </div>
       </div>
     );
@@ -330,6 +491,7 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   const [err, setErr]         = useState('');
   const [paletaSugerida, setPaletaSugerida] = useState(null);
   const [subTab, setSubTab]   = useState('datos');
+  const [pdfDocTab, setPdfDocTab] = useState('factura');
   const fileRef  = useRef(null);
   const fondoRef = useRef(null);
   const msgTimers = useRef({});
@@ -469,10 +631,33 @@ const saveSection = async (sectionKey, fields) => {
     if (fondoRef.current) fondoRef.current.value = '';
   };
 
+  // ── PDF config helpers ─────────────────────────────────────────────────────
+  const currentPdfCfg = useMemo(() => {
+    const key = pdfDocTab === 'factura' ? 'pdf_factura' : 'pdf_remito';
+    return getPdfConfig(pdfDocTab, form[key]);
+  }, [pdfDocTab, form]);
+
+  const setPdfField = (field, value) => {
+    const key = pdfDocTab === 'factura' ? 'pdf_factura' : 'pdf_remito';
+    setForm((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: value } }));
+  };
+
+  const isPdfDirty = (tipo) => {
+    const key = tipo === 'factura' ? 'pdf_factura' : 'pdf_remito';
+    return JSON.stringify(form[key]) !== JSON.stringify(saved[key]);
+  };
+
+  const undoPdfSection = (tipo) => {
+    const key = tipo === 'factura' ? 'pdf_factura' : 'pdf_remito';
+    setForm((prev) => ({ ...prev, [key]: saved[key] }));
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
   const SUBTABS = [
     { key: 'datos',   label: 'Datos de la empresa' },
     { key: 'imagen',  label: 'Logo e Imagen de fondo' },
     { key: 'colores', label: 'Colores' },
+    { key: 'pdfs',    label: 'PDFs' },
   ];
 
   return (
@@ -688,38 +873,6 @@ const saveSection = async (sectionKey, fields) => {
           onUndo={() => undoSection(FONDO_FIELDS)}
           msg={msgs.fondo}
         />
-      </div>
-
-      {/* ── VISTA PREVIA EN DOCUMENTOS PDF ── */}
-      <div className="config-section">
-        <h3 className="config-section-title">Vista previa en documentos PDF</h3>
-        <p className="config-hint">Así se verá tu logo y colores en los reportes generados.</p>
-        <div className="config-pdf-previews-row">
-          <div className="config-pdf-preview-card">
-            <span className="config-pdf-preview-label">Ticket de venta</span>
-            <div className="config-pdf-mock">
-              <PdfPreviewMock
-                tipo="ticket"
-                logoSrc={form.logo_base64 || null}
-                logoBgColor={form.logo_bg_color}
-                logoTamano={form.logo_tamano}
-                primaryColor={form.color_primary}
-              />
-            </div>
-          </div>
-          <div className="config-pdf-preview-card">
-            <span className="config-pdf-preview-label">Reporte de productos</span>
-            <div className="config-pdf-mock">
-              <PdfPreviewMock
-                tipo="productos"
-                logoSrc={form.logo_base64 || null}
-                logoBgColor={form.logo_bg_color}
-                logoTamano={form.logo_tamano}
-                primaryColor={form.color_primary}
-              />
-            </div>
-          </div>
-        </div>
       </div></>}
 
       {/* ── COLORES ── */}
@@ -773,6 +926,207 @@ const saveSection = async (sectionKey, fields) => {
           <span style={{ background: form.color_logout_bg, color: '#fff', padding: '6px 16px', borderRadius: 6, fontSize: 13 }}>Cerrar sesión</span>
         </div>
       </div>}
+
+      {/* ── PDFs ── */}
+      {subTab === 'pdfs' && <div className="config-section">
+
+        {/* Vista previa de documentos (movida desde Logo e imagen) */}
+        <div className="config-section config-pdf-overview-section">
+          <h3 className="config-section-title">Vista previa de documentos</h3>
+          <p className="config-hint">Así se verá tu logo y colores en los reportes generados.</p>
+          <div className="config-pdf-previews-row">
+            <div className="config-pdf-preview-card">
+              <span className="config-pdf-preview-label">Ticket de venta</span>
+              <div className="config-pdf-mock">
+                <PdfPreviewMock
+                  tipo="ticket"
+                  logoSrc={form.logo_base64 || null}
+                  logoBgColor={form.logo_bg_color}
+                  logoTamano={form.logo_tamano}
+                  primaryColor={form.color_primary}
+                  pdfConfig={getPdfConfig('factura', form.pdf_factura)}
+                />
+              </div>
+            </div>
+            <div className="config-pdf-preview-card">
+              <span className="config-pdf-preview-label">Remito</span>
+              <div className="config-pdf-mock">
+                <PdfPreviewMock
+                  tipo="remito"
+                  logoSrc={form.logo_base64 || null}
+                  logoBgColor={form.logo_bg_color}
+                  logoTamano={form.logo_tamano}
+                  primaryColor={form.color_primary}
+                  pdfConfig={getPdfConfig('remito', form.pdf_remito)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Configuración por documento */}
+        <h3 className="config-section-title" style={{ marginTop: 24 }}>Configuración por documento</h3>
+        <div className="config-pdf-doctabs">
+          {[{ key: 'factura', label: 'Factura / Ticket' }, { key: 'remito', label: 'Remito' }].map((dt) => (
+            <button
+              key={dt.key}
+              type="button"
+              className={`config-pdf-doctab-btn${pdfDocTab === dt.key ? ' active' : ''}`}
+              onClick={() => setPdfDocTab(dt.key)}
+            >
+              {dt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="config-pdf-editor">
+          {/* Panel de configuración */}
+          <div className="config-pdf-editor-panel">
+            <div className="config-field-row">
+              <label className="config-field-label">Tipografía</label>
+              <AppSelect value={currentPdfCfg.fontFamily} onChange={(e) => setPdfField('fontFamily', e.target.value)}>
+                <option value="helvetica">Helvetica (predeterminado)</option>
+                <option value="times">Times New Roman</option>
+                <option value="courier">Courier</option>
+              </AppSelect>
+            </div>
+            <div className="config-field-row">
+              <label className="config-field-label">Tamaño de fuente base</label>
+              <AppInput
+                type="number"
+                min="7"
+                max="14"
+                step="1"
+                value={currentPdfCfg.fontSizeBase}
+                onChange={(e) => setPdfField('fontSizeBase', Number(e.target.value))}
+              />
+            </div>
+            <div className="config-field-row">
+              <label className="config-field-label">Posición del logo</label>
+              <AppSelect value={currentPdfCfg.logoPosicion || 'izquierda'} onChange={(e) => setPdfField('logoPosicion', e.target.value)}>
+                <option value="izquierda">Izquierda (columna)</option>
+                <option value="derecha">Derecha (columna)</option>
+                <option value="centro">Centro (encima del contenido)</option>
+                <option value="cabecera">Cabecera (ancho completo)</option>
+              </AppSelect>
+            </div>
+            <div className="config-field-row">
+              <label className="config-field-label">Tamaño del logo (mm)</label>
+              <AppInput
+                type="number"
+                min="10"
+                max="80"
+                step="5"
+                value={currentPdfCfg.logoTamano}
+                onChange={(e) => setPdfField('logoTamano', Number(e.target.value))}
+              />
+            </div>
+            <div className="config-field-row">
+              <label className="config-field-label">Pie de página</label>
+              <AppInput
+                value={currentPdfCfg.piePagina}
+                onChange={(e) => setPdfField('piePagina', e.target.value)}
+                placeholder="Texto que aparece al pie de cada página"
+              />
+            </div>
+            <div className="config-field-row">
+              <label className="config-field-label">Notas / observaciones</label>
+              <AppTextarea
+                value={currentPdfCfg.notas}
+                onChange={(e) => setPdfField('notas', e.target.value)}
+                placeholder="Texto adicional al final del documento"
+                rows={2}
+              />
+            </div>
+
+            <h4 className="config-pdf-section-subtitle">Datos de la empresa</h4>
+            {[
+              { key: 'mostrarRazonSocial', label: 'Mostrar razón social' },
+              { key: 'mostrarRut',         label: 'Mostrar RUT' },
+              { key: 'mostrarDireccion',   label: 'Mostrar dirección' },
+              { key: 'mostrarTelefono',    label: 'Mostrar teléfono' },
+              { key: 'mostrarEmail',       label: 'Mostrar email' },
+            ].map(({ key, label }) => (
+              <div key={key} className="config-field-row config-field-row--checkbox">
+                <label className="config-field-label">{label}</label>
+                <input
+                  type="checkbox"
+                  className="config-checkbox"
+                  checked={currentPdfCfg[key] !== false}
+                  onChange={(e) => setPdfField(key, e.target.checked)}
+                />
+              </div>
+            ))}
+
+            <h4 className="config-pdf-section-subtitle">Datos del cliente</h4>
+            {[
+              { key: 'mostrarClienteNombre',    label: 'Mostrar nombre del cliente' },
+              { key: 'mostrarClienteTelefono',  label: 'Mostrar teléfono' },
+              { key: 'mostrarClienteDireccion', label: 'Mostrar dirección' },
+              { key: 'mostrarClienteHorarios',  label: 'Mostrar horarios' },
+            ].map(({ key, label }) => (
+              <div key={key} className="config-field-row config-field-row--checkbox">
+                <label className="config-field-label">{label}</label>
+                <input
+                  type="checkbox"
+                  className="config-checkbox"
+                  checked={currentPdfCfg[key] !== false}
+                  onChange={(e) => setPdfField(key, e.target.checked)}
+                />
+              </div>
+            ))}
+
+            <h4 className="config-pdf-section-subtitle">Opciones</h4>
+            {pdfDocTab === 'factura' && (
+              <div className="config-field-row config-field-row--checkbox">
+                <label className="config-field-label">Mostrar desglose de IVA</label>
+                <input
+                  type="checkbox"
+                  className="config-checkbox"
+                  checked={!!currentPdfCfg.mostrarIva}
+                  onChange={(e) => setPdfField('mostrarIva', e.target.checked)}
+                />
+              </div>
+            )}
+            {pdfDocTab === 'remito' && (
+              <div className="config-field-row config-field-row--checkbox">
+                <label className="config-field-label">Mostrar precio unitario</label>
+                <input
+                  type="checkbox"
+                  className="config-checkbox"
+                  checked={!!currentPdfCfg.mostrarCosto}
+                  onChange={(e) => setPdfField('mostrarCosto', e.target.checked)}
+                />
+              </div>
+            )}
+            <SectionActions
+              dirty={isPdfDirty(pdfDocTab)}
+              saving={savingSection === `pdf_${pdfDocTab}`}
+              onSave={() => saveSection(`pdf_${pdfDocTab}`, [`pdf_${pdfDocTab}`])}
+              onUndo={() => undoPdfSection(pdfDocTab)}
+              msg={msgs[`pdf_${pdfDocTab}`]}
+            />
+          </div>
+
+          {/* Vista previa en tiempo real */}
+          <div className="config-pdf-editor-preview">
+            <span className="config-pdf-preview-label">
+              {pdfDocTab === 'factura' ? 'Factura / Ticket de venta' : 'Remito'}
+            </span>
+            <div className="config-pdf-mock config-pdf-mock--large">
+              <PdfPreviewMock
+                tipo={pdfDocTab === 'factura' ? 'ticket' : 'remito'}
+                logoSrc={form.logo_base64 || null}
+                logoBgColor={form.logo_bg_color}
+                logoTamano={form.logo_tamano}
+                primaryColor={form.color_primary}
+                pdfConfig={currentPdfCfg}
+              />
+            </div>
+          </div>
+        </div>
+      </div>}
+
       </div>
     </div>
   );
