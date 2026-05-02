@@ -40,7 +40,7 @@ body.dashboard-scroll-lock {
 .dashboard-logo-wrap {
   padding: 1.2rem 1.1rem 0.9rem;
   border-bottom: 1px solid rgba(255,255,255,0.12);
-  background: var(--logo-bg, #ffffff);
+  background: var(--logo-bg, transparent);
 }
 
 .dashboard-logo-btn {

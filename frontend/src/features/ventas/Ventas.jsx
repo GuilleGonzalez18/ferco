@@ -817,7 +817,7 @@ export default function Ventas({
     const colMaxW = infoWidth / 2 - 2;
 
     // ── Logo (contain dentro del cuadrado, sin distorsión) ──
-    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (logo) {
       const nw = logo.naturalWidth  || logoBoxSize;
       const nh = logo.naturalHeight || logoBoxSize;

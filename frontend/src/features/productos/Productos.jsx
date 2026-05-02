@@ -278,7 +278,7 @@ export default function Productos({ productos = [], setProductos }) {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (logo) {
       doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
     }
@@ -493,7 +493,7 @@ export default function Productos({ productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const headerLogo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const headerLogo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (headerLogo) {
       doc.addImage(headerLogo.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
@@ -574,7 +574,7 @@ export default function Productos({ productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (headerLogo2) {
       doc.addImage(headerLogo2.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
