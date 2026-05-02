@@ -54,7 +54,8 @@ export function applyColors(empresa) {
   root.style.setProperty('--logout-bg', empresa.color_logout_bg || DEFAULTS.color_logout_bg);
   root.style.setProperty('--dashboard-bg-opacity', String(empresa.fondo_opacidad ?? DEFAULTS.fondo_opacidad));
   root.style.setProperty('--logo-max-width', `${empresa.logo_tamano ?? DEFAULTS.logo_tamano}px`);
-  root.style.setProperty('--logo-bg', empresa.logo_bg_color || DEFAULTS.logo_bg_color);
+  const logoBgRaw = (empresa.logo_bg_color || DEFAULTS.logo_bg_color).toLowerCase().trim();
+  root.style.setProperty('--logo-bg', logoBgRaw);
   // '__none__' = usuario eligió sin fondo; null = nunca configurado = logo Mercatus por defecto
   const fondoVal = empresa.fondo_base64;
   const bgImage = (fondoVal === '__none__' || fondoVal === '')
