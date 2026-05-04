@@ -147,7 +147,8 @@ export async function buildCFE(ventaId) {
   let totIvaMin = 0;
   let totIvaBasica = 0;
 
-  const detalle = [];
+  // --- Primera pasada: construir líneas brutas ---
+  const rawLines = [];
 
   for (const row of detalleQ.rows) {
     const packs = Number(row.packs ?? 0);
@@ -163,66 +164,91 @@ export async function buildCFE(ventaId) {
 
     const hasPacks = packs > 0 && precioEmpaque > 0;
     const hasSueltas = sueltas > 0;
-    const hasOldData = !hasPacks && !hasSueltas; // datos anteriores a la migración
+    const hasOldData = !hasPacks && !hasSueltas;
 
-    // Calcular montos brutos para distribuir descuento proporcionalmente
     const montoPacksBruto = hasPacks ? round2(packs * precioEmpaque) : 0;
     const montoSueltasBruto = hasSueltas ? round2(sueltas * precioUnidad) : 0;
     const montoTotalBruto = hasPacks || hasSueltas
       ? round2(montoPacksBruto + montoSueltasBruto)
       : round2(Number(row.cantidad || 1) * round2(row.precio_unitario));
 
-    // Distribuir descuento proporcionalmente entre packs y sueltas
+    // Distribuir descuento por ítem proporcionalmente entre packs y sueltas
     const descPacks = (hasPacks && montoTotalBruto > 0)
       ? round2(descuentoAplicado * montoPacksBruto / montoTotalBruto)
       : (hasPacks ? descuentoAplicado : 0);
     const descSueltas = hasSueltas ? round2(descuentoAplicado - descPacks) : 0;
 
-    const pushLine = (cantidad, precio, monto, descuento, uniMed) => {
-      const montoNeto = round2(monto - descuento);
-      if (indFact === 2 && porcentaje > 0) {
-        const neto = round2(montoNeto / (1 + porcentaje));
-        totNetoMin += neto;
-        totIvaMin += round2(montoNeto - neto);
-      } else if (indFact === 3 && porcentaje > 0) {
-        const neto = round2(montoNeto / (1 + porcentaje));
-        totNetoBasica += neto;
-        totIvaBasica += round2(montoNeto - neto);
-      } else {
-        totNoGrav += montoNeto;
-      }
-      const descPct = monto > 0 ? round2((descuento / monto) * 100) : 0;
-      detalle.push({
-        IteCodiTpoCod: codeTipo,
-        IteCodiCod: codValue,
-        IteIndFact: String(indFact),
-        IteNomItem: nombreItem,
-        IteDscItem: '',
-        IteCantidad: cantidad.toFixed(3),
-        IteUniMed: uniMed,
-        ItePrecioUnitario: precio.toFixed(4),
-        IteDescuentoPct: descPct.toFixed(2),
-        IteDescuentoMonto: descuento.toFixed(2),
-        IteMontoItem: monto.toFixed(2),
-      });
-    };
+    const lineBase = { indFact, porcentaje, codeTipo, codValue, nombreItem };
 
     if (hasOldData) {
-      // Datos anteriores a la migración: comportamiento original
       const cantidad = Number(row.cantidad || 1);
       const precioU = round2(row.precio_unitario);
       const monto = round2(cantidad * precioU);
-      pushLine(cantidad, precioU, monto, descuentoAplicado, getUniMed(row.unidad));
+      rawLines.push({ ...lineBase, cantidad, precio: precioU, monto, descItem: descuentoAplicado, uniMed: getUniMed(row.unidad) });
     } else {
-      // Línea de empaques
       if (hasPacks) {
-        pushLine(packs, precioEmpaque, montoPacksBruto, descPacks, getUniMed(row.tipo_empaque));
+        rawLines.push({ ...lineBase, cantidad: packs, precio: precioEmpaque, monto: montoPacksBruto, descItem: descPacks, uniMed: getUniMed(row.tipo_empaque) });
       }
-      // Línea de unidades sueltas
       if (hasSueltas) {
-        pushLine(sueltas, precioUnidad, montoSueltasBruto, descSueltas, getUniMed(row.unidad));
+        rawLines.push({ ...lineBase, cantidad: sueltas, precio: precioUnidad, monto: montoSueltasBruto, descItem: descSueltas, uniMed: getUniMed(row.unidad) });
       }
     }
+  }
+
+  // --- Calcular descuento global y distribuirlo ---
+  const baseNetaItems = round2(rawLines.reduce((acc, l) => acc + l.monto - l.descItem, 0));
+  const descTotalTipo = venta.descuento_total_tipo || 'ninguno';
+  const descTotalValorRaw = Number(venta.descuento_total_valor || 0);
+  let descGlobalAmount = 0;
+  if (descTotalTipo === 'porcentaje' && descTotalValorRaw > 0) {
+    const pct = Math.max(0, Math.min(100, descTotalValorRaw));
+    descGlobalAmount = round2((baseNetaItems * pct) / 100);
+  } else if (descTotalTipo === 'fijo' && descTotalValorRaw > 0) {
+    descGlobalAmount = round2(Math.max(0, Math.min(baseNetaItems, descTotalValorRaw)));
+  }
+
+  // --- Segunda pasada: construir detalle CFE con descuento total por línea ---
+  const detalle = [];
+  let descGlobalDistribuido = 0;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const l = rawLines[i];
+    const netaLinea = round2(l.monto - l.descItem);
+    // Última línea absorbe el residuo de redondeo
+    const descGlobalLinea = (i === rawLines.length - 1)
+      ? round2(descGlobalAmount - descGlobalDistribuido)
+      : (baseNetaItems > 0 ? round2(descGlobalAmount * netaLinea / baseNetaItems) : 0);
+    descGlobalDistribuido = round2(descGlobalDistribuido + descGlobalLinea);
+
+    const descTotal = round2(l.descItem + descGlobalLinea);
+    const montoNeto = round2(l.monto - descTotal);
+
+    if (l.indFact === 2 && l.porcentaje > 0) {
+      const neto = round2(montoNeto / (1 + l.porcentaje));
+      totNetoMin += neto;
+      totIvaMin += round2(montoNeto - neto);
+    } else if (l.indFact === 3 && l.porcentaje > 0) {
+      const neto = round2(montoNeto / (1 + l.porcentaje));
+      totNetoBasica += neto;
+      totIvaBasica += round2(montoNeto - neto);
+    } else {
+      totNoGrav += montoNeto;
+    }
+
+    const descPct = l.monto > 0 ? round2((descTotal / l.monto) * 100) : 0;
+    detalle.push({
+      IteCodiTpoCod: l.codeTipo,
+      IteCodiCod: l.codValue,
+      IteIndFact: String(l.indFact),
+      IteNomItem: l.nombreItem,
+      IteDscItem: '',
+      IteCantidad: l.cantidad.toFixed(3),
+      IteUniMed: l.uniMed,
+      ItePrecioUnitario: l.precio.toFixed(4),
+      IteDescuentoPct: descPct.toFixed(2),
+      IteDescuentoMonto: descTotal.toFixed(2),
+      IteMontoItem: l.monto.toFixed(2),
+    });
   }
 
   totNoGrav = round2(totNoGrav);

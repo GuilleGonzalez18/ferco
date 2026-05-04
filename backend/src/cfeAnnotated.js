@@ -84,8 +84,8 @@ const FIELD_COMMENTS = {
   IteUniMed:          'Unidad de medida 4 chars: UNID, CAJA, PACK, KILO, LITR, etc.',
   ItePrecioUnitario:  'Precio unitario (hasta 6 decimales)',
   IteDescuentoPct:    'Descuento en porcentaje (hasta 3 decimales)',
-  IteDescuentoMonto:  'Monto del descuento aplicado. Debe existir si existe IteDescuentoPct',
-  IteMontoItem:       'Monto total del ítem = (Cantidad × PrecioUnitario) − Descuento',
+  IteDescuentoMonto:  'Monto del descuento aplicado (ítem + descuento global distribuido proporcionalmente). Debe existir si existe IteDescuentoPct',
+  IteMontoItem:       'Monto bruto del ítem = Cantidad × PrecioUnitario (sin descontar)',
 };
 
 /**
