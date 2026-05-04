@@ -3,6 +3,8 @@ import { pool } from '../db.js';
 import { getAuthUserFromRequest } from '../auth.js';
 import { sendMail } from '../mailer.js';
 import { getMetodoGanancias, calcularGanancia } from '../gananciaCalculator.js';
+import { buildCFE } from '../cfeBuilder.js';
+import { buildCFEAnnotated } from '../cfeAnnotated.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -1260,6 +1262,9 @@ ventasRouter.get('/:id', async (req, res) => {
 
   const detalleResult = await pool.query(
     `SELECT vd.id, vd.venta_id, vd.producto_id, vd.cantidad, vd.precio_unitario,
+            vd.packs, vd.unidades_sueltas, vd.unidades_por_empaque, vd.tipo_empaque,
+            vd.precio_empaque, vd.precio_unidad, vd.modo_venta,
+            vd.descuento_tipo, vd.descuento_valor, vd.descuento_aplicado,
             p.nombre AS producto_nombre
      FROM public.venta_detalle vd
      LEFT JOIN public.productos p ON p.id = vd.producto_id
@@ -1389,9 +1394,28 @@ ventasRouter.post('/', async (req, res) => {
 
     for (const item of detalle) {
       await client.query(
-        `INSERT INTO public.venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4)`,
-        [ventaId, Number(item.producto_id), Math.floor(toNumber(item.cantidad)), toNumber(item.precio_unitario)]
+        `INSERT INTO public.venta_detalle
+          (venta_id, producto_id, cantidad, precio_unitario,
+           packs, unidades_sueltas, unidades_por_empaque, tipo_empaque,
+           precio_empaque, precio_unidad, modo_venta,
+           descuento_tipo, descuento_valor, descuento_aplicado)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [
+          ventaId,
+          Number(item.producto_id),
+          Math.floor(toNumber(item.cantidad)),
+          toNumber(item.precio_unitario),
+          item.packs != null ? Math.floor(toNumber(item.packs)) : null,
+          item.unidades_sueltas != null ? Math.floor(toNumber(item.unidades_sueltas)) : null,
+          item.unidades_por_empaque != null ? Math.floor(toNumber(item.unidades_por_empaque)) : null,
+          item.tipo_empaque || null,
+          item.precio_empaque != null ? toNumber(item.precio_empaque) : null,
+          item.precio_unidad != null ? toNumber(item.precio_unidad) : null,
+          item.modo_venta || 'unidad',
+          item.descuento_tipo || 'ninguno',
+          toNumber(item.descuento_valor),
+          toNumber(item.descuento_aplicado),
+        ]
       );
     }
     if (pagosNormalizados.length > 0) {
@@ -1748,5 +1772,31 @@ ventasRouter.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: error.message });
   } finally {
     client.release();
+  }
+});
+
+// ── CFE JSON builder (solo lectura, sin envío a DGI) ─────────────────────────
+
+ventasRouter.get('/:id/cfe', async (req, res) => {
+  const authUser = getAuthUserFromRequest(req);
+  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+
+  const esPropietario =
+    authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
+  if (!esPropietario) return res.status(403).json({ error: 'Sin permiso' });
+
+  const ventaId = Number(req.params.id);
+  if (!Number.isFinite(ventaId)) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const cfe = await buildCFE(ventaId);
+    if (req.query.annotated === '1') {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send(buildCFEAnnotated(cfe));
+    }
+    return res.json(cfe);
+  } catch (err) {
+    if (err.message.includes('no encontrada')) return res.status(404).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });

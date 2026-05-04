@@ -16,6 +16,182 @@ import AppSelect from '../../shared/components/fields/AppSelect';
 import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
 import AppButton from '../../shared/components/button/AppButton';
 
+// ── Modal Gestión de Ciudades y Departamentos ─────────────────────────────────
+
+function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTodosBarrios, onClose }) {
+  const [tabU, setTabU] = useState('departamentos');
+  const [nuevoDepNombre, setNuevoDepNombre] = useState('');
+  const [editDepId, setEditDepId] = useState(null);
+  const [editDepNombre, setEditDepNombre] = useState('');
+  const [nuevoBarNombre, setNuevoBarNombre] = useState('');
+  const [nuevoBarDepId, setNuevoBarDepId] = useState('');
+  const [editBarId, setEditBarId] = useState(null);
+  const [editBarNombre, setEditBarNombre] = useState('');
+  const [editBarDepId, setEditBarDepId] = useState('');
+  const [errorU, setErrorU] = useState('');
+
+  const showError = (msg) => {
+    setErrorU(msg);
+    setTimeout(() => setErrorU(''), 3500);
+  };
+
+  // Departamentos CRUD
+  const crearDep = async () => {
+    const nombre = nuevoDepNombre.trim();
+    if (!nombre) return;
+    try {
+      const created = await api.createDepartamento({ nombre });
+      setDepartamentos((prev) => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setNuevoDepNombre('');
+    } catch (e) { showError(e.message); }
+  };
+
+  const guardarEditDep = async (id) => {
+    const nombre = editDepNombre.trim();
+    if (!nombre) return;
+    try {
+      const updated = await api.updateDepartamento(id, { nombre });
+      setDepartamentos((prev) => prev.map((d) => d.id === id ? updated : d));
+      setEditDepId(null);
+    } catch (e) { showError(e.message); }
+  };
+
+  const eliminarDep = async (dep) => {
+    const ok = await appConfirm(`¿Eliminar departamento "${dep.nombre}"?`, { title: 'Eliminar departamento', confirmText: 'Eliminar', cancelText: 'Cancelar' });
+    if (!ok) return;
+    try {
+      await api.deleteDepartamento(dep.id);
+      setDepartamentos((prev) => prev.filter((d) => d.id !== dep.id));
+    } catch (e) { showError(e.message); }
+  };
+
+  // Barrios CRUD
+  const crearBar = async () => {
+    const nombre = nuevoBarNombre.trim();
+    if (!nombre) return;
+    try {
+      const created = await api.createBarrio({ nombre, departamento_id: nuevoBarDepId ? Number(nuevoBarDepId) : null });
+      setTodosBarrios((prev) => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setNuevoBarNombre('');
+    } catch (e) { showError(e.message); }
+  };
+
+  const guardarEditBar = async (id) => {
+    const nombre = editBarNombre.trim();
+    if (!nombre) return;
+    try {
+      const updated = await api.updateBarrio(id, { nombre, departamento_id: editBarDepId ? Number(editBarDepId) : null });
+      setTodosBarrios((prev) => prev.map((b) => b.id === id ? updated : b));
+      setEditBarId(null);
+    } catch (e) { showError(e.message); }
+  };
+
+  const eliminarBar = async (bar) => {
+    const ok = await appConfirm(`¿Eliminar ciudad "${bar.nombre}"?`, { title: 'Eliminar ciudad', confirmText: 'Eliminar', cancelText: 'Cancelar' });
+    if (!ok) return;
+    try {
+      await api.deleteBarrio(bar.id);
+      setTodosBarrios((prev) => prev.filter((b) => b.id !== bar.id));
+    } catch (e) { showError(e.message); }
+  };
+
+  return (
+    <div className="export-modal-overlay" role="dialog" aria-modal="true">
+      <div className="export-modal-backdrop" onClick={onClose} />
+      <div className="ub-modal">
+        <h4 className="ub-modal-title">Ciudades y Departamentos</h4>
+        <div className="ub-tabs">
+          <button type="button" className={`ub-tab-btn ${tabU === 'departamentos' ? 'active' : ''}`} onClick={() => setTabU('departamentos')}>Departamentos</button>
+          <button type="button" className={`ub-tab-btn ${tabU === 'barrios' ? 'active' : ''}`} onClick={() => setTabU('barrios')}>Ciudades</button>
+        </div>
+
+        {errorU && <p className="ub-error">{errorU}</p>}
+
+        {tabU === 'departamentos' && (
+          <div className="ub-section">
+            <div className="ub-add-row">
+              <AppInput
+                value={nuevoDepNombre}
+                onChange={(e) => setNuevoDepNombre(e.target.value)}
+                placeholder="Nuevo departamento"
+                onKeyDown={(e) => e.key === 'Enter' && crearDep()}
+              />
+              <AppButton type="button" onClick={crearDep}>Agregar</AppButton>
+            </div>
+            <ul className="ub-list">
+              {departamentos.map((d) => (
+                <li key={d.id} className="ub-list-item">
+                  {editDepId === d.id ? (
+                    <>
+                      <AppInput value={editDepNombre} onChange={(e) => setEditDepNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditDep(d.id)} />
+                      <AppButton type="button" onClick={() => guardarEditDep(d.id)}>Guardar</AppButton>
+                      <AppButton type="button" onClick={() => setEditDepId(null)}>Cancelar</AppButton>
+                    </>
+                  ) : (
+                    <>
+                      <span className="ub-item-name">{d.nombre}</span>
+                      <AppButton type="button" className="edit-btn" onClick={() => { setEditDepId(d.id); setEditDepNombre(d.nombre); }}>Editar</AppButton>
+                      <AppButton type="button" className="delete-btn" onClick={() => eliminarDep(d)}>Eliminar</AppButton>
+                    </>
+                  )}
+                </li>
+              ))}
+              {departamentos.length === 0 && <li className="ub-empty">Sin departamentos</li>}
+            </ul>
+          </div>
+        )}
+
+        {tabU === 'barrios' && (
+          <div className="ub-section">
+            <div className="ub-add-row">
+              <AppInput
+                value={nuevoBarNombre}
+                onChange={(e) => setNuevoBarNombre(e.target.value)}
+                placeholder="Nueva ciudad"
+                onKeyDown={(e) => e.key === 'Enter' && crearBar()}
+              />
+              <AppSelect value={nuevoBarDepId} onChange={(e) => setNuevoBarDepId(e.target.value)}>
+                <option value="">Sin departamento</option>
+                {departamentos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+              </AppSelect>
+              <AppButton type="button" onClick={crearBar}>Agregar</AppButton>
+            </div>
+            <ul className="ub-list">
+              {todosBarrios.map((b) => {
+                const depNombre = departamentos.find((d) => d.id === b.departamento_id)?.nombre;
+                return (
+                  <li key={b.id} className="ub-list-item">
+                    {editBarId === b.id ? (
+                      <>
+                        <AppInput value={editBarNombre} onChange={(e) => setEditBarNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditBar(b.id)} />
+                        <AppSelect value={editBarDepId} onChange={(e) => setEditBarDepId(e.target.value)}>
+                          <option value="">Sin departamento</option>
+                          {departamentos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                        </AppSelect>
+                        <AppButton type="button" onClick={() => guardarEditBar(b.id)}>Guardar</AppButton>
+                        <AppButton type="button" onClick={() => setEditBarId(null)}>Cancelar</AppButton>
+                      </>
+                    ) : (
+                      <>
+                        <span className="ub-item-name">{b.nombre}{depNombre ? <small> — {depNombre}</small> : null}</span>
+                        <AppButton type="button" className="edit-btn" onClick={() => { setEditBarId(b.id); setEditBarNombre(b.nombre); setEditBarDepId(b.departamento_id ? String(b.departamento_id) : ''); }}>Editar</AppButton>
+                        <AppButton type="button" className="delete-btn" onClick={() => eliminarBar(b)}>Eliminar</AppButton>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+              {todosBarrios.length === 0 && <li className="ub-empty">Sin ciudades</li>}
+            </ul>
+          </div>
+        )}
+
+        <AppButton type="button" className="export-modal-close" onClick={onClose}>Cerrar</AppButton>
+      </div>
+    </div>
+  );
+}
+
 export default function Clientes() {
   const { empresa } = useConfig();
   const { can } = usePermisos();
@@ -27,6 +203,9 @@ export default function Clientes() {
   const MINUTOS = ['00', '15', '30', '45'];
 
   const [clientes, setClientes] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [todosBarrios, setTodosBarrios] = useState([]);
+  const [ubicacionesModalOpen, setUbicacionesModalOpen] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
@@ -45,13 +224,24 @@ export default function Clientes() {
     tiene_reapertura: false,
     horario_reapertura: '',
     horario_cierre_reapertura: '',
+    tipo_documento: '',
+    numero_documento: '',
+    departamento_id: '',
+    barrio_id: '',
+    codigo_postal: '',
   });
 
   useEffect(() => {
     const load = async () => {
       try {
-        const rows = await api.getClientes();
+        const [rows, deps, barrios] = await Promise.all([
+          api.getClientes(),
+          api.getDepartamentos(),
+          api.getBarrios(),
+        ]);
         setClientes(rows);
+        setDepartamentos(deps);
+        setTodosBarrios(barrios);
       } catch (error) {
         console.error('Error cargando clientes', error);
       }
@@ -143,6 +333,14 @@ export default function Clientes() {
         tiene_reapertura: Boolean(nuevo.tiene_reapertura),
         horario_reapertura: nuevo.tiene_reapertura ? normalizeHoraForSave(nuevo.horario_reapertura) : null,
         horario_cierre_reapertura: nuevo.tiene_reapertura ? normalizeHoraForSave(nuevo.horario_cierre_reapertura) : null,
+        tipo_documento: nuevo.tipo_documento || null,
+        numero_documento: nuevo.numero_documento || null,
+        departamento_id: nuevo.departamento_id ? Number(nuevo.departamento_id) : null,
+        barrio_id: nuevo.barrio_id ? Number(nuevo.barrio_id) : null,
+        ciudad: nuevo.barrio_id
+          ? (todosBarrios.find((b) => String(b.id) === String(nuevo.barrio_id))?.nombre || null)
+          : null,
+        codigo_postal: nuevo.codigo_postal || null,
       };
 
       if (!isValidHorarioRange(payload.horario_apertura, payload.horario_cierre)) {
@@ -185,6 +383,11 @@ export default function Clientes() {
         tiene_reapertura: false,
         horario_reapertura: '',
         horario_cierre_reapertura: '',
+        tipo_documento: '',
+        numero_documento: '',
+        departamento_id: '',
+        barrio_id: '',
+        codigo_postal: '',
       });
       setMostrarForm(false);
       setEditandoId(null);
@@ -207,6 +410,11 @@ export default function Clientes() {
       tiene_reapertura: Boolean(cliente.tiene_reapertura),
       horario_reapertura: cliente.horario_reapertura || '',
       horario_cierre_reapertura: cliente.horario_cierre_reapertura || '',
+      tipo_documento: cliente.tipo_documento || '',
+      numero_documento: cliente.numero_documento || '',
+      departamento_id: cliente.departamento_id ? String(cliente.departamento_id) : '',
+      barrio_id: cliente.barrio_id ? String(cliente.barrio_id) : '',
+      codigo_postal: cliente.codigo_postal || '',
     });
     setMostrarForm(true);
   };
@@ -236,6 +444,11 @@ export default function Clientes() {
           tiene_reapertura: false,
           horario_reapertura: '',
           horario_cierre_reapertura: '',
+          tipo_documento: '',
+          numero_documento: '',
+          departamento_id: '',
+          barrio_id: '',
+          codigo_postal: '',
         });
       }
     } catch (error) {
@@ -377,6 +590,11 @@ export default function Clientes() {
       tiene_reapertura: false,
       horario_reapertura: '',
       horario_cierre_reapertura: '',
+      tipo_documento: '',
+      numero_documento: '',
+      departamento_id: '',
+      barrio_id: '',
+      codigo_postal: '',
     });
     setMostrarForm(true);
   };
@@ -395,6 +613,11 @@ export default function Clientes() {
       tiene_reapertura: false,
       horario_reapertura: '',
       horario_cierre_reapertura: '',
+      tipo_documento: '',
+      numero_documento: '',
+      departamento_id: '',
+      barrio_id: '',
+      codigo_postal: '',
     });
   };
 
@@ -489,6 +712,14 @@ export default function Clientes() {
           <span>CLIENTE</span>
         </AppButton>
         )}
+        <AppButton
+          type="button"
+          className="icon-btn"
+          title="Gestionar ciudades y departamentos"
+          onClick={() => setUbicacionesModalOpen(true)}
+        >
+          <span>CIUDADES</span>
+        </AppButton>
         {puedeExportar && (
         <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
           <img src="/print.svg" alt="" aria-hidden="true" />
@@ -575,6 +806,49 @@ export default function Clientes() {
             </label>
             <label className="field-label">RUT / C.I.
               <AppInput name="rut" value={nuevo.rut} onChange={handleChange} placeholder="Rut/C.I." required />
+            </label>
+            <label className="field-label">Tipo de documento
+              <AppSelect name="tipo_documento" value={nuevo.tipo_documento || ''} onChange={handleChange}>
+                <option value="">Sin especificar</option>
+                <option value="RUT">RUT</option>
+                <option value="CI">Cédula de identidad</option>
+                <option value="PASAPORTE">Pasaporte</option>
+                <option value="DNI">DNI</option>
+                <option value="OTRO">Otro</option>
+              </AppSelect>
+            </label>
+            <label className="field-label">Número de documento
+              <AppInput name="numero_documento" value={nuevo.numero_documento} onChange={handleChange} placeholder="Número de documento" />
+            </label>
+            <label className="field-label">Departamento
+              <AppSelect
+                name="departamento_id"
+                value={nuevo.departamento_id || ''}
+                onChange={(e) => setNuevo((prev) => ({ ...prev, departamento_id: e.target.value, barrio_id: '' }))}
+              >
+                <option value="">Sin departamento</option>
+                {departamentos.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </AppSelect>
+            </label>
+            <label className="field-label">Ciudad
+              <AppSelect
+                name="barrio_id"
+                value={nuevo.barrio_id || ''}
+                onChange={handleChange}
+                disabled={!nuevo.departamento_id}
+              >
+                <option value="">Sin ciudad</option>
+                {todosBarrios
+                  .filter((b) => !nuevo.departamento_id || String(b.departamento_id) === String(nuevo.departamento_id))
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>{b.nombre}</option>
+                  ))}
+              </AppSelect>
+            </label>
+            <label className="field-label">Código postal
+              <AppInput name="codigo_postal" value={nuevo.codigo_postal} onChange={handleChange} placeholder="Código postal" />
             </label>
             <label className="field-label">Dirección
               <AppInput name="direccion" value={nuevo.direccion} onChange={handleChange} placeholder="Dirección" />
@@ -680,6 +954,16 @@ export default function Clientes() {
           </form>
         </aside>
       </div>
+
+      {ubicacionesModalOpen && (
+        <UbicacionesModal
+          departamentos={departamentos}
+          setDepartamentos={setDepartamentos}
+          todosBarrios={todosBarrios}
+          setTodosBarrios={setTodosBarrios}
+          onClose={() => setUbicacionesModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

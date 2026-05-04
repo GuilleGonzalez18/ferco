@@ -8,8 +8,10 @@ import { usuariosRouter } from './routes/usuarios.js';
 import { ventasRouter } from './routes/ventas.js';
 import { auditoriaRouter } from './routes/auditoria.js';
 import { empaquesRouter } from './routes/empaques.js';
+import { tiposIvaRouter } from './routes/tipos-iva.js';
 import { configuracionRouter } from './routes/configuracion.js';
 import { permisosRouter } from './routes/permisos.js';
+import { ubicacionesRouter } from './routes/ubicaciones.js';
 import { runMigration } from './scripts/runMigration.js';
 
 dotenv.config();
@@ -65,8 +67,10 @@ app.use('/api/usuarios', usuariosRouter);
 app.use('/api/ventas', ventasRouter);
 app.use('/api/auditoria', auditoriaRouter);
 app.use('/api/empaques', empaquesRouter);
+app.use('/api/tipos-iva', tiposIvaRouter);
 app.use('/api/configuracion', configuracionRouter);
 app.use('/api/permisos', permisosRouter);
+app.use('/api/ubicaciones', ubicacionesRouter);
 
 app.listen(PORT, async () => {
   console.log(`CORS origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'all origins allowed'}`);

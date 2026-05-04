@@ -72,3 +72,13 @@ Estas instrucciones aplican a todo el repositorio y son obligatorias para cualqu
 
 - Si una mejora puede resolverse con un componente compartido existente, reutilizarlo.
 - Si no existe, crear una solucion compartida en `shared` antes que una implementacion aislada en una feature.
+
+## Base de Datos — Sincronizacion Obligatoria
+
+Cada vez que se agrega o modifica la estructura de la base de datos (nueva tabla, nueva columna, nuevo indice, nueva constraint, datos semilla), se deben actualizar **ambos** archivos en el mismo commit:
+
+- `backend/src/scripts/runMigration.js` — parche incremental con `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` o equivalente.
+- `backend/src/scripts/bootstrapSchema.js` — estado final completo del schema. El `CREATE TABLE` correspondiente debe reflejar todas las columnas actuales con sus tipos y defaults correctos.
+
+**bootstrapSchema.js es la fuente de verdad para tenants nuevos.** Si solo se actualiza runMigration.js, un tenant nuevo instalado desde cero tendra un schema incompleto y el sistema fallara.
+

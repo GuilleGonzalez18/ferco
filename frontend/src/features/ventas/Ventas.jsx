@@ -1035,6 +1035,16 @@ export default function Ventas({
           producto_id: item.productoId,
           cantidad: item.unidadesSolicitadas,
           precio_unitario: toNumber(item.precioUnitarioCalculado),
+          packs: item.packsCalculados,
+          unidades_sueltas: item.unidadesSueltasCalculadas,
+          unidades_por_empaque: item.unidadesPorEmpaque,
+          tipo_empaque: item.tipoEmpaque,
+          precio_empaque: toNumber(item.precioEmpaque),
+          precio_unidad: toNumber(item.precioUnidad),
+          modo_venta: item.modoVenta || 'unidad',
+          descuento_tipo: item.descuentoTipo || 'ninguno',
+          descuento_valor: toNumber(item.descuentoValor),
+          descuento_aplicado: toNumber(item.descuentoAplicado),
         })),
       });
 
@@ -1080,6 +1090,23 @@ export default function Ventas({
       });
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
+
+      // Descargar JSON CFE automáticamente (con comentarios JSONC)
+      if (ventaCreada?.id) {
+        api.getVentaCFEAnnotated(ventaCreada.id)
+          .then((text) => {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cfe-venta-${ventaCreada.id}.jsonc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch(() => {}); // silencioso, no interrumpe el flujo
+      }
     } catch (error) {
       await appAlert(`No se pudo registrar la venta: ${error.message}`);
     }

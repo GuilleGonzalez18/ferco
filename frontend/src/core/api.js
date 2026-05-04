@@ -28,7 +28,7 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error instanceof TypeError) {
-      throw new Error('No se pudo conectar con el backend. Valide con RPG SOFTWARE.');
+      throw new Error('No se pudo conectar con el backend. Valide con RPG Software.');
     }
     throw error;
   }
@@ -113,6 +113,12 @@ export const api = {
   deleteEmpaque: (id) =>
     request(`/empaques/${id}`, { method: 'DELETE' }),
 
+  // Tipos IVA
+  getTiposIva: () => request('/tipos-iva'),
+  createTipoIva: (data) => request('/tipos-iva', { method: 'POST', body: JSON.stringify(data) }),
+  updateTipoIva: (id, data) => request(`/tipos-iva/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTipoIva: (id) => request(`/tipos-iva/${id}`, { method: 'DELETE' }),
+
   getClientes: () => request('/clientes'),
   createCliente: (payload) =>
     request('/clientes', { method: 'POST', body: JSON.stringify(payload) }),
@@ -120,6 +126,27 @@ export const api = {
     request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteCliente: (id) =>
     request(`/clientes/${id}`, { method: 'DELETE' }),
+
+  getDepartamentos: () => request('/ubicaciones/departamentos'),
+  createDepartamento: (payload) =>
+    request('/ubicaciones/departamentos', { method: 'POST', body: JSON.stringify(payload) }),
+  updateDepartamento: (id, payload) =>
+    request(`/ubicaciones/departamentos/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteDepartamento: (id) =>
+    request(`/ubicaciones/departamentos/${id}`, { method: 'DELETE' }),
+
+  getBarrios: (departamentoId) => {
+    const url = departamentoId
+      ? `/ubicaciones/barrios?departamento_id=${departamentoId}`
+      : '/ubicaciones/barrios';
+    return request(url);
+  },
+  createBarrio: (payload) =>
+    request('/ubicaciones/barrios', { method: 'POST', body: JSON.stringify(payload) }),
+  updateBarrio: (id, payload) =>
+    request(`/ubicaciones/barrios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteBarrio: (id) =>
+    request(`/ubicaciones/barrios/${id}`, { method: 'DELETE' }),
   getVentas: (filtro) => {
     if (typeof filtro === 'string') {
       return request(filtro ? `/ventas?fecha=${encodeURIComponent(filtro)}` : '/ventas');
@@ -146,6 +173,10 @@ export const api = {
     return request(`/ventas/entregas/resumen${suffix ? `?${suffix}` : ''}`);
   },
   getVentaById: (id) => request(`/ventas/${id}`),
+  getVentaCFE: (id) => request(`/ventas/${id}/cfe`),
+  getVentaCFEAnnotated: (id) => fetch(`${API_BASE}/ventas/${id}/cfe?annotated=1`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` },
+  }).then((r) => { if (!r.ok) throw new Error('Error CFE'); return r.text(); }),
   updateVentaEntregado: (id, entregado) =>
     request(`/ventas/${id}/entregado`, {
       method: 'PUT',
