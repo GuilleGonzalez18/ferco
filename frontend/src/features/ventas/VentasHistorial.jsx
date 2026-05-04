@@ -321,7 +321,7 @@ export default function VentasHistorial() {
       const maxLogoW = pageWidth - marginX * 2;
       const maxLogoH = logoSize;
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth || maxLogoW;
           const nh = logo.naturalHeight || maxLogoH;
@@ -343,7 +343,7 @@ export default function VentasHistorial() {
       // Logo centrado, info a ancho completo debajo
       const drawSize = logoSize;
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth || drawSize;
           const nh = logo.naturalHeight || drawSize;
@@ -383,7 +383,7 @@ export default function VentasHistorial() {
       contentStartY = headerY;
 
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth  || logoBoxSize;
           const nh = logo.naturalHeight || logoBoxSize;
@@ -411,12 +411,14 @@ export default function VentasHistorial() {
       cfg.mostrarEmail       !== false && empresa.correo       ? empresa.correo : null,
     ].filter(Boolean);
     empresaLines.forEach((line) => {
+      const linesCount = doc.splitTextToSize(line, infoWidth).length;
       doc.text(line, col1X, empresaY, { maxWidth: infoWidth });
-      empresaY += lineH - 1;
+      empresaY += linesCount * (lineH - 1);
     });
 
     doc.setFontSize(cfg.fontSizeBase || 10);
-    let infoY = contentStartY + titleH;
+    // Start infoY AFTER empresa lines to prevent overlap
+    let infoY = Math.max(contentStartY + titleH, empresaY + 2);
     const pagosLabel = Array.isArray(venta.pagos) && venta.pagos.length > 0
       ? formatPagosResumen(venta.pagos)
       : formatMedioPago(venta.medio_pago);
@@ -439,12 +441,15 @@ export default function VentasHistorial() {
 
     const maxRows = Math.max(leftRows.length, rightRows.length);
     for (let i = 0; i < maxRows; i++) {
+      const lLines = leftRows[i]  ? doc.splitTextToSize(leftRows[i],  colMaxW).length : 1;
+      const rLines = rightRows[i] ? doc.splitTextToSize(rightRows[i], colMaxW).length : 1;
       if (leftRows[i])  doc.text(leftRows[i],  col1X, infoY, { maxWidth: colMaxW });
       if (rightRows[i]) doc.text(rightRows[i], col2X, infoY, { maxWidth: colMaxW });
-      infoY += lineH;
+      infoY += Math.max(lLines, rLines) * lineH;
     }
 
-    let cursorY = headerY + headerHeight + 5;
+    // cursorY must be after both headerHeight AND the actual rendered content (info rows + empresa lines)
+    let cursorY = Math.max(headerY + headerHeight + 5, infoY + 3);
 
     autoTable(doc, {
       startY: cursorY,
@@ -553,7 +558,7 @@ export default function VentasHistorial() {
       const maxLogoW = pageWidth - marginX * 2;
       const maxLogoH = logoSize;
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth || maxLogoW;
           const nh = logo.naturalHeight || maxLogoH;
@@ -570,7 +575,7 @@ export default function VentasHistorial() {
     } else if (posicion === 'centro') {
       const drawSize = logoSize;
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth || drawSize;
           const nh = logo.naturalHeight || drawSize;
@@ -600,7 +605,7 @@ export default function VentasHistorial() {
       headerHeight = titleH + dataRows * lineH + 2;
       contentStartY = headerY;
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const nw = logo.naturalWidth  || logoBoxSize;
           const nh = logo.naturalHeight || logoBoxSize;
@@ -632,13 +637,15 @@ export default function VentasHistorial() {
       cfg.mostrarEmail       !== false && empresa.correo       ? empresa.correo : null,
     ].filter(Boolean);
     empresaLines2.forEach((line) => {
+      const linesCount = doc.splitTextToSize(line, infoWidth).length;
       doc.text(line, col1X, empresaY2, { maxWidth: infoWidth });
-      empresaY2 += lineH - 1;
+      empresaY2 += linesCount * (lineH - 1);
     });
     doc.setFontSize(cfg.fontSizeBase || 10);
     doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
 
-    let infoY = contentStartY + titleH;
+    // Start infoY AFTER empresa lines to prevent overlap
+    let infoY = Math.max(contentStartY + titleH, empresaY2 + 2);
     const leftRows = [
       `Fecha Emisión: ${formatDateTime(venta.fecha)}`,
       `Fecha entrega: ${formatDateOnly(venta.fecha_entrega)}`,
@@ -652,14 +659,15 @@ export default function VentasHistorial() {
     ].filter(Boolean);
     const maxRows2 = Math.max(leftRows.length, rightRows.length);
     for (let i = 0; i < maxRows2; i++) {
+      const lLines = leftRows[i]  ? doc.splitTextToSize(leftRows[i],  colMaxW).length : 1;
+      const rLines = rightRows[i] ? doc.splitTextToSize(rightRows[i], colMaxW).length : 1;
       if (leftRows[i])  doc.text(leftRows[i],  col1X, infoY, { maxWidth: colMaxW });
       if (rightRows[i]) doc.text(rightRows[i], col2X, infoY, { maxWidth: colMaxW });
-      infoY += lineH;
+      infoY += Math.max(lLines, rLines) * lineH;
     }
 
-    let cursorY = headerY + headerHeight + 5;
-
-    // ── Tabla: mostrar precio si cfg.mostrarCosto ──
+    // cursorY must be after both headerHeight AND the actual rendered content
+    let cursorY = Math.max(headerY + headerHeight + 5, infoY + 3);
     const tableHead = cfg.mostrarCosto
       ? [['Producto', 'Cantidad', 'P. Unitario']]
       : [['Producto', 'Cantidad']];
@@ -948,7 +956,7 @@ export default function VentasHistorial() {
       const periodoLabel = resumen.desde === resumen.hasta ? `Día ${resumen.desde}` : `${resumen.desde} al ${resumen.hasta}`;
 
       try {
-        const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+        const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
         if (logo) {
           const maxW = 60;
           const maxH = 20;

@@ -29,8 +29,18 @@ function compressImage(dataUrl, maxW, maxH, quality) {
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/webp', quality));
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, w, h); // ensure transparent background before drawing
+      ctx.drawImage(img, 0, 0, w, h);
+      // Detect transparency: if any pixel has alpha < 255, preserve as PNG
+      // so transparent logos are never flattened to white on conversion
+      const pixels = ctx.getImageData(0, 0, w, h).data;
+      let hasAlpha = false;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] < 255) { hasAlpha = true; break; }
+      }
+      const format = hasAlpha ? 'image/png' : 'image/webp';
+      resolve(canvas.toDataURL(format, hasAlpha ? undefined : quality));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
@@ -505,6 +515,7 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   useEffect(() => {
     if (initialEmpresa) {
       const f = buildForm(initialEmpresa);
+      let previewForm;
       setForm((prevForm) => {
         const prevSaved = savedRef.current;
         const merged = { ...f };
@@ -512,12 +523,16 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
         for (const key of Object.keys(prevForm)) {
           if (prevForm[key] !== prevSaved[key]) merged[key] = prevForm[key];
         }
+        previewForm = merged;
         return merged;
       });
       setSaved(f);
       savedRef.current = f;
+      // Re-apply visual preview to restore any unsaved color/visual changes
+      // that were wiped by applyColors() during the server reload (reloadConfig)
+      if (previewForm) applyPreview?.(previewForm);
     }
-  }, [initialEmpresa]);
+  }, [initialEmpresa, applyPreview]);
 
   useEffect(() => {
     return () => {

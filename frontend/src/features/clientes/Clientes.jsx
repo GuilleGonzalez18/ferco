@@ -248,7 +248,7 @@ export default function Clientes() {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     let startY = 30;
     if (logo) {
       doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);

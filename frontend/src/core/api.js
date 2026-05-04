@@ -28,7 +28,7 @@ async function request(path, options = {}) {
     });
   } catch (error) {
     if (error instanceof TypeError) {
-      throw new Error('No se pudo conectar con el backend. Verifica que esté corriendo en http://localhost:3001.');
+      throw new Error('No se pudo conectar con el backend. Valide con RPG SOFTWARE.');
     }
     throw error;
   }

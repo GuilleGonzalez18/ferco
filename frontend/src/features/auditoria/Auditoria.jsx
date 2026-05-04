@@ -285,7 +285,7 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
 
   const withHeaderLogo = async (doc) => {
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (logo) {
       doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
     }
