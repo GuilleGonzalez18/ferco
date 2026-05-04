@@ -40,7 +40,7 @@ body.dashboard-scroll-lock {
 .dashboard-logo-wrap {
   padding: 1.2rem 1.1rem 0.9rem;
   border-bottom: 1px solid rgba(255,255,255,0.12);
-  background: var(--logo-bg, #ffffff);
+  background: var(--logo-bg, transparent);
 }
 
 .dashboard-logo-btn {
@@ -380,6 +380,20 @@ body.dashboard-scroll-lock {
 
 .dashboard-topbar-action.ventas-carrito-btn {
   position: relative;
+}
+
+/* Animación shake del ícono carrito al recibir ítem */
+.dashboard-topbar-action.ventas-carrito-btn.carrito-shake {
+  animation: carrito-icon-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes carrito-icon-shake {
+  0%   { transform: rotate(0deg) scale(1); }
+  20%  { transform: rotate(-12deg) scale(1.15); }
+  40%  { transform: rotate(10deg) scale(1.1); }
+  60%  { transform: rotate(-8deg) scale(1.05); }
+  80%  { transform: rotate(5deg) scale(1.02); }
+  100% { transform: rotate(0deg) scale(1); }
 }
 
 .ventas-carrito-count {

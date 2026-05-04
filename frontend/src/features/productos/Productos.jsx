@@ -25,8 +25,9 @@ function stockState(stockValue) {
 }
 
 function formatMoney(value) {
-  const n = Math.round(Number(value || 0));
-  return `$${n.toLocaleString('es-UY', { maximumFractionDigits: 0 })}`;
+  const n = Number(value || 0);
+  const hasDecimals = n % 1 !== 0;
+  return `$${n.toLocaleString('es-UY', { minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 })}`;
 }
 
 function formatCatalogUpdatedAt() {
@@ -277,7 +278,7 @@ export default function Productos({ productos = [], setProductos }) {
   const exportarPDF = async () => {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
-    const logo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const logo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (logo) {
       doc.addImage(logo.dataUrl, 'JPEG', 10, 10, 40, 20);
     }
@@ -492,7 +493,7 @@ export default function Productos({ productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const headerLogo = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const headerLogo = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (headerLogo) {
       doc.addImage(headerLogo.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
@@ -573,7 +574,7 @@ export default function Productos({ productos = [], setProductos }) {
     let y = 28;
     let col = 0;
 
-    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, empresa.logo_bg_color);
+    const headerLogo2 = await loadLogoForPdf(empresa.logo_base64, '#ffffff');
     if (headerLogo2) {
       doc.addImage(headerLogo2.dataUrl, 'JPEG', margin, 8, 24, 12);
     }
@@ -1139,13 +1140,13 @@ export default function Productos({ productos = [], setProductos }) {
               <AppInput name="cantidadEmpaque" value={nuevo.cantidadEmpaque} onChange={handleChange} placeholder="Cantidad por empaque" type="number" min="0" step="1" />
             </label>
             <label className="field-label">Precio de costo
-              <AppInput name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="1" />
+              <AppInput name="costo" value={nuevo.costo} onChange={handleChange} placeholder="Precio de Costo" type="number" min="0" step="0.01" />
             </label>
             <label className="field-label">Precio de venta
-              <AppInput name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="1" />
+              <AppInput name="venta" value={nuevo.venta} onChange={handleChange} placeholder="Precio de Venta" type="number" min="0" step="0.01" />
             </label>
             <label className="field-label">Precio por empaque
-              <AppInput name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="1" />
+              <AppInput name="precioEmpaque" value={nuevo.precioEmpaque} onChange={handleChange} placeholder="Precio por empaque" type="number" min="0" step="0.01" />
             </label>
             <label className="field-label">URL de imagen
               <AppInput

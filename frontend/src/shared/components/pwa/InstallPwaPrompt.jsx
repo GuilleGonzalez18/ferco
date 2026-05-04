@@ -23,9 +23,9 @@ export default function InstallPwaPrompt() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
     if (outcome === 'accepted') {
       setVisible(false);
-      setDeferredPrompt(null);
     }
   };
 

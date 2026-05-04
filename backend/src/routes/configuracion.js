@@ -8,7 +8,9 @@ export const configuracionRouter = Router();
 
 configuracionRouter.get('/empresa', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM public.config_empresa LIMIT 1');
+    const result = await query(
+      'SELECT *, pdf_factura, pdf_remito FROM public.config_empresa LIMIT 1'
+    );
     res.json(result.rows[0] ?? {});
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -25,6 +27,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
     color_logout_bg,
     fondo_opacidad, logo_tamano, logo_bg_color,
     configurado,
+    pdf_factura, pdf_remito,
   } = req.body;
 
   try {
@@ -57,6 +60,8 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         fondo_opacidad       = COALESCE($20::decimal, fondo_opacidad),
         logo_tamano          = COALESCE($21::smallint, logo_tamano),
         logo_bg_color        = COALESCE($22::varchar, logo_bg_color),
+        pdf_factura          = COALESCE($23::jsonb, pdf_factura),
+        pdf_remito           = COALESCE($24::jsonb, pdf_remito),
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
       RETURNING *`,
@@ -70,7 +75,9 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
        color_logout_bg ?? null,
        fondo_opacidad ?? null,
        logo_tamano ?? null,
-       logo_bg_color ?? null]
+       logo_bg_color ?? null,
+       pdf_factura != null ? JSON.stringify(pdf_factura) : null,
+       pdf_remito != null ? JSON.stringify(pdf_remito) : null]
     );
     res.json(result.rows[0]);
   } catch (err) {

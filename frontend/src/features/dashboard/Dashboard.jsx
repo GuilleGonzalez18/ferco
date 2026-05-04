@@ -17,6 +17,7 @@ import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
 import { useConfig } from '../../core/ConfigContext';
 import { usePermisos } from '../../core/PermisosContext';
+import AvisoBanner from '../../shared/components/avisos/AvisoBanner';
 
 // ── Widget system ──────────────────────────────────────────────────────────────
 
@@ -534,11 +535,21 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
+  const [carritoIconAnim, setCarritoIconAnim] = useState(0);
+  const prevCarritoCount = useRef(0);
   const [editMode, setEditMode] = useState(false);
   const { empresa, modulos } = useConfig();
   const { can, esPropietario } = usePermisos();
   const canVerEmpresa = can('estadisticas', 'ver_empresa');
   const [widgets, saveWidgets, widgetsLoading] = useWidgetPrefs();
+
+  // Animar ícono del carrito cuando aumenta el count
+  useEffect(() => {
+    if (ventasCarritoCount > prevCarritoCount.current) {
+      setCarritoIconAnim((k) => k + 1);
+    }
+    prevCarritoCount.current = ventasCarritoCount;
+  }, [ventasCarritoCount]);
 
   const opcionesMenu = OPCIONES.filter((op) => {
     // Permisos dinámicos por sección
@@ -726,6 +737,7 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       </aside>
 
       <main className="dashboard-content">
+        <AvisoBanner app="mercatus" />
         <div className="dashboard-topbar">
           <div className="dashboard-topbar-content">
             <span className="dashboard-topbar-title">{tituloActual}</span>
@@ -733,7 +745,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
               {pantalla === 'nueva-venta' && (
                 <button
                   type="button"
-                  className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''}`}
+                  key={carritoIconAnim}
+                  className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''} ${carritoIconAnim > 0 ? 'carrito-shake' : ''}`}
                   onClick={() => setVentasCarritoAbierto((prev) => !prev)}
                   aria-label={ventasCarritoAbierto ? `Cerrar carrito (${ventasCarritoCount})` : `Abrir carrito (${ventasCarritoCount})`}
                   aria-expanded={ventasCarritoAbierto}

@@ -2,16 +2,31 @@ import { query } from '../db.js';
 
 const statements = [
   `
+  CREATE TABLE IF NOT EXISTS public.roles (
+    id serial PRIMARY KEY,
+    nombre varchar(50) NOT NULL UNIQUE,
+    es_sistema boolean NOT NULL DEFAULT false
+  );
+  `,
+  `
+  INSERT INTO public.roles (nombre, es_sistema) VALUES
+    ('propietario', true),
+    ('vendedor',    true)
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
+  `
   CREATE TABLE IF NOT EXISTS public.usuarios (
     id serial PRIMARY KEY,
     username varchar(80) NOT NULL,
     password varchar(255) NOT NULL,
-    tipo varchar(30) NOT NULL DEFAULT 'vendedor',
+    rol_id integer NULL REFERENCES public.roles(id) ON DELETE SET NULL,
     nombre varchar(120) NULL,
     apellido varchar(120) NULL,
     correo varchar(180) NOT NULL,
     telefono varchar(50) NULL,
-    direccion text NULL
+    direccion text NULL,
+    debe_cambiar_password boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now()
   );
   `,
   `
@@ -498,6 +513,87 @@ const statements = [
     ('estadisticas',  'Estadísticas',     true, true,  8),
     ('configuracion', 'Configuración',    true, true,  9)
   ON CONFLICT (codigo) DO NOTHING;
+  `,
+  // === ROLES Y PERMISOS ===
+  `
+  CREATE TABLE IF NOT EXISTS public.permisos_rol (
+    id serial PRIMARY KEY,
+    rol_id integer NOT NULL REFERENCES public.roles(id) ON DELETE CASCADE,
+    recurso varchar(80) NOT NULL,
+    accion varchar(80) NOT NULL,
+    habilitado boolean NOT NULL DEFAULT true,
+    UNIQUE(rol_id, recurso, accion)
+  );
+  `,
+  `
+  INSERT INTO public.permisos_rol (rol_id, recurso, accion, habilitado)
+  SELECT r.id, v.recurso, v.accion, v.habilitado
+  FROM public.roles r
+  JOIN (VALUES
+    ('propietario','nueva-venta','usar',true),
+    ('propietario','ventas','ver',true),
+    ('propietario','ventas','eliminar',true),
+    ('propietario','ventas','exportar',true),
+    ('propietario','productos','ver',true),
+    ('propietario','productos','agregar',true),
+    ('propietario','productos','editar',true),
+    ('propietario','productos','eliminar',true),
+    ('propietario','productos','ver_archivados',true),
+    ('propietario','productos','gestionar_empaques',true),
+    ('propietario','productos','ver_costo',true),
+    ('propietario','productos','ver_ganancia',true),
+    ('propietario','productos','exportar',true),
+    ('propietario','clientes','ver',true),
+    ('propietario','clientes','agregar',true),
+    ('propietario','clientes','editar',true),
+    ('propietario','clientes','eliminar',true),
+    ('propietario','clientes','exportar',true),
+    ('propietario','usuarios','ver',true),
+    ('propietario','usuarios','agregar',true),
+    ('propietario','usuarios','editar',true),
+    ('propietario','usuarios','eliminar',true),
+    ('propietario','estadisticas','ver',true),
+    ('propietario','estadisticas','ver_empresa',true),
+    ('propietario','estadisticas','ver_por_usuario',true),
+    ('propietario','estadisticas','exportar',true),
+    ('propietario','stock','ver',true),
+    ('propietario','stock','editar',true),
+    ('propietario','auditoria','ver',true),
+    ('propietario','auditoria','exportar',true),
+    ('propietario','configuracion','ver',true),
+    ('vendedor','nueva-venta','usar',true),
+    ('vendedor','ventas','ver',true),
+    ('vendedor','ventas','eliminar',false),
+    ('vendedor','ventas','exportar',false),
+    ('vendedor','productos','ver',true),
+    ('vendedor','productos','agregar',false),
+    ('vendedor','productos','editar',false),
+    ('vendedor','productos','eliminar',false),
+    ('vendedor','productos','ver_archivados',false),
+    ('vendedor','productos','gestionar_empaques',false),
+    ('vendedor','productos','ver_costo',false),
+    ('vendedor','productos','ver_ganancia',false),
+    ('vendedor','productos','exportar',false),
+    ('vendedor','clientes','ver',true),
+    ('vendedor','clientes','agregar',false),
+    ('vendedor','clientes','editar',false),
+    ('vendedor','clientes','eliminar',false),
+    ('vendedor','clientes','exportar',false),
+    ('vendedor','usuarios','ver',false),
+    ('vendedor','usuarios','agregar',false),
+    ('vendedor','usuarios','editar',false),
+    ('vendedor','usuarios','eliminar',false),
+    ('vendedor','estadisticas','ver',true),
+    ('vendedor','estadisticas','ver_empresa',false),
+    ('vendedor','estadisticas','ver_por_usuario',false),
+    ('vendedor','estadisticas','exportar',false),
+    ('vendedor','stock','ver',false),
+    ('vendedor','stock','editar',false),
+    ('vendedor','auditoria','ver',false),
+    ('vendedor','auditoria','exportar',false),
+    ('vendedor','configuracion','ver',false)
+  ) AS v(rol_nombre, recurso, accion, habilitado) ON r.nombre = v.rol_nombre
+  ON CONFLICT (rol_id, recurso, accion) DO NOTHING;
   `,
   // === MÉTODOS DE CÁLCULO DE GANANCIAS ===
   `

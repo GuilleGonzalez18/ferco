@@ -4,7 +4,6 @@ import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 import SetupWizard from './features/setup/SetupWizard';
 import AppDialogHost from './shared/components/dialog/AppDialogHost';
-import InstallPwaPrompt from './shared/components/pwa/InstallPwaPrompt';
 import CambiarPasswordModal from './shared/components/auth/CambiarPasswordModal';
 import './App.css';
 import { api } from './core/api';
@@ -23,12 +22,12 @@ function AppShell({ user, onLogout }) {
   const esPropietario =
     user?.rol_nombre === 'propietario' || user?.tipo === 'propietario' || user?.tipo === 'admin';
 
-  // Empresa sin configurar: flag configurado === false en la BD
+  // Empresa sin configurar: flag configurado falsy (null o false) en la BD
   const empresaSinConfigurar =
     !loading &&
     esPropietario &&
     !wizardCompleto &&
-    empresa.configurado === false;
+    !empresa.configurado;
 
   useEffect(() => {
     const loadProductos = async () => {
@@ -74,6 +73,8 @@ function AppShell({ user, onLogout }) {
   );
 }
 
+const USER_KEY = 'ferco_user';
+
 function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
@@ -82,11 +83,21 @@ function App() {
     const restoreSession = async () => {
       const token = api.getAuthToken();
       if (!token) { setAuthReady(true); return; }
+
+      // Restauración instantánea desde localStorage para evitar pantalla en blanco
+      const savedUser = localStorage.getItem(USER_KEY);
+      if (savedUser) {
+        try { setUser(JSON.parse(savedUser)); } catch { /* ignorar */ }
+      }
+
       try {
         const currentUser = await api.me();
         setUser(currentUser);
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       } catch {
         api.clearAuthToken();
+        localStorage.removeItem(USER_KEY);
+        setUser(null);
       } finally {
         setAuthReady(true);
       }
@@ -98,7 +109,12 @@ function App() {
     const onUserUpdated = (event) => {
       const updated = event?.detail;
       if (!updated?.id) return;
-      setUser((prev) => (prev && Number(prev.id) === Number(updated.id) ? { ...prev, ...updated } : prev));
+      setUser((prev) => {
+        if (!prev || Number(prev.id) !== Number(updated.id)) return prev;
+        const next = { ...prev, ...updated };
+        localStorage.setItem(USER_KEY, JSON.stringify(next));
+        return next;
+      });
     };
     window.addEventListener('ferco:user-updated', onUserUpdated);
     return () => window.removeEventListener('ferco:user-updated', onUserUpdated);
@@ -106,20 +122,30 @@ function App() {
 
   const handleLogout = () => {
     api.clearAuthToken();
+    localStorage.removeItem(USER_KEY);
     setUser(null);
   };
 
+  const handleLogin = (userData) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const handlePasswordChanged = () => {
-    setUser((prev) => prev ? { ...prev, debe_cambiar_password: false } : prev);
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, debe_cambiar_password: false };
+      localStorage.setItem(USER_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
     <ConfigProvider>
       <AppDialogHost />
-      <InstallPwaPrompt />
       {authReady && (
         !user ? (
-          <Login onLogin={setUser} />
+          <Login onLogin={handleLogin} />
         ) : (
           <>
             {user.debe_cambiar_password && (
