@@ -166,9 +166,12 @@
 
 .stock-inline-panel {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
-  gap: 0.8rem;
-  align-items: start;
+  grid-template-columns: minmax(220px, 320px) minmax(200px, 250px);
+  width: min(620px, 100%);
+  gap: 0.72rem;
+  justify-content: center;
+  align-items: stretch;
+  margin-inline: auto;
 }
 
 .stock-inline-main {
@@ -176,6 +179,10 @@
   border-radius: 10px;
   padding: 0.6rem;
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .stock-inline-name {
@@ -191,6 +198,10 @@
   border-radius: 10px;
   padding: 0.6rem;
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
 }
 
 .stock-actions {
@@ -198,6 +209,8 @@
   grid-template-columns: 1fr;
   gap: 0.35rem;
   margin-top: 0.5rem;
+  width: 100%;
+  max-width: none;
 }
 
 .stock-actions .app-button,
@@ -225,20 +238,51 @@
   font-size: 0.82rem;
   color: var(--color-primary);
   margin-top: 0.4rem;
+  width: 100%;
+  max-width: none;
 }
 
 .stock-cantidad input {
   min-height: var(--field-height);
+  width: 100%;
 }
 
 .stock-history-btn {
-  margin-top: 0.6rem;
+  margin-top: 0;
   background: #8090a4;
 }
 
 .stock-history-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: none;
+  margin-top: 0.6rem;
+  margin-inline: 0;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  width: 100% !important;
+  max-width: none !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0.6rem 0 0 !important;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions > .app-button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions > button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row > .app-button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row > button {
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .stock-modal-overlay {
@@ -477,7 +521,9 @@
 
   .stock-inline-panel {
     grid-template-columns: 1fr;
+    width: 100%;
     gap: 0.55rem;
+    margin-inline: 0;
   }
 
   .stock-inline-main,
@@ -623,6 +669,12 @@
   .stock-actions {
     grid-template-columns: 1fr;
     gap: 0.5rem;
+    max-width: none;
+  }
+
+  .stock-cantidad,
+  .stock-history-row {
+    max-width: none;
   }
 
   .stock-inline-panel {

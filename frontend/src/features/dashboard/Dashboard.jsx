@@ -11,7 +11,7 @@ import Configuracion from '../configuracion/Configuracion';
 import './Dashboard.css';
 import { api } from '../../core/api';
 import { CgArrowsExchange } from 'react-icons/cg';
-import { FiRotateCcw, FiShoppingCart, FiSliders, FiX, FiPlus, FiCheck } from 'react-icons/fi';
+import { FiShoppingCart, FiSliders, FiX, FiPlus, FiCheck } from 'react-icons/fi';
 import { RiSettings3Line } from 'react-icons/ri';
 import { APP_VERSION } from '../../core/version';
 import AppButton from '../../shared/components/button/AppButton';
@@ -544,8 +544,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const [ventasCarritoAbierto, setVentasCarritoAbierto] = useState(false);
   const [ventasCarritoCount, setVentasCarritoCount] = useState(0);
-  const [auditoriaDateFiltersActivos, setAuditoriaDateFiltersActivos] = useState(false);
-  const [auditoriaClearSignal, setAuditoriaClearSignal] = useState(0);
   const [carritoIconAnim, setCarritoIconAnim] = useState(0);
   const prevCarritoCount = useRef(0);
   const [editMode, setEditMode] = useState(false);
@@ -598,11 +596,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
     }
   }, [pantalla, ventasCarritoCount]);
 
-  useEffect(() => {
-    if (pantalla !== 'auditoria') {
-      setAuditoriaDateFiltersActivos(false);
-    }
-  }, [pantalla]);
+
 
   const closeVentasCarritoDrawer = useCallback(() => {
     setVentasCarritoAbierto(false);
@@ -663,12 +657,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
         case 'usuarios':     return <Usuarios currentUser={user} />;
         case 'mi-usuario':   return <MiUsuarioView user={user} />;
         case 'auditoria':
-          return (
-            <Auditoria
-              onDateFiltersActiveChange={setAuditoriaDateFiltersActivos}
-              clearDateFiltersSignal={auditoriaClearSignal}
-            />
-          );
+          return <Auditoria />;
         case 'control-stock':
           return can('stock', 'ver')
             ? (
@@ -693,7 +682,6 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
       esPropietario,
       ventasCarritoAbierto,
       closeVentasCarritoDrawer,
-      auditoriaClearSignal,
     ]
   );
 
@@ -790,18 +778,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
                   {ventasCarritoCount > 0 && <span className="ventas-carrito-count">{ventasCarritoCount}</span>}
                 </button>
               )}
-              {pantalla === 'auditoria' && (
-                <button
-                  type="button"
-                  className="dashboard-topbar-action auditoria-clear-btn"
-                  onClick={() => setAuditoriaClearSignal((prev) => prev + 1)}
-                  aria-label="Limpiar rango de fechas"
-                  disabled={!auditoriaDateFiltersActivos}
-                >
-                  <FiRotateCcw aria-hidden="true" />
-                  <span>Limpiar</span>
-                </button>
-              )}
+
               {filterHasContent && (
                 <button
                   type="button"
@@ -881,7 +858,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
           {contenidoPantalla}
         </div>
 
-        {/* Panel de filtros y acciones */}
+        {/* Panel de filtros y acciones — mobile */}
         <div
           className={`filter-panel-overlay ${filterPanelOpen ? 'open' : ''}`}
           onClick={() => setFilterPanelOpen(false)}

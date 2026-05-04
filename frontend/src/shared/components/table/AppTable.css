@@ -107,11 +107,11 @@
 .app-table-expanded-content .stock-history-row {
   width: 100% !important;
   display: flex !important;
-  flex-direction: column !important;
+  flex-direction: row !important;
   gap: 0.45rem;
-  justify-content: flex-start;
-  align-items: stretch !important;
-  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
 }
 
 .app-table-expanded-content .acciones-cliente-panel > .app-button,
@@ -123,15 +123,15 @@
 .app-table-expanded-content .venta-detalle-actions > button,
 .app-table-expanded-content .stock-actions > button,
 .app-table-expanded-content .stock-history-row > button {
-  width: 100% !important;
-  min-width: 100% !important;
+  width: auto !important;
+  min-width: 0 !important;
   justify-content: center !important;
 }
 
 .app-table-expanded-content .app-button,
 .app-table-expanded-content button {
-  width: 100% !important;
-  min-width: 100% !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .app-table-expanded-content .usuario-actions {
@@ -349,7 +349,7 @@
 
   .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row .app-table-expanded-content > :first-child {
     display: flex;
-    flex-direction: column;
+    flex-direction: column !important;
     width: 100%;
     box-sizing: border-box;
   }

@@ -10,6 +10,7 @@ import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 
 const PAGE_SIZE = 10;
 
@@ -31,7 +32,7 @@ function formatQty(value) {
   return Number.isFinite(n) ? n.toLocaleString('es-UY') : String(value ?? '-');
 }
 
-export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersSignal = 0 }) {
+export default function Auditoria() {
   const { empresa } = useConfig();
   const { can } = usePermisos();
   const puedeExportar = can('auditoria', 'exportar');
@@ -81,18 +82,11 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
     }
   }, [desde, hasta, loadAuditoria]);
 
-  useEffect(() => {
-    if (typeof onDateFiltersActiveChange !== 'function') return undefined;
-    onDateFiltersActiveChange(Boolean(desde || hasta));
-    return () => onDateFiltersActiveChange(false);
-  }, [desde, hasta, onDateFiltersActiveChange]);
-
-  useEffect(() => {
-    if (!clearDateFiltersSignal) return;
+  const limpiarFechas = useCallback(() => {
     setDesde('');
     setHasta('');
     loadAuditoria('', '');
-  }, [clearDateFiltersSignal, loadAuditoria]);
+  }, [loadAuditoria]);
 
   const movimientosFiltrados = useMemo(() => {
     const q = filtroTextoMov.trim().toLowerCase();
@@ -318,12 +312,15 @@ export default function Auditoria({ onDateFiltersActiveChange, clearDateFiltersS
 
   return (
     <div className="auditoria-main">
-      <div className="auditoria-toolbar">
-        <div className="auditoria-toolbar-dates auditoria-filtros">
-          <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-          <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+      <FilterSlot>
+        <div className="auditoria-fecha-range">
+          <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} title="Desde" />
+          <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} title="Hasta" />
+          <AppButton type="button" className="audit-btn secondary" onClick={limpiarFechas} disabled={!desde && !hasta}>
+            Limpiar fechas
+          </AppButton>
         </div>
-      </div>
+      </FilterSlot>
 
       <div className="auditoria-tabs" role="tablist" aria-label="Secciones de auditoría">
         <button

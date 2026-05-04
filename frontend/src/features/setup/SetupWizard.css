@@ -151,7 +151,6 @@
 
 .setup-color-picker-row span {
   font-size: 0.8rem;
-  font-family: var(--font-sans);
   color: var(--color-text);
 }
 

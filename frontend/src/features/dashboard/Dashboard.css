@@ -1171,10 +1171,17 @@ body.dashboard-scroll-lock {
   }
 }
 
-/* ── Filter panel ── */
+/* ── Filter panel (drawer — mobile) ── */
 .filter-panel-btn {
   position: static;
   z-index: auto;
+}
+
+/* Botón solo visible en mobile */
+@media (min-width: 851px) {
+  .filter-panel-btn {
+    display: none !important;
+  }
 }
 
 .filter-panel-overlay {
@@ -1314,11 +1321,6 @@ body.dashboard-scroll-lock {
 
 .filter-panel-body .exportar-pdf {
   justify-content: center;
-}
-
-/* Mostrar el botón también en desktop (no sólo mobile) */
-.filter-panel-btn {
-  display: inline-flex !important;
 }
 
 @media (max-width: 600px) {
