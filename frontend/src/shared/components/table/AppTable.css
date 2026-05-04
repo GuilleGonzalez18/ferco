@@ -278,6 +278,8 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     border-bottom-color: transparent;
+    margin-bottom: 0;
+    background: #e6eef9;
   }
 
   .app-table-wrap:not(.mobile-table) .app-table tbody td {
