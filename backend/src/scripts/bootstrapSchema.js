@@ -58,7 +58,8 @@ const statements = [
     horario_reapertura varchar(5) NULL,
     horario_cierre_reapertura varchar(5) NULL,
     departamento_id integer NULL,
-    barrio_id integer NULL
+    barrio_id integer NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
   );
   `,
   `
@@ -100,7 +101,8 @@ const statements = [
     cantidad_empaque integer NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
     empaque_id integer NULL,
-    activo boolean NOT NULL DEFAULT true
+    activo boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now()
   );
   `,
   `
@@ -473,11 +475,22 @@ const statements = [
     correo varchar(180) NULL,
     website varchar(255) NULL,
     logo_base64 text NULL,
-    color_primary varchar(7) NOT NULL DEFAULT '#375f8c',
-    color_primary_strong varchar(7) NOT NULL DEFAULT '#294c74',
-    color_primary_soft varchar(7) NOT NULL DEFAULT '#e7effa',
-    color_menu_bg varchar(7) NOT NULL DEFAULT '#1f2933',
-    color_menu_active varchar(7) NOT NULL DEFAULT '#375f8c',
+    color_primary varchar(7) NOT NULL DEFAULT '#cc2222',
+    color_primary_strong varchar(7) NOT NULL DEFAULT '#8f0e0e',
+    color_primary_soft varchar(7) NOT NULL DEFAULT '#fce8e8',
+    color_menu_bg varchar(7) NOT NULL DEFAULT '#3d1a08',
+    color_menu_active varchar(7) NOT NULL DEFAULT '#cc2222',
+    color_text varchar(7) DEFAULT '#1d2b3e',
+    color_text_muted varchar(7) DEFAULT '#526278',
+    color_menu_text varchar(7) DEFAULT '#f5e6e6',
+    fondo_base64 text NULL,
+    configurado boolean NOT NULL DEFAULT false,
+    color_logout_bg varchar(7) DEFAULT '#d32f2f',
+    fondo_opacidad decimal(3,2) DEFAULT 0.06,
+    logo_tamano smallint DEFAULT 200,
+    logo_bg_color varchar(7) DEFAULT '#ffffff',
+    pdf_factura jsonb NOT NULL DEFAULT '{}'::jsonb,
+    pdf_remito jsonb NOT NULL DEFAULT '{}'::jsonb,
     updated_at timestamp without time zone NOT NULL DEFAULT now()
   );
   `,
@@ -630,6 +643,24 @@ const statements = [
   SELECT id FROM public.config_ganancias_metodos WHERE codigo = 'margen_venta'
   AND NOT EXISTS (SELECT 1 FROM public.config_ganancias)
   LIMIT 1;
+  `,
+  // === DASHBOARD WIDGETS PERSONALIZADOS POR USUARIO ===
+  `
+  CREATE TABLE IF NOT EXISTS public.dashboard_widgets (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id integer NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    posicion smallint NOT NULL DEFAULT 0,
+    categoria varchar(30) NOT NULL,
+    tipo varchar(20) NOT NULL,
+    metrica varchar(30) NOT NULL,
+    rango varchar(20),
+    periodo_comparacion varchar(20),
+    etiqueta varchar(60) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS idx_dashboard_widgets_usuario ON public.dashboard_widgets(usuario_id);
   `,
 ];
 
