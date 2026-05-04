@@ -4,6 +4,22 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.control-stock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  background: rgba(8, 16, 24, 0.48);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.control-stock-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .control-stock-head {
@@ -18,9 +34,9 @@
 }
 
 .control-stock-layout {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   flex: 1;
   min-height: 0;
 }
@@ -39,16 +55,19 @@
   border-radius: 0;
   padding: 0;
   min-height: 0;
+  width: 100%;
+  flex: 1;
 }
 
 .control-stock-table-wrap {
   border: 1px solid #e4ebf4;
+  width: 100%;
   height: 100%;
 }
 
 .control-stock-table {
   min-width: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .control-stock-table th:first-child,
@@ -59,6 +78,7 @@
 .control-stock-table th:last-child,
 .control-stock-table td:last-child {
   width: 110px;
+  min-width: 110px;
 }
 
 .sort-header-btn {
@@ -144,11 +164,58 @@
   text-align: center;
 }
 
+.stock-inline-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(200px, 250px);
+  width: min(620px, 100%);
+  gap: 0.72rem;
+  justify-content: center;
+  align-items: stretch;
+  margin-inline: auto;
+}
+
+.stock-inline-main {
+  border: 1px solid #e4ebf4;
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.stock-inline-name {
+  margin: 0.45rem 0 0.25rem;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.stock-inline-actions-wrap {
+  border: 1px solid #e4ebf4;
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+}
+
 .stock-actions {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.35rem;
   margin-top: 0.5rem;
+  width: 100%;
+  max-width: none;
+}
+
+.stock-actions .app-button,
+.stock-history-row .app-button {
+  width: 100%;
 }
 
 .stock-actions button,
@@ -171,20 +238,51 @@
   font-size: 0.82rem;
   color: var(--color-primary);
   margin-top: 0.4rem;
+  width: 100%;
+  max-width: none;
 }
 
 .stock-cantidad input {
   min-height: var(--field-height);
+  width: 100%;
 }
 
 .stock-history-btn {
-  margin-top: 0.6rem;
+  margin-top: 0;
   background: #8090a4;
 }
 
 .stock-history-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: none;
+  margin-top: 0.6rem;
+  margin-inline: 0;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  width: 100% !important;
+  max-width: none !important;
+  justify-content: stretch !important;
+  align-items: stretch !important;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0.6rem 0 0 !important;
+}
+
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions > .app-button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-actions > button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row > .app-button,
+.control-stock-table-wrap .app-table-expanded-content .stock-inline-panel .stock-history-row > button {
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .stock-modal-overlay {
@@ -223,12 +321,49 @@
 }
 
 .control-stock-panel {
-  transform: translateX(0);
-  opacity: 1;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(420px, 94vw);
+  height: 100%;
+  z-index: 170;
+  border-radius: 0;
+  box-shadow: -10px 0 30px rgba(20, 30, 45, 0.2);
+  transform: translate3d(105%, 0, 0);
+  transition: transform 0.25s ease;
+  padding: 0.9rem;
+  overflow-y: auto;
+  will-change: transform;
 }
 
-.control-stock-panel.is-active {
-  animation: stockPanelSlideIn 240ms cubic-bezier(0.22, 1, 0.36, 1);
+.control-stock-panel.is-open {
+  transform: translate3d(0, 0, 0);
+}
+
+.control-stock-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid #dbe4f0;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.45rem;
+}
+
+.control-stock-panel-head h3 {
+  margin: 0;
+  color: #375f8c;
+  font-size: 0.95rem;
+}
+
+.control-stock-panel-close {
+  border: 1px solid #d7e2f0;
+  background: #fff;
+  color: #375f8c;
+  border-radius: 7px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
 }
 
 .stock-modal ul {
@@ -316,6 +451,30 @@
 /* Chevron — solo visible en mobile */
 .stock-row-chevron {
   display: none;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.control-stock-table-wrap .app-table-row.app-table-row-expanded-anchor {
+  background: #edf4ff;
+}
+
+.control-stock-table-wrap .app-table-row.app-table-row-expanded-anchor .stock-row-chevron {
+  transform: rotate(90deg);
+  color: var(--color-primary);
+}
+
+.stock-inline-panel {
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  position: relative;
+  box-shadow: none;
+}
+
+.stock-inline-panel::before {
+  display: none;
 }
 
 /* Handle del drawer */
@@ -358,6 +517,22 @@
 
   .control-stock-list {
     height: calc(100dvh - 130px);
+  }
+
+  .stock-inline-panel {
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 0.55rem;
+    margin-inline: 0;
+  }
+
+  .stock-inline-main,
+  .stock-inline-actions-wrap {
+    padding: 0.55rem;
+  }
+
+  .stock-inline-name {
+    font-size: 0.84rem;
   }
 
   /* Ocultar thumbnail en mobile para más espacio al nombre */
@@ -494,6 +669,17 @@
   .stock-actions {
     grid-template-columns: 1fr;
     gap: 0.5rem;
+    max-width: none;
+  }
+
+  .stock-cantidad,
+  .stock-history-row {
+    max-width: none;
+  }
+
+  .stock-inline-panel {
+    padding: 0;
+    border-radius: 0;
   }
 }
 

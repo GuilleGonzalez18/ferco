@@ -26,7 +26,7 @@
   min-width: min(100%, 640px);
 }
 
-.ventas-range-inputs {
+.ventas-date-estado-row {
   display: flex;
   align-items: end;
   gap: 0.55rem;
@@ -536,11 +536,12 @@
 }
 
 .venta-detalle-panel {
-  margin: -0.18rem 0 0.5rem;
-  border: 1px dashed #d6e3f4;
-  border-radius: 8px;
-  background: #f8fbff;
-  padding: 0.45rem 0.55rem;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 .venta-detalle-panel p {
@@ -618,10 +619,27 @@
 }
 
 .venta-detalle-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.venta-detalle-actions .reprint-btn,
+.venta-detalle-actions .cancel-btn,
+.venta-detalle-actions .delete-btn {
+  width: 100%;
+  min-height: 36px;
+  height: auto;
+  padding: 0.32rem 0.52rem;
+}
+
+.venta-detalle-actions .delete-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.5rem;
+  justify-content: center;
+  gap: 0.22rem;
 }
 
 .cancel-btn {
@@ -657,6 +675,74 @@
   display: block;
   text-align: center;
   color: #7d8797;
+}
+
+@media (max-width: 599px) {
+  .ventas-historial-main {
+    padding: 0.65rem 0.65rem 0.75rem;
+  }
+
+  .ventas-historial-toolbar {
+    gap: 0.45rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Presets: scroll horizontal, sin wrap */
+  .ventas-quick-range-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 0.15rem;
+  }
+
+  .ventas-quick-range-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ticket-preset-btn {
+    flex-shrink: 0;
+  }
+
+  /* Desde + Hasta y Estado en segunda fila para evitar compresión */
+  .ventas-date-estado-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+
+  .ventas-date-estado-row .ventas-fecha-filter:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .ventas-fecha-filter {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Botones de exportar: fila, solo icono */
+  .ventas-export-group {
+    flex-direction: row;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .ventas-export-btn {
+    flex: 1;
+    height: 44px;
+    justify-content: center;
+    gap: 0.35rem;
+    padding-inline: 0.5rem;
+  }
+
+  .ventas-export-btn svg {
+    width: 16px;
+    height: 16px;
+    margin-right: 0.2rem;
+  }
+
+  .venta-detalle-panel {
+    padding: 0;
+  }
 }
 
 @media (max-width: 920px) {
@@ -718,38 +804,41 @@
     font-size: 0.6rem;
   }
 
-  .reprint-btn {
-    min-width: 28px;
-    height: 26px;
-    padding: 0 0.24rem;
-  }
-
-  .reprint-btn img {
-    width: 12px;
-    height: 12px;
-  }
-
-  .reprint-btn svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .reprint-btn small {
-    font-size: 0.56rem;
-  }
-
-  .cancel-btn {
-    height: 24px;
-    min-width: 28px;
-    padding: 0 0.24rem;
-    font-size: 0.72rem;
-  }
-
-  .cancel-btn small {
-    font-size: 0.56rem;
-  }
-
   .venta-detalle-actions {
-    gap: 0.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .venta-detalle-actions .reprint-btn,
+  .venta-detalle-actions .cancel-btn,
+  .venta-detalle-actions .delete-btn {
+    width: 100%;
+    min-height: 38px;
+    padding: 0.35rem 0.45rem;
+  }
+
+  .reprint-btn img,
+  .reprint-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .reprint-btn small,
+  .cancel-btn small {
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .venta-detalle-actions {
+    gap: 0.45rem;
+  }
+
+  .venta-detalle-actions .reprint-btn,
+  .venta-detalle-actions .cancel-btn,
+  .venta-detalle-actions .delete-btn {
+    min-height: 42px;
+    justify-content: center;
   }
 }

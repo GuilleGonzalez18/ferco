@@ -1135,9 +1135,9 @@ export default function Ventas({
               <div className="catalogo-head">
                 {/* {pasosHeader} */}
                 <div className="catalogo-top">
-                  <h3>Buscar</h3>
                   <AppInput
                     type="text"
+                    className="table-search-field"
                     placeholder="Buscar por nombre o código..."
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}

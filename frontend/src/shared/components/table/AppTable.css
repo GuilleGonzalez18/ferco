@@ -4,6 +4,7 @@
   border-radius: 10px;
   background: #fff;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .app-table {
@@ -23,7 +24,7 @@
 }
 
 .app-table-wrap.is-sticky-header {
-  max-height: var(--app-table-max-height, calc(100vh - 280px));
+  max-height: var(--app-table-max-height, calc(100dvh - 280px));
 }
 
 .app-table-wrap.is-sticky-header .app-table thead th {
@@ -74,26 +75,69 @@
 
 .app-table-expanded-cell {
   padding: 0 !important;
-  border-bottom: 1px solid #e5ecf7;
+  border-bottom: none;
 }
 
 .app-table-expanded-content {
-  padding: 0.46rem 0.62rem;
-  background: #f8fbff;
+  padding: 0 !important;
+  background: transparent;
+}
+
+.app-table-row.app-table-row-expanded-anchor td {
+  border-bottom-color: transparent;
+}
+
+.app-table-expanded-content > :first-child {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: -1px;
+  border: 1px solid #d6e3f4;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #eef3fb 0%, #e8eef8 100%);
+  padding: 0.52rem 0.58rem 0.56rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .app-table-expanded-content .acciones-cliente-panel,
 .app-table-expanded-content .acciones-producto-panel,
-.app-table-expanded-content .usuario-actions.show {
-  width: 100%;
-  display: inline-flex;
-  gap: 0.35rem;
-  justify-content: flex-end;
+.app-table-expanded-content .usuario-actions.show,
+.app-table-expanded-content .venta-detalle-actions,
+.app-table-expanded-content .stock-actions,
+.app-table-expanded-content .stock-history-row {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.45rem;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.app-table-expanded-content .acciones-cliente-panel > .app-button,
+.app-table-expanded-content .acciones-producto-panel > .app-button,
+.app-table-expanded-content .usuario-actions.show > .app-button,
+.app-table-expanded-content .venta-detalle-actions > .app-button,
+.app-table-expanded-content .stock-actions > .app-button,
+.app-table-expanded-content .stock-history-row > .app-button,
+.app-table-expanded-content .venta-detalle-actions > button,
+.app-table-expanded-content .stock-actions > button,
+.app-table-expanded-content .stock-history-row > button {
+  width: auto !important;
+  min-width: 0 !important;
+  justify-content: center !important;
+}
+
+.app-table-expanded-content .app-button,
+.app-table-expanded-content button {
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .app-table-expanded-content .usuario-actions {
-  position: static;
-  transform: none;
+  position: static !important;
+  transform: none !important;
+  inset: auto !important;
 }
 
 .app-table-row.producto-row.stock-low {
@@ -191,5 +235,186 @@
   .app-table th,
   .app-table td {
     padding: 0.46rem 0.55rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .app-table-wrap:not(.mobile-table) {
+    border: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .app-table-wrap:not(.mobile-table).is-sticky-header {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table,
+  .app-table-wrap:not(.mobile-table) .app-table tbody {
+    display: block;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table thead {
+    display: none;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody tr.app-table-row {
+    display: block;
+    border: 1px solid #e4ebf4;
+    border-radius: 10px;
+    background: #fff;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody tr.app-table-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody tr.app-table-row.is-expanded {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+    margin-bottom: 0;
+    background: #e6eef9;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #f0f4fa;
+    padding: 0.42rem 0.65rem;
+    text-align: right;
+    font-size: 0.82rem;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #375f8c;
+    font-size: 0.73rem;
+    flex-shrink: 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  /* Celdas sin etiqueta (imágenes, acciones) */
+  .app-table-wrap:not(.mobile-table) .app-table tbody td[data-label=''] {
+    justify-content: flex-end;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody td[data-label='']::before {
+    display: none;
+  }
+
+  /* Columnas marcadas como mobileHide */
+  .app-table-wrap:not(.mobile-table) .app-table tbody td[data-mobile-hide='true'] {
+    display: none;
+  }
+
+  /* Fila expandida — más específico que tbody td para ganar display */
+  .app-table-wrap:not(.mobile-table) .app-table tbody tr.app-table-expanded-row {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row td {
+    display: block !important;
+    border-bottom: none;
+    padding: 0 !important;
+    margin-top: -1px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row td::before {
+    display: none;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row .app-table-expanded-content {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row .app-table-expanded-content > :first-child {
+    display: flex;
+    flex-direction: column !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row .app-table-expanded-content .app-button,
+  .app-table-wrap:not(.mobile-table) .app-table tbody .app-table-expanded-row .app-table-expanded-content button {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* Fila vacía */
+  .app-table-wrap:not(.mobile-table) .app-table-empty-row td {
+    display: block;
+    border: 1px solid #e4ebf4;
+    border-radius: 10px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .app-table-wrap:not(.mobile-table) .app-table-empty-row td::before {
+    display: none;
+  }
+
+  /* Colores de fila preservados */
+  .app-table-wrap:not(.mobile-table) .app-table-row.producto-row.stock-low { background: #ffecad; }
+  .app-table-wrap:not(.mobile-table) .app-table-row.producto-row.stock-zero { background: #f6c4c4; }
+  .app-table-wrap:not(.mobile-table) .app-table-row.venta-row-entregada { background: #e4f6ea; }
+  .app-table-wrap:not(.mobile-table) .app-table-row.venta-row-cancelada { background: #fff3f3; }
+  .app-table-wrap:not(.mobile-table) .app-table-row.is-expanded { background: #e6eef9; }
+
+  .app-table-wrap.mobile-table {
+    overflow: auto;
+    border: 1px solid #e4ebf4;
+    background: #fff;
+  }
+
+  .app-table-wrap.mobile-table .app-table {
+    display: table;
+    width: 100%;
+    min-width: var(--app-table-min-width, 680px);
+    font-size: 0.78rem;
+  }
+
+  .app-table-wrap.mobile-table .app-table thead {
+    display: table-header-group;
+  }
+
+  .app-table-wrap.mobile-table .app-table tbody {
+    display: table-row-group;
+  }
+
+  .app-table-wrap.mobile-table .app-table tbody tr.app-table-row {
+    display: table-row;
+  }
+
+  .app-table-wrap.mobile-table .app-table tbody td {
+    display: table-cell;
+    text-align: inherit;
+    border-bottom: 1px solid #edf2f9;
+    padding: 0.46rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .app-table-wrap.mobile-table .app-table tbody td::before {
+    display: none;
   }
 }

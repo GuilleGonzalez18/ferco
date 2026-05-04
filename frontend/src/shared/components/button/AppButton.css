@@ -12,6 +12,12 @@
   justify-content: center;
   gap: 0.35rem;
   transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  text-align: center;
+}
+
+.app-button span,
+.app-button small {
+  text-align: center;
 }
 
 .app-button:hover {

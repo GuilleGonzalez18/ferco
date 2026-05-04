@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
@@ -15,6 +16,7 @@ import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
 import AppButton from '../../shared/components/button/AppButton';
+import { PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 export default function Clientes() {
   const { empresa } = useConfig();
@@ -343,7 +345,7 @@ export default function Clientes() {
     w.document.write(`
       <html><head><title>Clientes</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:16px}
+        body{font-family:${PRINT_FONT_FAMILY_CSS};padding:16px}
         h2{color:#375f8c}
         table{border-collapse:collapse;width:100%}
         th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}
@@ -434,6 +436,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Dirección',
+      mobileHide: true,
       render: (c) => c.direccion || '-',
     },
     {
@@ -454,6 +457,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Mail',
+      mobileHide: true,
       render: (c) => c.correo || '-',
     },
     {
@@ -464,6 +468,7 @@ export default function Clientes() {
         </button>
       ),
       mobileLabel: 'Horarios',
+      mobileHide: true,
       render: (c) => formatHorarioCliente(c),
     },
   ];
@@ -473,27 +478,31 @@ export default function Clientes() {
       <div className="clientes-toolbar">
         <AppInput
           type="text"
-          className="buscar-cliente"
+          className="buscar-cliente table-search-field"
           placeholder="Buscar por nombre o RUT/C.I."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        {puedeAgregar && (
-        <AppButton
-          type="button"
-          className="icon-btn"
-          title="Agregar cliente"
-          onClick={abrirAlta}
-        >
-          <img src="/add.svg" alt="" aria-hidden="true" />
-          <span>CLIENTE</span>
-        </AppButton>
-        )}
-        {puedeExportar && (
-        <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
-          <img src="/print.svg" alt="" aria-hidden="true" />
-        </AppButton>
-        )}
+        <FilterSlot>
+          <>
+            {puedeAgregar && (
+              <AppButton
+                type="button"
+                className="icon-btn"
+                title="Agregar cliente"
+                onClick={abrirAlta}
+              >
+                <img src="/add.svg" alt="" aria-hidden="true" />
+                <span>CLIENTE</span>
+              </AppButton>
+            )}
+            {puedeExportar && (
+              <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>
+                <img src="/print.svg" alt="" aria-hidden="true" />
+              </AppButton>
+            )}
+          </>
+        </FilterSlot>
       </div>
 
       {exportModalOpen && (
