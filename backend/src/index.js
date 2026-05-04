@@ -69,9 +69,6 @@ app.use('/api/configuracion', configuracionRouter);
 app.use('/api/permisos', permisosRouter);
 
 app.listen(PORT, async () => {
-  // eslint-disable-next-line no-console
-  console.log(`Backend running on http://localhost:${PORT}`);
-  // eslint-disable-next-line no-console
   console.log(`CORS origins: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'all origins allowed'}`);
   try {
     await runMigration();
