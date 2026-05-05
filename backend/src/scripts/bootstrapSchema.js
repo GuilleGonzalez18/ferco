@@ -351,7 +351,10 @@ const statements = [
     modo_venta varchar(10) NOT NULL DEFAULT 'unidad',
     descuento_tipo varchar(20) NOT NULL DEFAULT 'ninguno',
     descuento_valor numeric(12,2) NOT NULL DEFAULT 0,
-    descuento_aplicado numeric(12,2) NOT NULL DEFAULT 0
+    descuento_aplicado numeric(12,2) NOT NULL DEFAULT 0,
+    descuento_packs_tipo varchar(20) NOT NULL DEFAULT 'ninguno',
+    descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0,
+    descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0
   );
   `,
   `

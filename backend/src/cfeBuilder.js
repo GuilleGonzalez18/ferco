@@ -111,6 +111,7 @@ export async function buildCFE(ventaId) {
             vd.packs, vd.unidades_sueltas, vd.unidades_por_empaque, vd.tipo_empaque,
             vd.precio_empaque, vd.precio_unidad, vd.modo_venta,
             vd.descuento_tipo, vd.descuento_valor, vd.descuento_aplicado,
+            vd.descuento_packs_tipo, vd.descuento_packs_valor, vd.descuento_packs_aplicado,
             p.id AS producto_id, p.nombre AS producto_nombre, p.ean, p.unidad,
             p.iva_id, ti.codigo AS iva_codigo, ti.porcentaje AS iva_porcentaje
      FROM public.venta_detalle vd
@@ -155,7 +156,6 @@ export async function buildCFE(ventaId) {
     const sueltas = Number(row.unidades_sueltas ?? 0);
     const precioEmpaque = round2(row.precio_empaque || 0);
     const precioUnidad = round2(row.precio_unidad || row.precio_unitario);
-    const descuentoAplicado = round2(row.descuento_aplicado || 0);
     const indFact = getIteIndFact(row.iva_codigo);
     const porcentaje = Number(row.iva_porcentaje || 0) / 100;
     const codeTipo = getCodiTpoCod(row.ean);
@@ -168,15 +168,10 @@ export async function buildCFE(ventaId) {
 
     const montoPacksBruto = hasPacks ? round2(packs * precioEmpaque) : 0;
     const montoSueltasBruto = hasSueltas ? round2(sueltas * precioUnidad) : 0;
-    const montoTotalBruto = hasPacks || hasSueltas
-      ? round2(montoPacksBruto + montoSueltasBruto)
-      : round2(Number(row.cantidad || 1) * round2(row.precio_unitario));
 
-    // Distribuir descuento por ítem proporcionalmente entre packs y sueltas
-    const descPacks = (hasPacks && montoTotalBruto > 0)
-      ? round2(descuentoAplicado * montoPacksBruto / montoTotalBruto)
-      : (hasPacks ? descuentoAplicado : 0);
-    const descSueltas = hasSueltas ? round2(descuentoAplicado - descPacks) : 0;
+    // Usar descuentos almacenados directamente (independientes por packs/sueltas)
+    const descuentoSueltasAplicado = round2(row.descuento_aplicado || 0);
+    const descuentoPacksAplicado = round2(row.descuento_packs_aplicado || 0);
 
     const lineBase = { indFact, porcentaje, codeTipo, codValue, nombreItem };
 
@@ -184,13 +179,13 @@ export async function buildCFE(ventaId) {
       const cantidad = Number(row.cantidad || 1);
       const precioU = round2(row.precio_unitario);
       const monto = round2(cantidad * precioU);
-      rawLines.push({ ...lineBase, cantidad, precio: precioU, monto, descItem: descuentoAplicado, uniMed: getUniMed(row.unidad) });
+      rawLines.push({ ...lineBase, cantidad, precio: precioU, monto, descItem: descuentoSueltasAplicado, uniMed: getUniMed(row.unidad) });
     } else {
       if (hasPacks) {
-        rawLines.push({ ...lineBase, cantidad: packs, precio: precioEmpaque, monto: montoPacksBruto, descItem: descPacks, uniMed: getUniMed(row.tipo_empaque) });
+        rawLines.push({ ...lineBase, cantidad: packs, precio: precioEmpaque, monto: montoPacksBruto, descItem: descuentoPacksAplicado, uniMed: getUniMed(row.tipo_empaque) });
       }
       if (hasSueltas) {
-        rawLines.push({ ...lineBase, cantidad: sueltas, precio: precioUnidad, monto: montoSueltasBruto, descItem: descSueltas, uniMed: getUniMed(row.unidad) });
+        rawLines.push({ ...lineBase, cantidad: sueltas, precio: precioUnidad, monto: montoSueltasBruto, descItem: descuentoSueltasAplicado, uniMed: getUniMed(row.unidad) });
       }
     }
   }
@@ -247,7 +242,7 @@ export async function buildCFE(ventaId) {
       ItePrecioUnitario: l.precio.toFixed(4),
       IteDescuentoPct: descPct.toFixed(2),
       IteDescuentoMonto: descTotal.toFixed(2),
-      IteMontoItem: l.monto.toFixed(2),
+      IteMontoItem: round2(l.monto - descTotal).toFixed(2),
     });
   }
 
@@ -292,7 +287,7 @@ export async function buildCFE(ventaId) {
       CFETipoCFE: tipoCFE,
       CFESerie: '',
       CFENro: '',
-      CFEFchEmis: formatDateTime(venta.fecha),
+      CFEFchEmis: formatDate(venta.fecha),
       CFEMntBruto: '1',
       CFEFmaPago: getFmaPago(medioPago),
       CFEFchVenc: formatDate(venta.fecha_entrega) || formatDate(venta.fecha),

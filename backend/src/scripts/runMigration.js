@@ -867,6 +867,10 @@ const statements = [
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_tipo varchar(20) NOT NULL DEFAULT 'ninguno';`,
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_valor numeric(12,2) NOT NULL DEFAULT 0;`,
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
+  // === DESCUENTOS INDEPENDIENTES POR PACKS (v15) ===
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_tipo varchar(20) NOT NULL DEFAULT 'ninguno';`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
 ];
 
 export async function runMigration() {
