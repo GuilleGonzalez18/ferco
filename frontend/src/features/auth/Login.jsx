@@ -146,6 +146,7 @@ export default function Login({ onLogin }) {
           )}
           <h2>Iniciar sesión</h2>
         <AppInput
+          id="login-email"
           type="email"
           placeholder="Correo electrónico"
           value={email}
@@ -153,6 +154,7 @@ export default function Login({ onLogin }) {
         />
         {mode === 'login' && (
           <AppInput
+            id="login-password"
             type="password"
             placeholder="Contraseña"
             value={password}
@@ -162,12 +164,14 @@ export default function Login({ onLogin }) {
         {mode === 'reset' && (
           <>
             <AppInput
+              id="reset-token"
               type="text"
-                placeholder="Código de 6 dígitos"
-                value={resetToken}
-                onChange={e => setResetToken(e.target.value)}
-              />
+              placeholder="Código de 6 dígitos"
+              value={resetToken}
+              onChange={e => setResetToken(e.target.value)}
+            />
             <AppInput
+              id="reset-password"
               type="password"
               placeholder="Nueva contraseña (mínimo 8)"
               value={newPassword}
