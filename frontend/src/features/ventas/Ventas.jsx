@@ -211,6 +211,7 @@ export default function Ventas({
   const [descuentoItemModal, setDescuentoItemModal] = useState({
     open: false,
     itemId: null,
+    parte: 'sueltas',
     tipo: 'porcentaje',
     valor: '',
   });
@@ -343,6 +344,8 @@ export default function Ventas({
           modoVenta: unidadesPorEmpaque > 1 && cantidad % unidadesPorEmpaque === 0 ? 'empaque' : 'unidad',
           descuentoTipo: 'ninguno',
           descuentoValor: '',
+          descuentoPacksTipo: 'ninguno',
+          descuentoPacksValor: '',
         };
       })
       .filter(Boolean);
@@ -550,6 +553,8 @@ export default function Ventas({
           modoVenta,
           descuentoTipo: 'ninguno',
           descuentoValor: '',
+          descuentoPacksTipo: 'ninguno',
+          descuentoPacksValor: '',
         },
       ];
     });
@@ -619,30 +624,45 @@ export default function Ventas({
     updateItem(itemId, { unidadesSolicitadas: unidades });
   };
 
-  const openDiscountModal = (item) => {
+  const openDiscountModal = (item, parte = 'sueltas') => {
+    const esPacks = parte === 'packs';
     setDescuentoItemModal({
       open: true,
       itemId: item.id,
-      tipo: item.descuentoTipo === 'fijo' ? 'fijo' : 'porcentaje',
-      valor: item.descuentoValor || '',
+      parte,
+      tipo: esPacks
+        ? (item.descuentoPacksTipo === 'fijo' ? 'fijo' : 'porcentaje')
+        : (item.descuentoTipo === 'fijo' ? 'fijo' : 'porcentaje'),
+      valor: esPacks ? (item.descuentoPacksValor || '') : (item.descuentoValor || ''),
     });
   };
 
   const closeDiscountModal = () => {
-    setDescuentoItemModal({ open: false, itemId: null, tipo: 'porcentaje', valor: '' });
+    setDescuentoItemModal({ open: false, itemId: null, parte: 'sueltas', tipo: 'porcentaje', valor: '' });
   };
 
   const applyItemDiscount = () => {
     if (!descuentoItemModal.itemId) return;
-    updateItem(descuentoItemModal.itemId, {
-      descuentoTipo: descuentoItemModal.tipo,
-      descuentoValor: descuentoItemModal.valor,
-    });
+    if (descuentoItemModal.parte === 'packs') {
+      updateItem(descuentoItemModal.itemId, {
+        descuentoPacksTipo: descuentoItemModal.tipo,
+        descuentoPacksValor: descuentoItemModal.valor,
+      });
+    } else {
+      updateItem(descuentoItemModal.itemId, {
+        descuentoTipo: descuentoItemModal.tipo,
+        descuentoValor: descuentoItemModal.valor,
+      });
+    }
     closeDiscountModal();
   };
 
-  const removeItemDiscount = (itemId) => {
-    updateItem(itemId, { descuentoTipo: 'ninguno', descuentoValor: '' });
+  const removeItemDiscount = (itemId, parte = 'sueltas') => {
+    if (parte === 'packs') {
+      updateItem(itemId, { descuentoPacksTipo: 'ninguno', descuentoPacksValor: '' });
+    } else {
+      updateItem(itemId, { descuentoTipo: 'ninguno', descuentoValor: '' });
+    }
   };
 
   const openGlobalDiscountModal = () => {
@@ -679,27 +699,44 @@ export default function Ventas({
       const split = puedeEmpaque
         ? splitByEmpaque(unidades, packSize)
         : { packs: 0, unidadesSueltas: unidades };
-      const base = puedeEmpaque
-        ? roundMoney(split.packs * precioEmpaque + split.unidadesSueltas * precioUnidad)
-        : roundMoney(unidades * precioUnidad);
-      const valor = toNumber(item.descuentoValor);
-      let descuento = 0;
 
+      const montoPacks = puedeEmpaque ? roundMoney(split.packs * precioEmpaque) : 0;
+      const montoSueltas = roundMoney(split.unidadesSueltas * precioUnidad);
+      const base = roundMoney(montoPacks + montoSueltas);
+
+      // Descuento sobre sueltas (o sobre la base completa si no hay split de packs)
+      const valorSueltas = toNumber(item.descuentoValor);
+      const baseSueltas = puedeEmpaque && split.packs > 0 ? montoSueltas : base;
+      let descSueltas = 0;
       if (item.descuentoTipo === 'porcentaje') {
-        const pct = Math.max(0, Math.min(100, valor));
-        descuento = (base * pct) / 100;
+        descSueltas = (baseSueltas * Math.max(0, Math.min(100, valorSueltas))) / 100;
       } else if (item.descuentoTipo === 'fijo') {
-        const fijo = roundMoney(valor);
-        descuento = Math.max(0, Math.min(base, fijo));
+        descSueltas = Math.max(0, Math.min(baseSueltas, roundMoney(valorSueltas)));
       }
 
-      const descuentoAplicado = roundMoney(descuento);
+      // Descuento sobre packs (solo si hay packs)
+      let descPacks = 0;
+      if (split.packs > 0) {
+        const valorPacks = toNumber(item.descuentoPacksValor);
+        if (item.descuentoPacksTipo === 'porcentaje') {
+          descPacks = (montoPacks * Math.max(0, Math.min(100, valorPacks))) / 100;
+        } else if (item.descuentoPacksTipo === 'fijo') {
+          descPacks = Math.max(0, Math.min(montoPacks, roundMoney(valorPacks)));
+        }
+      }
+
+      const descuentoPacksAplicado = roundMoney(descPacks);
+      const descuentoSueltasAplicado = roundMoney(descSueltas);
+      const descuentoAplicado = roundMoney(descuentoPacksAplicado + descuentoSueltasAplicado);
+
       return {
         ...item,
         subtotalBase: base,
         packsCalculados: split.packs,
         unidadesSueltasCalculadas: split.unidadesSueltas,
         precioUnitarioCalculado: unidades > 0 ? (base / unidades) : 0,
+        descuentoPacksAplicado,
+        descuentoSueltasAplicado,
         descuentoAplicado,
       };
     });
@@ -1035,6 +1072,19 @@ export default function Ventas({
           producto_id: item.productoId,
           cantidad: item.unidadesSolicitadas,
           precio_unitario: toNumber(item.precioUnitarioCalculado),
+          packs: item.packsCalculados,
+          unidades_sueltas: item.unidadesSueltasCalculadas,
+          unidades_por_empaque: item.unidadesPorEmpaque,
+          tipo_empaque: item.tipoEmpaque,
+          precio_empaque: toNumber(item.precioEmpaque),
+          precio_unidad: toNumber(item.precioUnidad),
+          modo_venta: item.modoVenta || 'unidad',
+          descuento_tipo: item.descuentoTipo || 'ninguno',
+          descuento_valor: toNumber(item.descuentoValor),
+          descuento_aplicado: toNumber(item.descuentoSueltasAplicado ?? item.descuentoAplicado),
+          descuento_packs_tipo: item.descuentoPacksTipo || 'ninguno',
+          descuento_packs_valor: toNumber(item.descuentoPacksValor),
+          descuento_packs_aplicado: toNumber(item.descuentoPacksAplicado),
         })),
       });
 
@@ -1080,6 +1130,23 @@ export default function Ventas({
       });
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
+
+      // Descargar JSON CFE automáticamente (con comentarios JSONC)
+      if (ventaCreada?.id) {
+        api.getVentaCFEAnnotated(ventaCreada.id)
+          .then((text) => {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cfe-venta-${ventaCreada.id}.jsonc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch(() => {}); // silencioso, no interrumpe el flujo
+      }
     } catch (error) {
       await appAlert(`No se pudo registrar la venta: ${error.message}`);
     }
@@ -1350,30 +1417,73 @@ export default function Ventas({
                     />
                   </div>
                   <div className="descuentos-item">
-                    {item.descuentoTipo === 'ninguno' ? (
-                      <AppButton
-                        type="button"
-                        className="descuento-action-link"
-                        onClick={() => openDiscountModal(item)}
-                      >
-                        Dar descuento
-                      </AppButton>
-                    ) : (
+                    {item.packsCalculados > 0 && item.unidadesSueltasCalculadas > 0 ? (
+                      // Descuentos independientes: uno para packs, otro para sueltas
                       <>
-                        <span className="descuento-aplicado">
-                          Descuento:{' '}
-                          {item.descuentoTipo === 'porcentaje'
-                            ? `${toNumber(item.descuentoValor)}%`
-                            : money(item.descuentoValor)}
-                        </span>
+                        <div className="descuento-linea">
+                          <span className="descuento-label">{item.tipoEmpaque || 'Empaque'}:</span>
+                          {item.descuentoPacksTipo === 'ninguno' ? (
+                            <AppButton type="button" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>
+                              Dar descuento
+                            </AppButton>
+                          ) : (
+                            <>
+                              <span className="descuento-aplicado">
+                                {item.descuentoPacksTipo === 'porcentaje'
+                                  ? `${toNumber(item.descuentoPacksValor)}%`
+                                  : money(item.descuentoPacksValor)}
+                              </span>
+                              <AppButton type="button" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>Editar</AppButton>
+                              <AppButton type="button" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'packs')}>✕</AppButton>
+                            </>
+                          )}
+                        </div>
+                        <div className="descuento-linea">
+                          <span className="descuento-label">Sueltas:</span>
+                          {item.descuentoTipo === 'ninguno' ? (
+                            <AppButton type="button" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>
+                              Dar descuento
+                            </AppButton>
+                          ) : (
+                            <>
+                              <span className="descuento-aplicado">
+                                {item.descuentoTipo === 'porcentaje'
+                                  ? `${toNumber(item.descuentoValor)}%`
+                                  : money(item.descuentoValor)}
+                              </span>
+                              <AppButton type="button" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>Editar</AppButton>
+                              <AppButton type="button" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'sueltas')}>✕</AppButton>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      // Descuento único (solo packs o solo sueltas)
+                      item.descuentoTipo === 'ninguno' ? (
                         <AppButton
                           type="button"
                           className="descuento-action-link"
-                          onClick={() => removeItemDiscount(item.id)}
+                          onClick={() => openDiscountModal(item, 'sueltas')}
                         >
-                          Eliminar descuento
+                          Dar descuento
                         </AppButton>
-                      </>
+                      ) : (
+                        <>
+                          <span className="descuento-aplicado">
+                            Descuento:{' '}
+                            {item.descuentoTipo === 'porcentaje'
+                              ? `${toNumber(item.descuentoValor)}%`
+                              : money(item.descuentoValor)}
+                          </span>
+                          <AppButton
+                            type="button"
+                            className="descuento-action-link"
+                            onClick={() => removeItemDiscount(item.id, 'sueltas')}
+                          >
+                            Eliminar descuento
+                          </AppButton>
+                        </>
+                      )
                     )}
                   </div>
                 </div>
@@ -1550,7 +1660,9 @@ export default function Ventas({
       >
         <div className="descuento-modal-backdrop" onClick={closeDiscountModal} />
         <div className="descuento-modal" role="dialog" aria-modal="true" aria-label="Aplicar descuento">
-          <h4>Aplicar descuento</h4>
+          <h4>
+            {descuentoItemModal.parte === 'packs' ? 'Descuento en empaques' : 'Descuento en unidades sueltas'}
+          </h4>
           <p>Selecciona el tipo de descuento para este producto.</p>
           <div className="descuento-modal-tipos">
             <AppButton

@@ -75,6 +75,10 @@ export default function Productos({ productos = [], setProductos }) {
   const [empaquesModalOpen, setEmpaquesModalOpen] = useState(false);
   const [empaques, setEmpaques] = useState([]);
   const [nuevoEmpaqueNombre, setNuevoEmpaqueNombre] = useState('');
+  const [tiposIvaModalOpen, setTiposIvaModalOpen] = useState(false);
+  const [tiposIva, setTiposIva] = useState([]);
+  const [nuevoIvaNombre, setNuevoIvaNombre] = useState('');
+  const [nuevoIvaPorcentaje, setNuevoIvaPorcentaje] = useState('');
   const mostrarOpcionesCatalogo = false;
   const { can } = usePermisos();
   const verCosto = can('productos', 'ver_costo');
@@ -86,7 +90,7 @@ export default function Productos({ productos = [], setProductos }) {
   const verArchivados = can('productos', 'ver_archivados');
   const gestionarEmpaques = can('productos', 'gestionar_empaques');
   const [nuevo, setNuevo] = useState({
-    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: ''
+    nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '', ivaId: ''
   });
 
   const loadEmpaques = async () => {
@@ -98,9 +102,19 @@ export default function Productos({ productos = [], setProductos }) {
     }
   };
 
+  const loadTiposIva = async () => {
+    try {
+      const rows = await api.getTiposIva();
+      setTiposIva(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      await appAlert(error.message || 'No se pudieron cargar los tipos de IVA.');
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       loadEmpaques();
+      loadTiposIva();
     });
   }, []);
 
@@ -184,7 +198,7 @@ export default function Productos({ productos = [], setProductos }) {
         const created = await api.createProducto(toApiProducto(nuevo));
         setProductos([fromApiProducto(created), ...productos]);
       }
-      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+      setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '', ivaId: '' });
       setMostrarForm(false);
       setImagenUrlError('');
     } catch (error) {
@@ -199,6 +213,7 @@ export default function Productos({ productos = [], setProductos }) {
       ...prod,
       imagen: null,
       empaqueId: prod.empaqueId || (matchedByName ? String(matchedByName.id) : ''),
+      ivaId: prod.ivaId || '',
     });
     setImagenUrlError('');
     setEditando(prod.id);
@@ -274,6 +289,47 @@ export default function Productos({ productos = [], setProductos }) {
       ));
     } catch (error) {
       await appAlert(error.message || 'No se pudo eliminar el empaque.');
+    }
+  };
+
+  const crearTipoIva = async () => {
+    const nombre = String(nuevoIvaNombre || '').trim();
+    const porcentaje = String(nuevoIvaPorcentaje || '').trim();
+    if (!nombre) {
+      await appAlert('Ingresa un nombre para el tipo de IVA.');
+      return;
+    }
+    if (porcentaje === '' || isNaN(Number(porcentaje)) || Number(porcentaje) < 0) {
+      await appAlert('Ingresa un porcentaje válido (mayor o igual a 0).');
+      return;
+    }
+    try {
+      const created = await api.createTipoIva({ codigo: 1, nombre, porcentaje: Number(porcentaje) });
+      setTiposIva((prev) => [...prev, created].sort((a, b) => Number(a.porcentaje) - Number(b.porcentaje)));
+      setNuevoIvaNombre('');
+      setNuevoIvaPorcentaje('');
+    } catch (error) {
+      await appAlert(error.message || 'No se pudo crear el tipo de IVA.');
+    }
+  };
+
+  const eliminarTipoIva = async (tipoIva) => {
+    const ok = await appConfirm(`¿Eliminar tipo de IVA "${tipoIva.nombre}"?`, {
+      title: 'Eliminar tipo de IVA',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) return;
+    try {
+      await api.deleteTipoIva(tipoIva.id);
+      setTiposIva((prev) => prev.filter((t) => Number(t.id) !== Number(tipoIva.id)));
+      setNuevo((prev) => (
+        String(prev.ivaId) === String(tipoIva.id)
+          ? { ...prev, ivaId: '' }
+          : prev
+      ));
+    } catch (error) {
+      await appAlert(error.message || 'No se pudo eliminar el tipo de IVA.');
     }
   };
 
@@ -773,14 +829,14 @@ export default function Productos({ productos = [], setProductos }) {
   const abrirAlta = () => {
     setMostrarForm(true);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '', ivaId: '' });
     setImagenUrlError('');
   };
 
   const cerrarPanel = () => {
     setMostrarForm(false);
     setEditando(null);
-    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '' });
+    setNuevo({ nombre: '', stock: '', categoria: '', imagen: null, imagenPreview: '', ean: '', tipoEmpaque: '', empaqueId: '', cantidadEmpaque: '', costo: '', venta: '', precioEmpaque: '', ivaId: '' });
     setImagenUrlError('');
   };
 
@@ -867,6 +923,14 @@ export default function Productos({ productos = [], setProductos }) {
       mobileHide: true,
       render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
     },
+    {
+      key: 'iva',
+      header: 'IVA',
+      mobileLabel: 'IVA',
+      render: (p) => p.ivaNombre
+        ? `${p.ivaNombre}${p.ivaPorcentaje ? ` ${p.ivaPorcentaje}%` : ''}`
+        : '-',
+    },
     ...(verGanancia
       ? [{
           key: 'ganancia',
@@ -952,6 +1016,11 @@ export default function Productos({ productos = [], setProductos }) {
             {gestionarEmpaques && (
             <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
               <span>EMPAQUES</span>
+            </AppButton>
+            )}
+            {gestionarEmpaques && (
+            <AppButton className="agregar-btn toolbar-add" title="Gestionar tipos de IVA" onClick={() => setTiposIvaModalOpen(true)}>
+              <span>IVA</span>
             </AppButton>
             )}
             {puedeExportar && (
@@ -1081,6 +1150,46 @@ export default function Productos({ productos = [], setProductos }) {
           </div>
         )}
 
+        {tiposIvaModalOpen && (
+          <div className="export-modal-overlay" role="dialog" aria-modal="true">
+            <div className="export-modal-backdrop" onClick={() => setTiposIvaModalOpen(false)} />
+            <div className="export-modal">
+              <h4>Gestionar tipos de IVA</h4>
+              <p>Agrega y administra los tipos de IVA.</p>
+              <div className="empaques-create-row">
+                <AppInput
+                  type="text"
+                  value={nuevoIvaNombre}
+                  onChange={(e) => setNuevoIvaNombre(e.target.value)}
+                  placeholder="Nombre (ej: Tasa Básica)"
+                />
+                <AppInput
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={nuevoIvaPorcentaje}
+                  onChange={(e) => setNuevoIvaPorcentaje(e.target.value)}
+                  placeholder="%"
+                  style={{ width: '80px' }}
+                />
+                <AppButton type="button" onClick={crearTipoIva}>Agregar</AppButton>
+              </div>
+              <div className="empaques-list">
+                {tiposIva.map((t) => (
+                  <div key={t.id} className="empaque-item">
+                    <span>{t.nombre} ({t.porcentaje}%)</span>
+                    <AppButton type="button" onClick={() => eliminarTipoIva(t)}>Eliminar</AppButton>
+                  </div>
+                ))}
+                {!tiposIva.length && <p className="empaque-empty">No hay tipos de IVA cargados.</p>}
+              </div>
+              <AppButton type="button" className="export-modal-close" onClick={() => setTiposIvaModalOpen(false)}>
+                Cerrar
+              </AppButton>
+            </div>
+          </div>
+        )}
+
         <AppTable
           columns={productosColumns}
           rows={sortedProductos}
@@ -1142,6 +1251,12 @@ export default function Productos({ productos = [], setProductos }) {
               <AppSelect name="empaqueId" value={nuevo.empaqueId || ''} onChange={handleChange} required>
                 <option value="">Seleccionar empaque</option>
                 {empaques.map((e) => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
+              </AppSelect>
+            </label>
+            <label className="field-label">IVA
+              <AppSelect name="ivaId" value={nuevo.ivaId || ''} onChange={handleChange} required>
+                <option value="">Seleccionar IVA</option>
+                {tiposIva.map((t) => <option key={t.id} value={String(t.id)}>{t.nombre} ({t.porcentaje}%)</option>)}
               </AppSelect>
             </label>
             <label className="field-label">Cantidad por empaque

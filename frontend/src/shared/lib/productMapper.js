@@ -26,6 +26,9 @@ export function fromApiProducto(row) {
     costo: String(row.costo ?? ''),
     venta: String(row.precio ?? ''),
     precioEmpaque: String(row.precio_empaque ?? ''),
+    ivaId: row.iva_id != null ? String(row.iva_id) : '',
+    ivaNombre: row.iva_nombre || '',
+    ivaPorcentaje: row.iva_porcentaje != null ? String(row.iva_porcentaje) : '',
   };
 }
 
@@ -42,5 +45,6 @@ export function toApiProducto(producto) {
     cantidad_empaque: producto.cantidadEmpaque ? Number(producto.cantidadEmpaque) : null,
     empaque_id: producto.empaqueId ? Number(producto.empaqueId) : null,
     precio_empaque: Math.round(Number(producto.precioEmpaque || 0) * 100) / 100,
+    iva_id: producto.ivaId ? Number(producto.ivaId) : null,
   };
 }

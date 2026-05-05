@@ -1,0 +1,209 @@
+// CFE – Comprobante Fiscal Electrónico – Muestra anotada
+// Formato: JSONC (JSON con comentarios) – abrir en VS Code para resaltado
+// API: Dynamica – Módulo de Facturación Electrónica (DGI Uruguay)
+// Ambiente: PRUEBAS (sin envío real a DGI)
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// CÓMO SE GENERA EN ESTE SISTEMA:
+//   GET /api/ventas/:id/cfe   → devuelve el JSON para una venta real
+//   El archivo de salida se puede descargar desde el botón "CFE" en Historial
+// ═══════════════════════════════════════════════════════════════════════════
+
+{
+  // ────────────────────────────────────────────────────────────────────────
+  // AMBIENTE
+  // ────────────────────────────────────────────────────────────────────────
+  "ambiente": "PRUEBAS", // "PRUEBAS" o "PRODUCCION" — siempre PRUEBAS hasta habilitar envío real
+
+  // ────────────────────────────────────────────────────────────────────────
+  // MASTER — Cabezal del comprobante
+  // ────────────────────────────────────────────────────────────────────────
+  "Master": {
+    "CFETipoCFE": "101",     // Tipo de comprobante. 101=eTicket | 111=eFactura | 102/112=NC | 103/113=ND
+                             // Se elige automáticamente: cliente con RUT → 111 (eFactura), resto → 101 (eTicket)
+    "CFESerie": "",          // Serie del comprobante (2 chars). Vacío = serie automática del módulo
+    "CFENro": "",            // Número del comprobante (hasta 7 dígitos). Vacío = numeración automática
+    "CFEFchEmis": "2026-05-04 12:30:00", // Fecha y hora de emisión contable (AAAA-MM-DD HH:MM:SS)
+    "CFEMntBruto": "1",      // Indicador de montos en detalle:
+                             //   0 = precios SIN IVA | 1 = precios CON IVA incluido ← usamos este
+    "CFEFmaPago": "1",       // Forma de pago: 1=Contado | 2=Crédito
+    "CFEFchVenc": "2026-05-04", // Fecha de vencimiento del documento (AAAA-MM-DD)
+    "CFETipoTraslado": "1",  // Solo para eRemito. 1=Venta | 2=Traslado interno
+    "CFEAdenda": "",         // Adenda libre al pie del documento. Usa '|' para saltos de línea
+    "CFENumReferencia": "42",// Número interno del ERP que identifica este CFE (= ID de venta)
+    "CFEImpFormato": "2",    // Formato del PDF: 1=rollo 80mm | 2=hoja A4 español | 6=hoja A5
+    "CFEIdCompra": "",       // Referencia de compra del receptor (ej. número de orden de compra)
+    "CFEIdCompraApodo": "",  // Nombre del campo CFEIdCompra a imprimir (ej. "Orden de Compra")
+    "CFETpoOperacion": "1",  // Tipo de operación: 1=Venta de productos | 2=Prestación de servicio
+    "CFEQrCode": "3",        // QR en representación impresa: 1=según licencia | 2=retornar | 3=no retornar
+    "CFERepImpresa": "2",    // PDF en base64 en la respuesta: 1=no retornar | 2=retornar
+    "CFEInfAdicional": ""    // Información adicional del comprobante (hasta 150 chars)
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // EMISOR — Datos del negocio que emite el comprobante
+  // Origen: tabla config_empresa
+  // ────────────────────────────────────────────────────────────────────────
+  "Emisor": {
+    "EmiRznSoc": "Ferco S.R.L.",         // Razón social del emisor (obligatorio, hasta 150 chars)
+                                          // Fuente: config_empresa.razon_social
+    "EmiComercial": "Ferco",             // Nombre comercial o fantasía (hasta 30 chars)
+                                          // Fuente: config_empresa.nombre
+    "EmiGiroEmis": "Comercio al por menor de artículos varios", // Giro del negocio (hasta 60 chars)
+                                          // Fuente: config_empresa.giro
+    "EmiTelefono": "099 000 000",        // Teléfono principal (hasta 20 chars)
+                                          // Fuente: config_empresa.telefono
+    "EmiTelefono2": "",                  // Teléfono secundario (opcional)
+    "EmiCorreoEmisor": "info@ferco.com.uy", // Correo de contacto (hasta 80 chars)
+                                            // Fuente: config_empresa.correo
+    "EmiSucursal": "",                   // Nombre de sucursal/casa central (hasta 20 chars, no figura en impresión)
+    "EmiDomFiscal": "Av. Italia 1234",   // Domicilio fiscal declarado en DGI (obligatorio, hasta 60 chars)
+                                          // Fuente: config_empresa.direccion
+    "EmiCiudad": "Montevideo",           // Ciudad declarada en DGI (obligatorio, hasta 30 chars)
+                                          // Fuente: config_empresa.ciudad
+    "EmiDepartamento": "Montevideo",     // Departamento declarado en DGI (obligatorio, hasta 30 chars)
+                                          // Fuente: config_empresa.departamento
+    "EmiInfAdicional": ""               // Información adicional del emisor (opcional)
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // RECEPTOR — Datos del cliente que recibe el comprobante
+  // Obligatorio para eFactura (111). Opcional para eTicket bajo monto tope DGI.
+  // Origen: tabla clientes (joined en ventas)
+  // ────────────────────────────────────────────────────────────────────────
+  "Receptor": {
+    "RcpTipoDocRecep": "3",        // Tipo de documento: 1=NIE | 2=RUT | 3=CI | 4=Otros | 5=Pasaporte | 6=DNI
+                                    // Fuente: clientes.tipo_documento
+    "RcpTipoDocDscRecep": "",      // Descripción del tipo si RcpTipoDocRecep=4 (Otros)
+    "RcpCodPaisRecep": "UY",       // Código de país ISO 3166-1 alfa-2. Obligatorio para eFactura.
+                                    // UY si tipo=RUT o CI | AR/BR/CL/PY si tipo=DNI
+    "RcpDocRecep": "12345678",     // Número de documento del receptor (hasta 20 chars)
+                                    // Fuente: clientes.numero_documento
+    "RcpRznSocRecep": "Juan Pérez",// Nombre o razón social del receptor (hasta 150 chars)
+                                    // Obligatorio para eFactura. Fuente: clientes.nombre
+    "RcpDirRecep": "Rivera 567",   // Domicilio del receptor (hasta 70 chars)
+                                    // Obligatorio para eFactura. Fuente: clientes.direccion
+    "RcpCiudadRecep": "Montevideo",// Ciudad del receptor (hasta 30 chars)
+                                    // Obligatorio para eFactura. Fuente: clientes.ciudad
+    "RcpDeptoRecep": "Montevideo", // Departamento del receptor (hasta 30 chars)
+                                    // Obligatorio para eFactura. Fuente: clientes.departamento (JOIN departamentos)
+    "RcpCP": "",                   // Código postal (hasta 5 dígitos, opcional)
+    "RcpCorreoRecep": "juan@mail.com", // Correo electrónico del receptor (opcional)
+                                        // Fuente: clientes.correo
+    "RcpInfAdiRecep": "",          // Información adicional del receptor (hasta 150 chars)
+    "RcpDirPaisRecep": "",         // País de la dirección (obligatorio solo en eFactura de Exportación)
+    "RcpDstEntregaRecep": ""       // Lugar de destino de mercadería (opcional)
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // TOTALES — Montos del comprobante agrupados por tipo de IVA
+  // CFEMntBruto=1: los precios en detalle incluyen IVA
+  //   neto = precio / (1 + tasa)     ej. precio 122 con IVA 22% → neto = 100
+  //   iva  = precio - neto           ej. 122 - 100 = 22
+  // ────────────────────────────────────────────────────────────────────────
+  "Totales": {
+    "TotTpoMoneda": "UYU",           // Moneda (ISO 4217): UYU=Peso Uruguayo | USD | EUR
+    "TotTpoCambio": "",              // Tipo de cambio (obligatorio si moneda ≠ UYU, hasta 3 decimales)
+
+    // Montos por categoría IVA (todos hasta 2 decimales)
+    "TotMntNoGrv": "0.00",           // Suma de ítems No Gravados/Exentos (IteIndFact=1)
+    "TotMntExpoyAsim": "0.00",       // Suma de ítems Exportación (IteIndFact=10) — no usado actualmente
+    "TotMntImpuestoPerc": "0.00",    // Suma de ítems con Impuesto Percibido (IteIndFact=11)
+    "TotMntIVaenSusp": "0.00",       // Suma de ítems con IVA en Suspenso (IteIndFact=12)
+
+    "TotMntNetoIvaTasaMin": "90.91", // Suma de montos NETO (sin IVA) con tasa mínima 10%
+    "TotMntNetoIVATasaBasica": "81.97", // Suma de montos NETO (sin IVA) con tasa básica 22%
+    "TotMntNetoIVAOtra": "0.00",     // Suma de montos NETO con otra tasa
+
+    "TotMntIVATasaMin": "9.09",      // Suma del IVA de ítems tasa mínima (TotMntNetoIvaTasaMin × 0.10)
+    "TotMntIVATasaBasica": "18.03",  // Suma del IVA de ítems tasa básica (TotMntNetoIVATasaBasica × 0.22)
+    "TotMntIVAOtra": "0.00",         // Suma del IVA de ítems otra tasa
+
+    // TotMntTotal = NoGrav + ExpAsim + ImpPerc + IVAsusp + NetoMin + NetoBas + NetoOtra + IVAmin + IVAbas + IVAotra
+    "TotMntTotal": "200.00",         // Total del comprobante (sin ítems No Facturables)
+    "TotMontoNF": "0.00",            // Monto No Facturable (IteIndFact=6 o 7, ej. señas, adelantos)
+    "TotMntPagar": "200.00",         // Total a pagar = TotMntTotal + TotMontoNF
+
+    "MedPagCodMP": "1",              // Código del medio de pago: 1=Efectivo | 2=Crédito | 3=Débito | 4=Transferencia
+    "MedPagGlosaMP": "EFECTIVO"      // Descripción del medio de pago (hasta 50 chars)
+  },
+
+  // ────────────────────────────────────────────────────────────────────────
+  // DETALLE — Lista de ítems del comprobante (1 a 700 para eTicket, 1 a 200 resto)
+  // Origen: tabla venta_detalle JOIN productos JOIN tipos_iva
+  // ────────────────────────────────────────────────────────────────────────
+  "Detalle": [
+    {
+      "IteCodiTpoCod": "INT1",       // Tipo de código del ítem: INT1=interno | GTIN13/12/8=EAN | PLU=PLU
+                                      // Si producto tiene EAN → GTINxx según cantidad de dígitos; sino INT1
+      "IteCodiCod": "15",            // Código del ítem según el tipo indicado (hasta 35 chars)
+                                      // INT1: usa el ID del producto | GTIN: usa el EAN
+      "IteIndFact": "3",             // Indicador de facturación:
+                                      //   1=Exento IVA | 2=Tasa Mínima 10% | 3=Tasa Básica 22%
+                                      //   4=Otra Tasa | 5=Entrega gratuita | 6=No facturable
+                                      // Origen: productos.iva_id → tipos_iva.codigo
+      "IteNomItem": "Producto ejemplo", // Nombre del producto/servicio en el documento (hasta 80 chars)
+                                         // Fuente: productos.nombre
+      "IteDscItem": "",              // Descripción adicional del ítem (hasta 1000 chars, opcional)
+      "IteCantidad": "2.000",        // Cantidad con hasta 3 decimales
+                                      // Fuente: venta_detalle.cantidad
+      "IteUniMed": "UNID",           // Unidad de medida (4 chars máx): UNID | CAJA | KILO | LITR | etc.
+                                      // Fuente: productos.unidad (truncado a 4 chars, mayúsculas)
+      "ItePrecioUnitario": "61.0000",// Precio unitario con hasta 6 decimales
+                                      // Fuente: venta_detalle.precio_unitario (con IVA incluido si CFEMntBruto=1)
+      "IteDescuentoPct": "0.00",     // Porcentaje de descuento (hasta 3 decimales)
+      "IteDescuentoMonto": "0.00",   // Monto del descuento (requerido si existe IteDescuentoPct)
+      "IteMontoItem": "122.00"       // Monto total del ítem = (cantidad × precio) - descuento
+                                      // Fuente: calculado en cfeBuilder.js
+    },
+    {
+      // Ejemplo de ítem con IVA Tasa Mínima (10%) — ej. medicamentos, algunos alimentos
+      "IteCodiTpoCod": "GTIN13",
+      "IteCodiCod": "7891234567890",
+      "IteIndFact": "2",             // 2 = Tasa Mínima 10%
+      "IteNomItem": "Producto con IVA mínimo",
+      "IteDscItem": "",
+      "IteCantidad": "1.000",
+      "IteUniMed": "UNID",
+      "ItePrecioUnitario": "100.0000",
+      "IteDescuentoPct": "0.00",
+      "IteDescuentoMonto": "0.00",
+      "IteMontoItem": "100.00"
+    },
+    {
+      // Ejemplo de ítem Exento de IVA (no gravado)
+      "IteCodiTpoCod": "INT1",
+      "IteCodiCod": "99",
+      "IteIndFact": "1",             // 1 = Exento / No Gravado
+      "IteNomItem": "Ítem exento",
+      "IteDscItem": "",
+      "IteCantidad": "1.000",
+      "IteUniMed": "UNID",
+      "ItePrecioUnitario": "78.00",
+      "IteDescuentoPct": "0.00",
+      "IteDescuentoMonto": "0.00",
+      "IteMontoItem": "78.00"
+    }
+  ],
+
+  // ────────────────────────────────────────────────────────────────────────
+  // REFERENCIA — Documentos referenciados (Notas de Crédito/Débito, cobranzas)
+  // Obligatorio para NC y ND. Hasta 40 referencias.
+  // Actualmente vacío en ventas normales.
+  // ────────────────────────────────────────────────────────────────────────
+  "Referencia": [
+    // Ejemplo de referencia (solo presente en NC/ND):
+    // {
+    //   "RefNroLinRef": "1",             // Secuencial 1-40
+    //   "RefIndGlobal": null,            // 1 = referencia global (sin CFE específico)
+    //   "RefTpoDocRef": "101",           // Tipo del comprobante referenciado (ej. 101=eTicket)
+    //   "RefSerie": "A",                 // Serie del comprobante referenciado
+    //   "RefNroCFERef": "1234567",       // Número del comprobante referenciado
+    //   "RefRazonRef": "Anulación",      // Motivo de la referencia (obligatorio si RefIndGlobal=1)
+    //   "RefFechaCFEref": "2026-04-01",  // Fecha del comprobante referenciado
+    //   "RefMntTotalRef": "200.00",      // Valor total del comprobante referenciado
+    //   "RefTpoMonedaRef": "UYU",        // Moneda del comprobante referenciado (obligatorio)
+    //   "RefTipCambioRef": "1.00"        // Tipo de cambio (1.00 si es UYU)
+    // }
+  ]
+}

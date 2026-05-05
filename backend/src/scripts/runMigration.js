@@ -812,6 +812,65 @@ const statements = [
   // === CONFIGURACIÓN DE PDFs POR DOCUMENTO (v12) ===
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS pdf_factura jsonb NOT NULL DEFAULT '{}'::jsonb;`,
   `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS pdf_remito jsonb NOT NULL DEFAULT '{}'::jsonb;`,
+  // === TIPOS DE IVA + IVA EN PRODUCTOS (v13) ===
+  `
+  CREATE TABLE IF NOT EXISTS public.tipos_iva (
+    id serial PRIMARY KEY,
+    codigo smallint NOT NULL,
+    nombre varchar(80) NOT NULL,
+    porcentaje decimal(5,2) NOT NULL DEFAULT 0,
+    activo boolean NOT NULL DEFAULT true
+  );
+  `,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_tipos_iva_nombre ON public.tipos_iva (nombre);`,
+  `
+  INSERT INTO public.tipos_iva (codigo, nombre, porcentaje)
+  VALUES
+    (1, 'No Grava',      0.00),
+    (1, 'Exento',        0.00),
+    (2, 'Tasa Mínima',  10.00),
+    (3, 'Tasa Básica',  22.00)
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
+  `ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS iva_id integer NULL;`,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE table_schema = 'public' AND table_name = 'productos'
+        AND constraint_name = 'productos_iva_id_fkey'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_iva_id_fkey
+      FOREIGN KEY (iva_id) REFERENCES public.tipos_iva(id) ON DELETE SET NULL;
+    END IF;
+  END $$;
+  `,
+  // === CAMPOS CFE EN CONFIG_EMPRESA (v13) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS giro varchar(180) NULL;`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS ciudad varchar(100) NULL;`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS departamento varchar(100) NULL;`,
+  // === CAMPOS DOCUMENTO EN CLIENTES (v13) ===
+  `ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS tipo_documento varchar(20) NULL;`,
+  `ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS numero_documento varchar(50) NULL;`,
+  `ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS ciudad varchar(100) NULL;`,
+  `ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS codigo_postal varchar(10) NULL;`,
+  // === DESGLOSE EMPAQUE EN VENTA_DETALLE (v14) ===
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS packs integer NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS unidades_sueltas integer NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS unidades_por_empaque integer NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS tipo_empaque varchar(50) NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS precio_empaque numeric(12,4) NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS precio_unidad numeric(12,4) NULL;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS modo_venta varchar(10) NOT NULL DEFAULT 'unidad';`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_tipo varchar(20) NOT NULL DEFAULT 'ninguno';`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_valor numeric(12,2) NOT NULL DEFAULT 0;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
+  // === DESCUENTOS INDEPENDIENTES POR PACKS (v15) ===
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_tipo varchar(20) NOT NULL DEFAULT 'ninguno';`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0;`,
+  `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
 ];
 
 export async function runMigration() {

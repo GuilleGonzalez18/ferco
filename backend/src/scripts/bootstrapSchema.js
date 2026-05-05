@@ -59,6 +59,10 @@ const statements = [
     horario_cierre_reapertura varchar(5) NULL,
     departamento_id integer NULL,
     barrio_id integer NULL,
+    tipo_documento varchar(20) NULL,
+    numero_documento varchar(50) NULL,
+    ciudad varchar(100) NULL,
+    codigo_postal varchar(10) NULL,
     created_at timestamptz NOT NULL DEFAULT now()
   );
   `,
@@ -88,6 +92,28 @@ const statements = [
     END IF;
   END $$;
   `,
+  // === TIPOS DE IVA ===
+  `
+  CREATE TABLE IF NOT EXISTS public.tipos_iva (
+    id serial PRIMARY KEY,
+    codigo smallint NOT NULL,
+    nombre varchar(80) NOT NULL,
+    porcentaje decimal(5,2) NOT NULL DEFAULT 0,
+    activo boolean NOT NULL DEFAULT true
+  );
+  `,
+  `
+  CREATE UNIQUE INDEX IF NOT EXISTS ux_tipos_iva_nombre ON public.tipos_iva (nombre);
+  `,
+  `
+  INSERT INTO public.tipos_iva (codigo, nombre, porcentaje)
+  VALUES
+    (1, 'No Grava',      0.00),
+    (1, 'Exento',        0.00),
+    (2, 'Tasa Mínima',  10.00),
+    (3, 'Tasa Básica',  22.00)
+  ON CONFLICT (nombre) DO NOTHING;
+  `,
   `
   CREATE TABLE IF NOT EXISTS public.productos (
     id serial PRIMARY KEY,
@@ -101,6 +127,7 @@ const statements = [
     cantidad_empaque integer NULL,
     precio_empaque numeric(12,2) NOT NULL DEFAULT 0,
     empaque_id integer NULL,
+    iva_id integer NULL,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now()
   );
@@ -270,6 +297,20 @@ const statements = [
   DO $$
   BEGIN
     IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE table_schema = 'public' AND table_name = 'productos'
+        AND constraint_name = 'productos_iva_id_fkey'
+    ) THEN
+      ALTER TABLE public.productos
+      ADD CONSTRAINT productos_iva_id_fkey
+      FOREIGN KEY (iva_id) REFERENCES public.tipos_iva(id) ON DELETE SET NULL;
+    END IF;
+  END $$;
+  `,
+  `
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
       SELECT 1
       FROM information_schema.table_constraints
       WHERE table_schema = 'public'
@@ -300,7 +341,20 @@ const statements = [
     venta_id integer NOT NULL,
     producto_id integer NOT NULL,
     cantidad integer NOT NULL,
-    precio_unitario numeric(12,2) NOT NULL
+    precio_unitario numeric(12,2) NOT NULL,
+    packs integer NULL,
+    unidades_sueltas integer NULL,
+    unidades_por_empaque integer NULL,
+    tipo_empaque varchar(50) NULL,
+    precio_empaque numeric(12,4) NULL,
+    precio_unidad numeric(12,4) NULL,
+    modo_venta varchar(10) NOT NULL DEFAULT 'unidad',
+    descuento_tipo varchar(20) NOT NULL DEFAULT 'ninguno',
+    descuento_valor numeric(12,2) NOT NULL DEFAULT 0,
+    descuento_aplicado numeric(12,2) NOT NULL DEFAULT 0,
+    descuento_packs_tipo varchar(20) NOT NULL DEFAULT 'ninguno',
+    descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0,
+    descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0
   );
   `,
   `
@@ -474,6 +528,9 @@ const statements = [
     telefono varchar(50) NULL,
     correo varchar(180) NULL,
     website varchar(255) NULL,
+    giro varchar(180) NULL,
+    ciudad varchar(100) NULL,
+    departamento varchar(100) NULL,
     logo_base64 text NULL,
     color_primary varchar(7) NOT NULL DEFAULT '#cc2222',
     color_primary_strong varchar(7) NOT NULL DEFAULT '#8f0e0e',

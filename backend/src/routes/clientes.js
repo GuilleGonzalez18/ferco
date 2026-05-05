@@ -73,11 +73,17 @@ function actorName(authUser) {
 
 clientesRouter.get('/', async (_req, res) => {
   const result = await query(
-    `SELECT id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
-            tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-            departamento_id, barrio_id
-     FROM public.clientes
-     ORDER BY id DESC`
+    `SELECT c.id, c.nombre, c.rut, c.direccion, c.telefono, c.correo,
+            c.horario_apertura, c.horario_cierre,
+            c.tiene_reapertura, c.horario_reapertura, c.horario_cierre_reapertura,
+            c.departamento_id, c.barrio_id,
+            d.nombre AS departamento_nombre,
+            b.nombre AS barrio_nombre,
+            c.tipo_documento, c.numero_documento, c.ciudad, c.codigo_postal
+     FROM public.clientes c
+     LEFT JOIN public.departamentos d ON d.id = c.departamento_id
+     LEFT JOIN public.barrios b ON b.id = c.barrio_id
+     ORDER BY c.id DESC`
   );
   res.json(result.rows);
 });
@@ -96,6 +102,10 @@ clientesRouter.post('/', async (req, res) => {
     horario_cierre_reapertura = null,
     departamento_id = null,
     barrio_id = null,
+    tipo_documento = null,
+    numero_documento = null,
+    ciudad = null,
+    codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
   const horarios = normalizeHorariosPayload({
@@ -110,11 +120,11 @@ clientesRouter.post('/', async (req, res) => {
   try {
     const result = await query(
       `INSERT INTO public.clientes
-        (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
                  tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-                 departamento_id, barrio_id`,
+                 departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal`,
       [
         nombre,
         rut,
@@ -128,6 +138,10 @@ clientesRouter.post('/', async (req, res) => {
         horarios.horario_cierre_reapertura,
         departamento_id,
         barrio_id,
+        tipo_documento || null,
+        numero_documento || null,
+        ciudad || null,
+        codigo_postal || null,
       ]
     );
     await query(
@@ -163,6 +177,10 @@ clientesRouter.put('/:id', async (req, res) => {
     horario_cierre_reapertura = null,
     departamento_id = null,
     barrio_id = null,
+    tipo_documento = null,
+    numero_documento = null,
+    ciudad = null,
+    codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
   const horarios = normalizeHorariosPayload({
@@ -188,11 +206,15 @@ clientesRouter.put('/:id', async (req, res) => {
            horario_reapertura = $9,
            horario_cierre_reapertura = $10,
            departamento_id = $11,
-           barrio_id = $12
-       WHERE id = $13
+           barrio_id = $12,
+           tipo_documento = $13,
+           numero_documento = $14,
+           ciudad = $15,
+           codigo_postal = $16
+       WHERE id = $17
        RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
                  tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-                 departamento_id, barrio_id`,
+                 departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal`,
       [
         nombre,
         rut,
@@ -206,6 +228,10 @@ clientesRouter.put('/:id', async (req, res) => {
         horarios.horario_cierre_reapertura,
         departamento_id,
         barrio_id,
+        tipo_documento || null,
+        numero_documento || null,
+        ciudad || null,
+        codigo_postal || null,
         id,
       ]
     );

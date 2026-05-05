@@ -17,11 +17,13 @@ function actorName(authUser) {
 async function getProductoRowById(id) {
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.iva_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque,
+            ti.nombre AS iva_nombre, ti.porcentaje AS iva_porcentaje, ti.codigo AS iva_codigo
      FROM public.productos p
      LEFT JOIN public.empaques e ON e.id = p.empaque_id
+     LEFT JOIN public.tipos_iva ti ON ti.id = p.iva_id
      WHERE p.id = $1`,
     [id]
   );
@@ -32,11 +34,13 @@ productosRouter.get('/', async (req, res) => {
   const includeArchived = String(req.query.includeArchived || '').toLowerCase() === 'true';
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.iva_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque,
+            ti.nombre AS iva_nombre, ti.porcentaje AS iva_porcentaje, ti.codigo AS iva_codigo
        FROM public.productos p
        LEFT JOIN public.empaques e ON e.id = p.empaque_id
+       LEFT JOIN public.tipos_iva ti ON ti.id = p.iva_id
       WHERE ($1::boolean = true OR p.activo = true)
        ORDER BY p.activo DESC, p.id DESC`,
     [includeArchived]
@@ -56,6 +60,7 @@ productosRouter.post('/', async (req, res) => {
     cantidad_empaque = null,
     empaque_id = null,
     precio_empaque = 0,
+    iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
   const costoInt = toMoney(costo);
@@ -78,13 +83,27 @@ productosRouter.post('/', async (req, res) => {
     }
   }
 
+  const ivaIdSafe = iva_id == null || iva_id === '' ? null : Number(iva_id);
+  if (ivaIdSafe !== null && (!Number.isInteger(ivaIdSafe) || ivaIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Tipo de IVA inválido' });
+  }
+  if (ivaIdSafe !== null) {
+    const ivaQ = await query(
+      `SELECT id FROM public.tipos_iva WHERE id = $1 AND activo = true`,
+      [ivaIdSafe]
+    );
+    if (!ivaQ.rowCount) {
+      return res.status(400).json({ error: 'Tipo de IVA no encontrado o inactivo' });
+    }
+  }
+
   try {
     const result = await query(
       `INSERT INTO public.productos
-        (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque, iva_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
-      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt]
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, ivaIdSafe]
     );
     await query(
       `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -137,6 +156,7 @@ productosRouter.put('/:id', async (req, res) => {
     cantidad_empaque = null,
     empaque_id = null,
     precio_empaque = 0,
+    iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
   const costoInt = toMoney(costo);
@@ -158,6 +178,20 @@ productosRouter.put('/:id', async (req, res) => {
     }
   }
 
+  const ivaIdSafe = iva_id == null || iva_id === '' ? null : Number(iva_id);
+  if (ivaIdSafe !== null && (!Number.isInteger(ivaIdSafe) || ivaIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Tipo de IVA inválido' });
+  }
+  if (ivaIdSafe !== null) {
+    const ivaQ = await query(
+      `SELECT id FROM public.tipos_iva WHERE id = $1 AND activo = true`,
+      [ivaIdSafe]
+    );
+    if (!ivaQ.rowCount) {
+      return res.status(400).json({ error: 'Tipo de IVA no encontrado o inactivo' });
+    }
+  }
+
   const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1 AND activo = true`, [id]);
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
@@ -174,10 +208,11 @@ productosRouter.put('/:id', async (req, res) => {
            ean = $7,
            cantidad_empaque = $8,
            empaque_id = $9,
-           precio_empaque = $10
-       WHERE id = $11
+           precio_empaque = $10,
+           iva_id = $11
+       WHERE id = $12
        RETURNING *`,
-      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, id]
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, ivaIdSafe, id]
     );
     const actualizado = result.rows[0];
     const stockAnterior = Number(prev.stock || 0);

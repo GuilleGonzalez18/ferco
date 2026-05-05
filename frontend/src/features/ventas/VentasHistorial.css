@@ -677,6 +677,29 @@
   color: #7d8797;
 }
 
+.cfe-modal {
+  width: min(700px, calc(100vw - 2rem));
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cfe-json-pre {
+  flex: 1;
+  overflow: auto;
+  background: #f3f6fb;
+  border: 1px solid #dce6f4;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #2a3a52;
+  text-align: left;
+  white-space: pre;
+  max-height: 55vh;
+}
+
 @media (max-width: 599px) {
   .ventas-historial-main {
     padding: 0.65rem 0.65rem 0.75rem;
@@ -746,10 +769,6 @@
 }
 
 @media (max-width: 920px) {
-  .ventas-historial-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
   .ventas-filtros-group {
     width: 100%;

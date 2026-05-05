@@ -125,7 +125,7 @@ function extractPaletteFromDataUrl(dataUrl) {
 
 // ── TAB EMPRESA ───────────────────────────────────────────────────────────────
 
-const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website'];
+const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website', 'giro', 'ciudad', 'departamento'];
 const LOGO_FIELDS   = ['logo_base64', 'logo_tamano', 'logo_bg_color'];
 const FONDO_FIELDS  = ['fondo_base64', 'fondo_opacidad'];
 const COLORES_FIELDS = [
@@ -145,6 +145,9 @@ function buildForm(emp) {
     telefono:             emp.telefono || '',
     correo:               emp.correo || '',
     website:              emp.website || '',
+    giro:                 emp.giro || '',
+    ciudad:               emp.ciudad || '',
+    departamento:         emp.departamento || '',
     logo_base64:          emp.logo_base64 || null,
     color_primary:        emp.color_primary || '#375f8c',
     color_primary_strong: emp.color_primary_strong || '#294c74',
@@ -502,6 +505,8 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   const [paletaSugerida, setPaletaSugerida] = useState(null);
   const [subTab, setSubTab]   = useState('datos');
   const [pdfDocTab, setPdfDocTab] = useState('factura');
+  const [departamentosEmp, setDepartamentosEmp] = useState([]);
+  const [barriosEmp, setBarriosEmp] = useState([]);
   const fileRef  = useRef(null);
   const fondoRef = useRef(null);
   const msgTimers = useRef({});
@@ -539,6 +544,12 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
       cancelPreviewRef.current?.();
       Object.values(msgTimers.current).forEach(clearTimeout);
     };
+  }, []);
+
+  useEffect(() => {
+    Promise.all([api.getDepartamentos(), api.getBarrios()])
+      .then(([deps, bars]) => { setDepartamentosEmp(deps); setBarriosEmp(bars); })
+      .catch(() => {});
   }, []);
 
   const isDirty = useCallback((fields) => fields.some((f) => form[f] !== saved[f]), [form, saved]);
@@ -722,6 +733,37 @@ const saveSection = async (sectionKey, fields) => {
         <div className="config-field-row">
           <label className="config-field-label">Sitio web</label>
           <AppInput value={form.website} onChange={set('website')} placeholder="https://..." />
+        </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Giro comercial</label>
+          <AppInput value={form.giro} onChange={set('giro')} placeholder="Giro comercial" />
+        </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Departamento</label>
+          <AppSelect
+            value={form.departamento}
+            onChange={(e) => setForm((prev) => ({ ...prev, departamento: e.target.value, ciudad: '' }))}
+          >
+            <option value="">— Seleccionar —</option>
+            {departamentosEmp.map((d) => (
+              <option key={d.id} value={d.nombre}>{d.nombre}</option>
+            ))}
+          </AppSelect>
+        </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Ciudad</label>
+          <AppSelect
+            value={form.ciudad}
+            onChange={set('ciudad')}
+            disabled={!form.departamento}
+          >
+            <option value="">— Seleccionar —</option>
+            {barriosEmp
+              .filter((b) => !form.departamento || b.departamento_nombre === form.departamento)
+              .map((b) => (
+                <option key={b.id} value={b.nombre}>{b.nombre}</option>
+              ))}
+          </AppSelect>
         </div>
         <SectionActions
           dirty={isDirty(DATOS_FIELDS)}

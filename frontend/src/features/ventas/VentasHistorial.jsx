@@ -189,6 +189,8 @@ export default function VentasHistorial() {
   const [modalTipoImpresionVentaId, setModalTipoImpresionVentaId] = useState(null);
   const [entregasDesde, setEntregasDesde] = useState(todayISO());
   const [entregasHasta, setEntregasHasta] = useState(todayISO());
+  const [cfeModalData, setCfeModalData] = useState(null);
+  const [loadingCfeId, setLoadingCfeId] = useState(null);
 
   const replicarVenta = async (ventaId) => {
     setPrintingId(ventaId);
@@ -200,6 +202,18 @@ export default function VentasHistorial() {
       await appAlert(err.message || 'No se pudo preparar la replicación de la venta.');
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  const verCFE = async (ventaId) => {
+    setLoadingCfeId(ventaId);
+    try {
+      const text = await api.getVentaCFEAnnotated(ventaId);
+      setCfeModalData({ ventaId, json: text });
+    } catch (err) {
+      await appAlert(err.message || 'No se pudo generar el CFE.');
+    } finally {
+      setLoadingCfeId(null);
     }
   };
 
@@ -457,11 +471,19 @@ export default function VentasHistorial() {
       body: (venta.detalle || []).map((item) => {
         const cant = Number(item.cantidad || 0);
         const precio = Number(item.precio_unitario || 0);
-        const desc = Number(item.descuento_item || 0);
+        const desc = Number(item.descuento_aplicado || item.descuento_item || 0);
         const subtotal = cant * precio - desc;
-        const presentacion = item.embalaje_nombre
-          ? `${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre}`
-          : `${cant} unidades`;
+        const packs = Number(item.packs ?? -1);
+        const sueltas = Number(item.unidades_sueltas ?? 0);
+        const tipoEmpaque = item.tipo_empaque || '';
+        let presentacion;
+        if (packs >= 0) {
+          if (packs > 0 && sueltas > 0) presentacion = `${packs} ${tipoEmpaque} + ${sueltas} u.`;
+          else if (packs > 0) presentacion = `${packs} ${tipoEmpaque}`;
+          else presentacion = `${sueltas} unidades`;
+        } else {
+          presentacion = `${cant} unidades`;
+        }
         return [
           item.producto_nombre || `Producto #${item.producto_id}`,
           cant,
@@ -674,9 +696,17 @@ export default function VentasHistorial() {
 
     const tableBody = (venta.detalle || []).map((item) => {
       const cant = Number(item.cantidad || 0);
-      const presentacion = item.embalaje_nombre
-        ? `${cant} (${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre})`
-        : `${cant} u.`;
+      const packs = Number(item.packs ?? -1);
+      const sueltas = Number(item.unidades_sueltas ?? 0);
+      const tipoEmpaque = item.tipo_empaque || '';
+      let presentacion;
+      if (packs >= 0) {
+        if (packs > 0 && sueltas > 0) presentacion = `${packs} ${tipoEmpaque} + ${sueltas} u.`;
+        else if (packs > 0) presentacion = `${packs} ${tipoEmpaque}`;
+        else presentacion = `${sueltas} u.`;
+      } else {
+        presentacion = `${cant} u.`;
+      }
       const row = [
         item.producto_nombre || `Producto #${item.producto_id}`,
         presentacion,
@@ -1443,6 +1473,16 @@ export default function VentasHistorial() {
             <img src="/print.svg" alt="" aria-hidden="true" />
             <small>Imprimir</small>
           </AppButton>
+          <AppButton
+            type="button"
+            className="reprint-btn"
+            onClick={() => verCFE(v.id)}
+            disabled={loadingCfeId === v.id}
+            title="Ver CFE (JSON)"
+            aria-label="Ver CFE"
+          >
+            <small>{loadingCfeId === v.id ? '...' : 'CFE'}</small>
+          </AppButton>
         </div>
         {loadingDetalleId === v.id ? (
           <p>Cargando detalle...</p>
@@ -1848,6 +1888,39 @@ export default function VentasHistorial() {
           expandedRowId={expandedVentaId}
           renderExpandedRow={(v) => renderExpandedVenta(v)}
         />
+      )}
+
+      {cfeModalData && (
+        <div className="export-modal-overlay" role="dialog" aria-modal="true" aria-label="CFE JSON">
+          <div className="export-modal-backdrop" onClick={() => setCfeModalData(null)} />
+          <div className="export-modal cfe-modal">
+            <h4>CFE — Venta #{cfeModalData.ventaId}</h4>
+            <pre className="cfe-json-pre">{cfeModalData.json}</pre>
+            <div className="export-modal-actions">
+              <AppButton
+                type="button"
+                onClick={() => {
+                  const blob = new Blob([cfeModalData.json], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `cfe-venta-${cfeModalData.ventaId}.jsonc`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Descargar JSON
+              </AppButton>
+            </div>
+            <AppButton
+              type="button"
+              className="export-modal-close"
+              onClick={() => setCfeModalData(null)}
+            >
+              Cerrar
+            </AppButton>
+          </div>
+        </div>
       )}
     </div>
   );
