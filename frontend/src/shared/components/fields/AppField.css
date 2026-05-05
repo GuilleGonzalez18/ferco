@@ -32,6 +32,12 @@
   cursor: not-allowed;
 }
 
+.table-search-field {
+  width: min(420px, 100%);
+  max-width: 420px;
+  min-width: 0;
+}
+
 textarea.app-field-control {
   min-height: calc(var(--field-height) + 24px);
 }

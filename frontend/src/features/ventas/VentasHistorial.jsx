@@ -4,6 +4,7 @@ import { useConfig } from '../../core/ConfigContext';
 import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
 import './VentasHistorial.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -16,6 +17,7 @@ import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { PDF_FONT_FAMILY, PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function todayISO() {
   const now = new Date();
@@ -314,7 +316,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -491,7 +493,7 @@ export default function VentasHistorial() {
           formatCurrency(subtotal),
         ];
       }),
-      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
     });
 
@@ -563,7 +565,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -640,10 +642,10 @@ export default function VentasHistorial() {
     }
 
     doc.setFontSize(14);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'bold');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'bold');
     doc.text('REMITO', col1X, contentStartY + 9);
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
     doc.text(`Remito de Factura N° ${venta.id}`, col1X, contentStartY + 15);
 
     // Datos de empresa bajo el título
@@ -662,7 +664,7 @@ export default function VentasHistorial() {
       empresaY2 += linesCount * (lineH - 1);
     });
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
 
     // Start infoY AFTER empresa lines to prevent overlap
     let infoY = Math.max(contentStartY + titleH, empresaY2 + 2);
@@ -719,7 +721,7 @@ export default function VentasHistorial() {
       startY: cursorY,
       head: tableHead,
       body: tableBody,
-      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
       columnStyles: cfg.mostrarCosto
         ? { 1: { halign: 'center', cellWidth: 40 }, 2: { halign: 'right', cellWidth: 35 } }
@@ -1090,7 +1092,7 @@ export default function VentasHistorial() {
           <head>
             <meta charset="UTF-8" />
             <style>
-              body { font-family: Arial, sans-serif; }
+              body { font-family: ${PRINT_FONT_FAMILY_CSS}; }
               .title { font-size: 18px; font-weight: 700; color: #375f8c; margin-bottom: 8px; }
               .meta { font-size: 13px; margin-bottom: 4px; color: #1f2933; }
               table { border-collapse: collapse; width: 100%; table-layout: fixed; margin-top: 10px; }
@@ -1344,6 +1346,7 @@ export default function VentasHistorial() {
         </button>
       ),
       mobileLabel: 'Vendedor',
+      mobileHide: true,
       render: (v) => v.usuario_nombre || '-',
     },
     {
@@ -1361,6 +1364,7 @@ export default function VentasHistorial() {
       key: 'pago',
       header: 'Pago',
       mobileLabel: 'Pago',
+      mobileHide: true,
       render: (v) => <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>,
     },
     {
@@ -1502,6 +1506,7 @@ export default function VentasHistorial() {
 
   return (
     <div className="ventas-historial-main">
+      <FilterSlot>
       <div className="ventas-historial-toolbar">
         <div className="ventas-filtros-group">
           <div className="ventas-range-stack">
@@ -1557,7 +1562,7 @@ export default function VentasHistorial() {
                 Este mes
               </AppButton>
             </div>
-            <div className="ventas-range-inputs">
+            <div className="ventas-date-estado-row">
               <label className="ventas-fecha-filter">
                 <span>Desde</span>
                 <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -1566,17 +1571,17 @@ export default function VentasHistorial() {
                 <span>Hasta</span>
                 <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </label>
+              <label className="ventas-fecha-filter">
+                <span>Estado</span>
+                <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+                  <option value="todos">Todos</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="entregado">Entregadas</option>
+                  <option value="canceladas">Canceladas</option>
+                </AppSelect>
+              </label>
             </div>
           </div>
-          <label className="ventas-fecha-filter">
-            <span>Estado</span>
-            <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
-              <option value="todos">Todos</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="entregado">Entregadas</option>
-              <option value="canceladas">Canceladas</option>
-            </AppSelect>
-          </label>
         </div>
         <div className="ventas-export-group">
           <AppButton
@@ -1584,6 +1589,7 @@ export default function VentasHistorial() {
             className="ventas-export-btn"
             onClick={() => setModalTicketsOpen(true)}
             disabled={printingBatch || loading}
+            title="Tickets para entrega"
           >
             <AiFillPrinter />
             {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega + Remito'}
@@ -1598,11 +1604,14 @@ export default function VentasHistorial() {
               setModalExportOpen(true);
             }}
             disabled={exportingEntregas}
+            title="Imprimir entregas"
           >
-            {exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}
+            <PiFilePdfBold />
+            <span className="btn-label">{exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}</span>
           </AppButton>
         </div>
       </div>
+      </FilterSlot>
 
       {modalTicketsOpen && (
         <div className="export-modal-overlay" role="dialog" aria-modal="true">
@@ -1872,6 +1881,7 @@ export default function VentasHistorial() {
           rows={ventasOrdenadas}
           rowKey="id"
           stickyHeader
+          minWidth={980}
           emptyMessage="No hay ventas para los filtros seleccionados."
           onRowClick={(v) => toggleDetalleVenta(v.id)}
           rowClassName={(v) => (v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : ''))}

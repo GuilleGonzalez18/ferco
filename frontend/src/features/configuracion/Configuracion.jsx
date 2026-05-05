@@ -191,11 +191,11 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor, 
 
   // Map jsPDF font names to CSS font families
   const fontMap = {
-    helvetica: 'Arial, sans-serif',
+    helvetica: "Inter, 'Segoe UI', Tahoma, sans-serif",
     times:     'Times New Roman, serif',
     courier:   'Courier New, monospace',
   };
-  const cssFont    = fontMap[pdfConfig?.fontFamily] || 'Arial, sans-serif';
+  const cssFont    = fontMap[pdfConfig?.fontFamily] || "Inter, 'Segoe UI', Tahoma, sans-serif";
   const baseFontSz = pdfConfig?.fontSizeBase || 10;
   const notas      = pdfConfig?.notas    || '';
   const piePagina  = pdfConfig?.piePagina || '';

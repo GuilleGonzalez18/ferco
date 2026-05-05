@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './Productos.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { api } from '../../core/api';
@@ -15,6 +16,7 @@ import { RiFileExcel2Line } from 'react-icons/ri';
 import { PiFilePdfBold } from 'react-icons/pi';
 import { AiFillPrinter } from 'react-icons/ai';
 import AppButton from '../../shared/components/button/AppButton';
+import { PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function stockState(stockValue) {
   const s = Number(stockValue || 0);
@@ -445,7 +447,7 @@ export default function Productos({ productos = [], setProductos }) {
     w.document.write(`
       <html><head><title>Productos</title>
       <style>
-        body{font-family:Arial,sans-serif;padding:16px}
+        body{font-family:${PRINT_FONT_FAMILY_CSS};padding:16px}
         h2{color:#375f8c}
         table{border-collapse:collapse;width:100%}
         th,td{border:1px solid #c8d3e5;padding:6px 8px;font-size:12px}
@@ -482,7 +484,7 @@ export default function Productos({ productos = [], setProductos }) {
         <meta charset="UTF-8" />
         <title>Catálogo de Productos</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 18px; color: #1f2933; }
+          body { font-family: ${PRINT_FONT_FAMILY_CSS}; padding: 18px; color: #1f2933; }
           .header { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
           .logo { width: 88px; height: auto; object-fit: contain; }
           h1 { margin: 0; font-size: 24px; color: #375f8c; }
@@ -918,6 +920,7 @@ export default function Productos({ productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Empaque',
+      mobileHide: true,
       render: (p) => `${p.tipoEmpaque} x ${p.cantidadEmpaque}`,
     },
     {
@@ -949,6 +952,7 @@ export default function Productos({ productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Costo',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney((Number(p.stock || 0) * Number(p.costo || 0))),
     },
@@ -960,6 +964,7 @@ export default function Productos({ productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Venta',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney((Number(p.stock || 0) * Number(p.venta || 0))),
     },
@@ -971,6 +976,7 @@ export default function Productos({ productos = [], setProductos }) {
         </button>
       ),
       mobileLabel: 'Total Ganancia',
+      mobileHide: true,
       align: 'right',
       render: (p) => formatMoney(Number(p.stock || 0) * calcularGananciaUnidad(p.costo, p.venta)),
     },
@@ -982,11 +988,12 @@ export default function Productos({ productos = [], setProductos }) {
         <div className="productos-toolbar">
           <AppInput
             type="text"
-            className="buscar-producto"
+            className="buscar-producto table-search-field"
             placeholder="Buscar por nombre, codigo, categoria..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+          <FilterSlot>
           <div className="productos-toolbar-actions">
             {puedeAgregar && (
             <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
@@ -1022,6 +1029,7 @@ export default function Productos({ productos = [], setProductos }) {
             </AppButton>
             )}
           </div>
+          </FilterSlot>
         </div>
 
         <div className="productos-totales">
