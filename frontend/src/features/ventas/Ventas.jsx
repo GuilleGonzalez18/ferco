@@ -419,7 +419,6 @@ export default function Ventas({
       setPaso(1); // siempre volver al paso 1 al restaurar
       setCarritoRestaurado(true);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carritoKey]); // solo al montar (carritoKey es estable)
 
   const productosFiltrados = useMemo(() => {
@@ -1051,6 +1050,10 @@ export default function Ventas({
       await appAlert(`La suma de pagos (${money(totalPagos)}) debe coincidir con el total (${money(total)}).`);
       return;
     }
+    if (total <= 0) {
+      await appAlert('El total de la venta debe ser mayor a cero.');
+      return;
+    }
     if (!setProductos) return;
 
     const demanda = carritoCalculado.reduce((acc, i) => {
@@ -1457,8 +1460,42 @@ export default function Ventas({
                           )}
                         </div>
                       </>
+                    ) : item.packsCalculados > 0 ? (
+                      // Solo empaques — descuento sobre packs
+                      item.descuentoPacksTipo === 'ninguno' ? (
+                        <AppButton
+                          type="button"
+                          className="descuento-action-link"
+                          onClick={() => openDiscountModal(item, 'packs')}
+                        >
+                          Dar descuento
+                        </AppButton>
+                      ) : (
+                        <>
+                          <span className="descuento-aplicado">
+                            Descuento:{' '}
+                            {item.descuentoPacksTipo === 'porcentaje'
+                              ? `${toNumber(item.descuentoPacksValor)}%`
+                              : money(item.descuentoPacksValor)}
+                          </span>
+                          <AppButton
+                            type="button"
+                            className="descuento-action-link"
+                            onClick={() => openDiscountModal(item, 'packs')}
+                          >
+                            Editar
+                          </AppButton>
+                          <AppButton
+                            type="button"
+                            className="descuento-action-link"
+                            onClick={() => removeItemDiscount(item.id, 'packs')}
+                          >
+                            Eliminar descuento
+                          </AppButton>
+                        </>
+                      )
                     ) : (
-                      // Descuento único (solo packs o solo sueltas)
+                      // Solo unidades sueltas — descuento sobre sueltas
                       item.descuentoTipo === 'ninguno' ? (
                         <AppButton
                           type="button"

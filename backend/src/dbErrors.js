@@ -26,10 +26,25 @@ export function mapDbError(error) {
   return null;
 }
 
+export function logServerError(context, error) {
+  const label = context ? `[${context}]` : '[server]';
+  // eslint-disable-next-line no-console
+  console.error(label, error);
+}
+
+export function sendServerError(
+  res,
+  error,
+  { status = 500, fallback = 'Error interno del servidor', context = '' } = {}
+) {
+  logServerError(context, error);
+  return res.status(status).json({ error: fallback });
+}
+
 export function sendDbError(res, error, fallback = 'No se pudo completar la operación') {
   const mapped = mapDbError(error);
   if (mapped) {
     return res.status(mapped.status).json({ error: mapped.error });
   }
-  return res.status(400).json({ error: error?.message || fallback });
+  return sendServerError(res, error, { fallback, context: 'db' });
 }

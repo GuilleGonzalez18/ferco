@@ -3,12 +3,15 @@ import { query } from '../db.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, JWT_SECRET } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
 import { sendMail } from '../mailer.js';
+import {
+  firstError, respondIfInvalid,
+  validateEmail, validateRequired, validateMaxLength, validateMinLength,
+} from '../middleware/validate.js';
 
 export const usuariosRouter = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 const RESET_CODE_TTL_MINUTES = Number(process.env.RESET_CODE_TTL_MINUTES || 10);
 
@@ -87,9 +90,24 @@ usuariosRouter.post('/', async (req, res) => {
   const usernameValue = String(username || '').trim();
   const correoValue = String(correo || '').trim().toLowerCase();
   const passwordValue = String(password || '');
-  if (!usernameValue || !passwordValue || !correoValue) {
-    return res.status(400).json({ error: 'username, password y correo son requeridos' });
-  }
+
+  const validationErr = firstError(
+    validateRequired(usernameValue, 'Username'),
+    validateMinLength(usernameValue, 3, 'Username'),
+    validateMaxLength(usernameValue, 50, 'Username'),
+    validateRequired(passwordValue, 'Password'),
+    validateMinLength(passwordValue, 8, 'La contraseña'),
+    validateMaxLength(passwordValue, 100, 'La contraseña'),
+    validateRequired(correoValue, 'Correo'),
+    !validateEmail(correoValue) ? 'El correo no tiene un formato válido' : null,
+    validateMaxLength(correoValue, 100, 'Correo'),
+    validateMaxLength(nombre, 100, 'Nombre'),
+    validateMaxLength(apellido, 100, 'Apellido'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(direccion, 255, 'Dirección'),
+  );
+  if (respondIfInvalid(res, validationErr)) return;
+
   if (!rol_id) {
     return res.status(400).json({ error: 'rol_id es requerido' });
   }
@@ -151,11 +169,29 @@ usuariosRouter.put('/:id', async (req, res) => {
   }
   const usernameValue = String(username || '').trim();
   const correoValue = String(correo || '').trim().toLowerCase();
-  if (!usernameValue || !correoValue) {
-    return res.status(400).json({ error: 'username y correo son requeridos' });
-  }
+
+  const putValidationErr = firstError(
+    validateRequired(usernameValue, 'Username'),
+    validateMinLength(usernameValue, 3, 'Username'),
+    validateMaxLength(usernameValue, 50, 'Username'),
+    validateRequired(correoValue, 'Correo'),
+    !validateEmail(correoValue) ? 'El correo no tiene un formato válido' : null,
+    validateMaxLength(correoValue, 100, 'Correo'),
+    validateMaxLength(nombre, 100, 'Nombre'),
+    validateMaxLength(apellido, 100, 'Apellido'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(direccion, 255, 'Dirección'),
+  );
+  if (respondIfInvalid(res, putValidationErr)) return;
 
   const passwordValue = typeof password === 'string' ? password.trim() : '';
+  if (passwordValue) {
+    const pwdErr = firstError(
+      validateMinLength(passwordValue, 8, 'La contraseña'),
+      validateMaxLength(passwordValue, 100, 'La contraseña'),
+    );
+    if (respondIfInvalid(res, pwdErr)) return;
+  }
   const currentUserQ = await query(
     `SELECT id, rol_id FROM public.usuarios WHERE id = $1 LIMIT 1`,
     [id]
@@ -300,12 +336,13 @@ usuariosRouter.post('/cambiar-password', async (req, res) => {
   if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
 
   const {passwordNueva } = req.body || {};
-  if (!passwordNueva) {
-    return res.status(400).json({ error: 'Se requiere la nueva contraseña' });
-  }
-  if (String(passwordNueva).length < 8) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
-  }
+
+  const cambiarPwdErr = firstError(
+    validateRequired(passwordNueva, 'La nueva contraseña'),
+    validateMinLength(passwordNueva, 8, 'La nueva contraseña'),
+    validateMaxLength(passwordNueva, 100, 'La nueva contraseña'),
+  );
+  if (respondIfInvalid(res, cambiarPwdErr)) return;
 
   const userQ = await query(
     `SELECT id, password FROM public.usuarios WHERE id = $1 LIMIT 1`,

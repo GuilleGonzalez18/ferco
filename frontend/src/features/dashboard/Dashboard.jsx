@@ -554,10 +554,12 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
 
   // Animar ícono del carrito cuando aumenta el count
   useEffect(() => {
-    if (ventasCarritoCount > prevCarritoCount.current) {
-      setCarritoIconAnim((k) => k + 1);
-    }
+    const prev = prevCarritoCount.current;
     prevCarritoCount.current = ventasCarritoCount;
+    if (ventasCarritoCount > prev) {
+      const id = setTimeout(() => setCarritoIconAnim((k) => k + 1), 0);
+      return () => clearTimeout(id);
+    }
   }, [ventasCarritoCount]);
 
   const opcionesMenu = OPCIONES.filter((op) => {

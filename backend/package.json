@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
+    "test": "node --test src/__tests__/validate.test.js src/__tests__/auth.test.js src/__tests__/cfeHelpers.test.js src/__tests__/pbt.test.js",
     "db:setup": "npm run db:schema && npm run db:migrate",
     "db:schema": "node src/scripts/bootstrapSchema.js",
     "db:migrate": "node src/scripts/runMigration.js",
@@ -19,7 +20,10 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "^8.0.7",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "fast-check": "^4.7.0"
   }
 }

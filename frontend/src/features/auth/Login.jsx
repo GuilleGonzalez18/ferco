@@ -111,8 +111,8 @@ export default function Login({ onLogin }) {
       setPassword('');
       setMode('reset');
       setForgotModalOpen(false);
-    } catch (e) {
-      setForgotError(e.message || 'No se pudo iniciar recuperación');
+    } catch {
+      setForgotError('No se pudo enviar el código. Verificá el correo ingresado.');
     }
   };
 

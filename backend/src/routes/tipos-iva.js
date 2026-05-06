@@ -1,16 +1,18 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import { validateMaxLength, validateNumber, respondIfInvalid, firstError } from '../middleware/validate.js';
 
 export const tiposIvaRouter = Router();
+tiposIvaRouter.use(requireAuth);
 
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
 }
 
-tiposIvaRouter.get('/', async (_req, res) => {
+tiposIvaRouter.get('/', requirePermission('productos', 'ver'), async (_req, res) => {
   const result = await query(
     `SELECT id, codigo, nombre, porcentaje, activo
      FROM public.tipos_iva
@@ -20,7 +22,7 @@ tiposIvaRouter.get('/', async (_req, res) => {
   return res.json(result.rows);
 });
 
-tiposIvaRouter.post('/', async (req, res) => {
+tiposIvaRouter.post('/', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const { codigo, nombre, porcentaje } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
   const safeNombre = String(nombre || '').trim();
@@ -30,6 +32,12 @@ tiposIvaRouter.post('/', async (req, res) => {
   if (!safeNombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
   if (!Number.isInteger(safeCodigo) || safeCodigo < 1) return res.status(400).json({ error: 'Código IVA inválido' });
   if (isNaN(safePorcentaje) || safePorcentaje < 0) return res.status(400).json({ error: 'Porcentaje inválido' });
+
+  const ivaPostErr = firstError(
+    validateMaxLength(safeNombre, 100, 'Nombre'),
+    validateNumber(safePorcentaje, 'Porcentaje', { min: 0, max: 100 }),
+  );
+  if (respondIfInvalid(res, ivaPostErr)) return;
 
   try {
     const result = await query(
@@ -49,7 +57,7 @@ tiposIvaRouter.post('/', async (req, res) => {
   }
 });
 
-tiposIvaRouter.put('/:id', async (req, res) => {
+tiposIvaRouter.put('/:id', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const id = Number(req.params.id);
   const { nombre, porcentaje } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
@@ -59,6 +67,12 @@ tiposIvaRouter.put('/:id', async (req, res) => {
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Id inválido' });
   if (!safeNombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
   if (isNaN(safePorcentaje) || safePorcentaje < 0) return res.status(400).json({ error: 'Porcentaje inválido' });
+
+  const ivaPutErr = firstError(
+    validateMaxLength(safeNombre, 100, 'Nombre'),
+    validateNumber(safePorcentaje, 'Porcentaje', { min: 0, max: 100 }),
+  );
+  if (respondIfInvalid(res, ivaPutErr)) return;
 
   try {
     const result = await query(
@@ -78,7 +92,7 @@ tiposIvaRouter.put('/:id', async (req, res) => {
   }
 });
 
-tiposIvaRouter.delete('/:id', async (req, res) => {
+tiposIvaRouter.delete('/:id', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Id inválido' });

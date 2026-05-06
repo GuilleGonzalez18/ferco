@@ -548,6 +548,7 @@ const statements = [
     logo_bg_color varchar(7) DEFAULT '#ffffff',
     pdf_factura jsonb NOT NULL DEFAULT '{}'::jsonb,
     pdf_remito jsonb NOT NULL DEFAULT '{}'::jsonb,
+    cfe_ambiente varchar(20) NOT NULL DEFAULT 'PRUEBAS',
     updated_at timestamp without time zone NOT NULL DEFAULT now()
   );
   `,

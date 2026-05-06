@@ -34,6 +34,7 @@ export function FilterPanelProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useFilterPanel() {
   return useContext(Ctx) ?? {};
 }

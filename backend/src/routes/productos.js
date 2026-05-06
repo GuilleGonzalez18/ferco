@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, hasPermission, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import {
+  firstError, respondIfInvalid,
+  validateRequired, validateMaxLength, validateNumber,
+} from '../middleware/validate.js';
 
 export const productosRouter = Router();
+productosRouter.use(requireAuth);
 
 function toMoney(value) {
   return Math.round(Number(value || 0) * 100) / 100;
@@ -30,8 +35,12 @@ async function getProductoRowById(id) {
   return result.rows[0] || null;
 }
 
-productosRouter.get('/', async (req, res) => {
+productosRouter.get('/', requirePermission('productos', 'ver'), async (req, res) => {
   const includeArchived = String(req.query.includeArchived || '').toLowerCase() === 'true';
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+  if (includeArchived && !(await hasPermission(authUser, 'productos', 'ver_archivados'))) {
+    return res.status(403).json({ error: 'Sin permiso para ver productos archivados' });
+  }
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
             p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.iva_id, p.activo,
@@ -48,7 +57,7 @@ productosRouter.get('/', async (req, res) => {
   res.json(result.rows);
 });
 
-productosRouter.post('/', async (req, res) => {
+productosRouter.post('/', requirePermission('productos', 'agregar'), async (req, res) => {
   const {
     nombre,
     costo = 0,
@@ -63,6 +72,18 @@ productosRouter.post('/', async (req, res) => {
     iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErr = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(unidad, 20, 'Unidad'),
+    validateMaxLength(ean, 100, 'EAN'),
+    validateNumber(precio, 'Precio', { required: true, min: 0 }),
+    validateNumber(costo, 'Costo', { min: 0 }),
+    validateNumber(precio_empaque, 'Precio de empaque', { min: 0 }),
+  );
+  if (respondIfInvalid(res, validationErr)) return;
+
   const costoInt = toMoney(costo);
   const precioInt = toMoney(precio);
   const precioEmpaqueInt = toMoney(precio_empaque);
@@ -143,8 +164,10 @@ productosRouter.post('/', async (req, res) => {
   }
 });
 
-productosRouter.put('/:id', async (req, res) => {
+productosRouter.put('/:id', requirePermission('productos', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID de producto inválido' });
+
   const {
     nombre,
     costo = 0,
@@ -159,6 +182,18 @@ productosRouter.put('/:id', async (req, res) => {
     iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErr = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(unidad, 20, 'Unidad'),
+    validateMaxLength(ean, 100, 'EAN'),
+    validateNumber(precio, 'Precio', { required: true, min: 0 }),
+    validateNumber(costo, 'Costo', { min: 0 }),
+    validateNumber(precio_empaque, 'Precio de empaque', { min: 0 }),
+  );
+  if (respondIfInvalid(res, validationErr)) return;
+
   const costoInt = toMoney(costo);
   const precioInt = toMoney(precio);
   const precioEmpaqueInt = toMoney(precio_empaque);
@@ -258,7 +293,7 @@ productosRouter.put('/:id', async (req, res) => {
   }
 });
 
-productosRouter.delete('/:id', async (req, res) => {
+productosRouter.delete('/:id', requirePermission('productos', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = true`, [id]);
@@ -285,7 +320,7 @@ productosRouter.delete('/:id', async (req, res) => {
   return res.status(204).send();
 });
 
-productosRouter.patch('/:id/restaurar', async (req, res) => {
+productosRouter.patch('/:id/restaurar', requirePermission('productos', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = false`, [id]);
@@ -318,7 +353,7 @@ productosRouter.patch('/:id/restaurar', async (req, res) => {
   return res.json(restoredRow);
 });
 
-productosRouter.patch('/:id/stock', async (req, res) => {
+productosRouter.patch('/:id/stock', requirePermission('stock', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const { stock } = req.body;
   const authUser = getAuthUserFromRequest(req);
@@ -367,7 +402,7 @@ productosRouter.patch('/:id/stock', async (req, res) => {
   return res.json(result.rows[0]);
 });
 
-productosRouter.get('/:id/movimientos', async (req, res) => {
+productosRouter.get('/:id/movimientos', requirePermission('stock', 'ver'), async (req, res) => {
   const id = Number(req.params.id);
   const limitRaw = Number(req.query.limit || 10);
   const limit = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 10;

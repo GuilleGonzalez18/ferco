@@ -80,6 +80,15 @@ function App() {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    const onSessionExpired = () => {
+      localStorage.removeItem(USER_KEY);
+      setUser(null);
+    };
+    window.addEventListener('ferco:session-expired', onSessionExpired);
+    return () => window.removeEventListener('ferco:session-expired', onSessionExpired);
+  }, []);
+
+  useEffect(() => {
     const restoreSession = async () => {
       const token = api.getAuthToken();
       if (!token) { setAuthReady(true); return; }

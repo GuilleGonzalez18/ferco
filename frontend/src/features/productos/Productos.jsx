@@ -791,7 +791,7 @@ export default function Productos({ productos = [], setProductos }) {
     });
 
     return list;
-  }, [productosFiltrados, sortBy, sortDir, verCosto, verGanancia]);
+  }, [productosFiltrados, sortBy, sortDir, verGanancia]);
 
   const totalesInventario = useMemo(() => {
     return productos.reduce((acc, p) => {
@@ -1242,7 +1242,7 @@ export default function Productos({ productos = [], setProductos }) {
               <AppInput name="nombre" value={nuevo.nombre} onChange={handleChange} placeholder="Nombre" required />
             </label>
             <label className="field-label">Stock
-              <AppInput name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" min="0" step="1" required />
+              <AppInput name="stock" value={nuevo.stock} onChange={handleChange} placeholder="Stock" type="number" step="1" required />
             </label>
             <label className="field-label">EAN / Código
               <AppInput name="ean" value={nuevo.ean} onChange={handleChange} placeholder="EAN/Código" />

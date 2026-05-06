@@ -871,6 +871,8 @@ const statements = [
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_tipo varchar(20) NOT NULL DEFAULT 'ninguno';`,
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0;`,
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
+  // === CFE AMBIENTE (v16) ===
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS cfe_ambiente varchar(20) NOT NULL DEFAULT 'PRUEBAS';`,
 ];
 
 export async function runMigration() {

@@ -41,7 +41,16 @@ async function request(path, options = {}) {
     } catch {
       // keep default message
     }
-    throw new Error(message);
+
+    // Token expirado o revocado: limpiar sesión y notificar
+    if (response.status === 401 && token) {
+      setToken('');
+      window.dispatchEvent(new CustomEvent('ferco:session-expired'));
+    }
+
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
   }
 
   if (response.status === 204) return null;

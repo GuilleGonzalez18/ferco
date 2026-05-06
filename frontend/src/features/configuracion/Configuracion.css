@@ -203,6 +203,11 @@
   margin: 0;
 }
 
+.config-hint--warn {
+  color: #b45309;
+  font-weight: 500;
+}
+
 .config-fondo-extra {
   margin-top: var(--space-sm);
   display: flex;

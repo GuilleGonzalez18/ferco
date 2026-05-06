@@ -1,91 +1,10 @@
 import { query } from './db.js';
-
-function round2(value) {
-  return Math.round(Number(value || 0) * 100) / 100;
-}
-
-function formatDate(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  const tzOffset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 10);
-}
-
-function formatDateTime(value) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  const tzOffset = d.getTimezoneOffset() * 60000;
-  const local = new Date(d.getTime() - tzOffset);
-  return local.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-// IteIndFact según codigo de tipos_iva
-// codigo 1 = No Grava / Exento, 2 = Tasa Mínima 10%, 3 = Tasa Básica 22%
-function getIteIndFact(ivaCodigo) {
-  const c = Number(ivaCodigo);
-  if (c === 2) return 2;
-  if (c === 3) return 3;
-  return 1;
-}
-
-function getFmaPago(medioPago) {
-  return String(medioPago || '').toLowerCase() === 'credito' ? '2' : '1';
-}
-
-function getGlosaMP(medioPago) {
-  const m = String(medioPago || '').toLowerCase();
-  if (m === 'credito') return 'CRÉDITO';
-  if (m === 'debito') return 'DÉBITO';
-  if (m === 'transferencia') return 'TRANSFERENCIA';
-  return 'EFECTIVO';
-}
-
-function getCodMP(medioPago) {
-  const m = String(medioPago || '').toLowerCase();
-  if (m === 'credito') return '2';
-  if (m === 'debito') return '3';
-  if (m === 'transferencia') return '4';
-  return '1';
-}
-
-// RUT=2, CI=3, PASAPORTE=5, DNI=6, OTRO=4
-function getRcpTipoDoc(tipoDoc) {
-  const t = String(tipoDoc || '').toUpperCase();
-  if (t === 'RUT') return 2;
-  if (t === 'CI') return 3;
-  if (t === 'PASAPORTE') return 5;
-  if (t === 'DNI') return 6;
-  if (t) return 4;
-  return null;
-}
-
-// Cliente con RUT → eFactura (111), resto → eTicket (101)
-function getCFETipo(cliente) {
-  if (
-    cliente &&
-    String(cliente.tipo_documento || '').toUpperCase() === 'RUT' &&
-    cliente.numero_documento
-  ) {
-    return '111';
-  }
-  return '101';
-}
-
-function getUniMed(unidad) {
-  const u = String(unidad || '').toUpperCase().slice(0, 4).trim();
-  return u || 'UNID';
-}
-
-function getCodiTpoCod(ean) {
-  if (!ean) return 'INT1';
-  const len = String(ean).replace(/\D/g, '').length;
-  if (len === 13) return 'GTIN13';
-  if (len === 12) return 'GTIN12';
-  if (len === 8) return 'GTIN8';
-  return 'INT1';
-}
+import {
+  round2, round4, formatDate, formatDateTime,
+  getIteIndFact, getFmaPago, getGlosaMP, getCodMP,
+  getRcpTipoDoc, getCFETipo, validateRut, getUniMed, getCodiTpoCod,
+  calcDescuentoGlobal, distributeGlobalDiscount,
+} from './cfeHelpers.js';
 
 export async function buildCFE(ventaId) {
   const ventaQ = await query(
@@ -124,10 +43,14 @@ export async function buildCFE(ventaId) {
 
   const empresaQ = await query(
     `SELECT nombre, razon_social, rut, direccion, telefono, correo,
-            giro, ciudad, departamento
+            giro, ciudad, departamento, cfe_ambiente
      FROM public.config_empresa LIMIT 1`
   );
   const empresa = empresaQ.rows[0] || {};
+
+  if (!empresa.ciudad || !empresa.departamento) {
+    throw new Error('Ciudad y Departamento del emisor son requeridos para emitir CFE. Configurar en Ajustes → Empresa.');
+  }
 
   const cliente = {
     nombre: venta.cliente_nombre,
@@ -142,6 +65,15 @@ export async function buildCFE(ventaId) {
   const tipoCFE = getCFETipo(cliente);
   const esFactura = tipoCFE === '111';
 
+  // Validar formato de RUT cuando se emite eFactura
+  if (
+    esFactura &&
+    String(cliente.tipo_documento || '').toUpperCase() === 'RUT' &&
+    !validateRut(cliente.numero_documento)
+  ) {
+    throw new Error(`RUT inválido: "${cliente.numero_documento}". El RUT debe tener entre 9 y 12 dígitos.`);
+  }
+
   let totNoGrav = 0;
   let totNetoMin = 0;
   let totNetoBasica = 0;
@@ -154,8 +86,9 @@ export async function buildCFE(ventaId) {
   for (const row of detalleQ.rows) {
     const packs = Number(row.packs ?? 0);
     const sueltas = Number(row.unidades_sueltas ?? 0);
-    const precioEmpaque = round2(row.precio_empaque || 0);
-    const precioUnidad = round2(row.precio_unidad || row.precio_unitario);
+    const packSize = Math.max(1, Number(row.unidades_por_empaque || 1));
+    const precioEmpaque = round4(row.precio_empaque || 0);
+    const precioUnidad = round4(row.precio_unidad || row.precio_unitario);
     const indFact = getIteIndFact(row.iva_codigo);
     const porcentaje = Number(row.iva_porcentaje || 0) / 100;
     const codeTipo = getCodiTpoCod(row.ean);
@@ -166,7 +99,9 @@ export async function buildCFE(ventaId) {
     const hasSueltas = sueltas > 0;
     const hasOldData = !hasPacks && !hasSueltas;
 
-    const montoPacksBruto = hasPacks ? round2(packs * precioEmpaque) : 0;
+    // Para la línea de empaques expresamos en unidades totales con descripción del empaque
+    const unidadesPacks = packs * packSize;
+    const montoPacksBruto = hasPacks ? round2(unidadesPacks * precioUnidad) : 0;
     const montoSueltasBruto = hasSueltas ? round2(sueltas * precioUnidad) : 0;
 
     // Usar descuentos almacenados directamente (independientes por packs/sueltas)
@@ -174,18 +109,21 @@ export async function buildCFE(ventaId) {
     const descuentoPacksAplicado = round2(row.descuento_packs_aplicado || 0);
 
     const lineBase = { indFact, porcentaje, codeTipo, codValue, nombreItem };
+    const uniMedUnidad = getUniMed(row.unidad);
 
     if (hasOldData) {
       const cantidad = Number(row.cantidad || 1);
       const precioU = round2(row.precio_unitario);
       const monto = round2(cantidad * precioU);
-      rawLines.push({ ...lineBase, cantidad, precio: precioU, monto, descItem: descuentoSueltasAplicado, uniMed: getUniMed(row.unidad) });
+      rawLines.push({ ...lineBase, cantidad, precio: precioU, monto, descItem: descuentoSueltasAplicado, uniMed: uniMedUnidad, dscItem: '' });
     } else {
       if (hasPacks) {
-        rawLines.push({ ...lineBase, cantidad: packs, precio: precioEmpaque, monto: montoPacksBruto, descItem: descuentoPacksAplicado, uniMed: getUniMed(row.tipo_empaque) });
+        const tipoEmpaque = row.tipo_empaque || 'Empaque';
+        const dscItem = `${packs} ${tipoEmpaque}${packs !== 1 ? 's' : ''} x ${packSize} unidades`;
+        rawLines.push({ ...lineBase, cantidad: unidadesPacks, precio: precioUnidad, monto: montoPacksBruto, descItem: descuentoPacksAplicado, uniMed: uniMedUnidad, dscItem });
       }
       if (hasSueltas) {
-        rawLines.push({ ...lineBase, cantidad: sueltas, precio: precioUnidad, monto: montoSueltasBruto, descItem: descuentoSueltasAplicado, uniMed: getUniMed(row.unidad) });
+        rawLines.push({ ...lineBase, cantidad: sueltas, precio: precioUnidad, monto: montoSueltasBruto, descItem: descuentoSueltasAplicado, uniMed: uniMedUnidad, dscItem: '' });
       }
     }
   }
@@ -194,26 +132,16 @@ export async function buildCFE(ventaId) {
   const baseNetaItems = round2(rawLines.reduce((acc, l) => acc + l.monto - l.descItem, 0));
   const descTotalTipo = venta.descuento_total_tipo || 'ninguno';
   const descTotalValorRaw = Number(venta.descuento_total_valor || 0);
-  let descGlobalAmount = 0;
-  if (descTotalTipo === 'porcentaje' && descTotalValorRaw > 0) {
-    const pct = Math.max(0, Math.min(100, descTotalValorRaw));
-    descGlobalAmount = round2((baseNetaItems * pct) / 100);
-  } else if (descTotalTipo === 'fijo' && descTotalValorRaw > 0) {
-    descGlobalAmount = round2(Math.max(0, Math.min(baseNetaItems, descTotalValorRaw)));
-  }
+  const descGlobalAmount = calcDescuentoGlobal(descTotalTipo, descTotalValorRaw, baseNetaItems);
 
   // --- Segunda pasada: construir detalle CFE con descuento total por línea ---
+  const netasLinea = rawLines.map((l) => round2(l.monto - l.descItem));
+  const globalPorLinea = distributeGlobalDiscount(netasLinea, descGlobalAmount);
   const detalle = [];
-  let descGlobalDistribuido = 0;
 
   for (let i = 0; i < rawLines.length; i++) {
     const l = rawLines[i];
-    const netaLinea = round2(l.monto - l.descItem);
-    // Última línea absorbe el residuo de redondeo
-    const descGlobalLinea = (i === rawLines.length - 1)
-      ? round2(descGlobalAmount - descGlobalDistribuido)
-      : (baseNetaItems > 0 ? round2(descGlobalAmount * netaLinea / baseNetaItems) : 0);
-    descGlobalDistribuido = round2(descGlobalDistribuido + descGlobalLinea);
+    const descGlobalLinea = globalPorLinea[i];
 
     const descTotal = round2(l.descItem + descGlobalLinea);
     const montoNeto = round2(l.monto - descTotal);
@@ -231,19 +159,23 @@ export async function buildCFE(ventaId) {
     }
 
     const descPct = l.monto > 0 ? round2((descTotal / l.monto) * 100) : 0;
-    detalle.push({
+    const itemLine = {
       IteCodiTpoCod: l.codeTipo,
       IteCodiCod: l.codValue,
       IteIndFact: String(l.indFact),
       IteNomItem: l.nombreItem,
-      IteDscItem: '',
+      IteDscItem: l.dscItem || '',
       IteCantidad: l.cantidad.toFixed(3),
       IteUniMed: l.uniMed,
       ItePrecioUnitario: l.precio.toFixed(4),
-      IteDescuentoPct: descPct.toFixed(2),
-      IteDescuentoMonto: descTotal.toFixed(2),
       IteMontoItem: round2(l.monto - descTotal).toFixed(2),
-    });
+    };
+    // IteDescuentoPct y IteDescuentoMonto son opcionales — solo incluir si hay descuento real
+    if (descTotal > 0) {
+      itemLine.IteDescuentoPct = descPct.toFixed(2);
+      itemLine.IteDescuentoMonto = descTotal.toFixed(2);
+    }
+    detalle.push(itemLine);
   }
 
   totNoGrav = round2(totNoGrav);
@@ -262,12 +194,21 @@ export async function buildCFE(ventaId) {
     : venta.medio_pago || 'efectivo';
 
   const rcpTipoDoc = getRcpTipoDoc(cliente.tipo_documento);
+  // Determinar código de país según tipo de documento
+  function getRcpCodPais(tipoDoc) {
+    const t = Number(tipoDoc);
+    if (t === 2 || t === 3) return 'UY'; // RUT o CI → Uruguay
+    if (t === 6) return '';               // DNI AR/BR/CL/PY → depende del país, dejar vacío
+    if (t === 1 || t === 5 || t === 7) return ''; // NIE, Pasaporte, NIFE → no determinado
+    if (t === 4) return '99';             // Otros → código genérico ISO 3166-1
+    return '';
+  }
   const receptor =
     esFactura || rcpTipoDoc
       ? {
           RcpTipoDocRecep: rcpTipoDoc ? String(rcpTipoDoc) : '',
           RcpTipoDocDscRecep: '',
-          RcpCodPaisRecep: rcpTipoDoc === 2 || rcpTipoDoc === 3 ? 'UY' : '',
+          RcpCodPaisRecep: getRcpCodPais(rcpTipoDoc),
           RcpDocRecep: String(cliente.numero_documento || '').slice(0, 20),
           RcpRznSocRecep: String(cliente.nombre || '').slice(0, 150),
           RcpDirRecep: String(cliente.direccion || '').slice(0, 70),
@@ -282,7 +223,7 @@ export async function buildCFE(ventaId) {
       : null;
 
   return {
-    ambiente: 'PRUEBAS',
+    ambiente: empresa.cfe_ambiente === 'PRODUCCION' ? 'PRODUCCION' : 'PRUEBAS',
     Master: {
       CFETipoCFE: tipoCFE,
       CFESerie: '',

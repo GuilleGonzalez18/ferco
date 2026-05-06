@@ -1,10 +1,17 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import {
+  firstError, respondIfInvalid,
+  validateEmail, validateRequired, validateMaxLength, validateEnum,
+} from '../middleware/validate.js';
+
+const TIPOS_DOCUMENTO = ['RUT', 'CI', 'PASAPORTE', 'DNI', 'OTRO'];
 
 
 export const clientesRouter = Router();
+clientesRouter.use(requireAuth);
 
 function normalizeHora(value) {
   const raw = String(value || '').trim();
@@ -71,7 +78,7 @@ function actorName(authUser) {
   return full || authUser?.username || authUser?.correo || null;
 }
 
-clientesRouter.get('/', async (_req, res) => {
+clientesRouter.get('/', requirePermission('clientes', 'ver'), async (_req, res) => {
   const result = await query(
     `SELECT c.id, c.nombre, c.rut, c.direccion, c.telefono, c.correo,
             c.horario_apertura, c.horario_cierre,
@@ -88,7 +95,7 @@ clientesRouter.get('/', async (_req, res) => {
   res.json(result.rows);
 });
 
-clientesRouter.post('/', async (req, res) => {
+clientesRouter.post('/', requirePermission('clientes', 'agregar'), async (req, res) => {
   const {
     nombre,
     rut,
@@ -108,6 +115,22 @@ clientesRouter.post('/', async (req, res) => {
     codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErrPost = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(rut, 50, 'RUT'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(correo, 100, 'Correo'),
+    correo ? (!validateEmail(correo) ? 'El correo no tiene un formato válido' : null) : null,
+    validateMaxLength(direccion, 500, 'Dirección'),
+    validateMaxLength(ciudad, 100, 'Ciudad'),
+    validateMaxLength(codigo_postal, 20, 'Código postal'),
+    validateMaxLength(numero_documento, 50, 'Número de documento'),
+    validateEnum(tipo_documento, TIPOS_DOCUMENTO, 'Tipo de documento'),
+  );
+  if (respondIfInvalid(res, validationErrPost)) return;
+
   const horarios = normalizeHorariosPayload({
     horario_apertura,
     horario_cierre,
@@ -162,8 +185,10 @@ clientesRouter.post('/', async (req, res) => {
   }
 });
 
-clientesRouter.put('/:id', async (req, res) => {
+clientesRouter.put('/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID de cliente inválido' });
+
   const {
     nombre,
     rut,
@@ -183,6 +208,22 @@ clientesRouter.put('/:id', async (req, res) => {
     codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErrPut = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(rut, 50, 'RUT'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(correo, 100, 'Correo'),
+    correo ? (!validateEmail(correo) ? 'El correo no tiene un formato válido' : null) : null,
+    validateMaxLength(direccion, 500, 'Dirección'),
+    validateMaxLength(ciudad, 100, 'Ciudad'),
+    validateMaxLength(codigo_postal, 20, 'Código postal'),
+    validateMaxLength(numero_documento, 50, 'Número de documento'),
+    validateEnum(tipo_documento, TIPOS_DOCUMENTO, 'Tipo de documento'),
+  );
+  if (respondIfInvalid(res, validationErrPut)) return;
+
   const horarios = normalizeHorariosPayload({
     horario_apertura,
     horario_cierre,
@@ -254,7 +295,7 @@ clientesRouter.put('/:id', async (req, res) => {
   }
 });
 
-clientesRouter.delete('/:id', async (req, res) => {
+clientesRouter.delete('/:id', requirePermission('clientes', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prev = await query(`SELECT id, nombre FROM public.clientes WHERE id = $1`, [id]);

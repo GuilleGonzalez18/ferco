@@ -125,7 +125,7 @@ function extractPaletteFromDataUrl(dataUrl) {
 
 // ── TAB EMPRESA ───────────────────────────────────────────────────────────────
 
-const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website', 'giro', 'ciudad', 'departamento'];
+const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website', 'giro', 'ciudad', 'departamento', 'cfe_ambiente'];
 const LOGO_FIELDS   = ['logo_base64', 'logo_tamano', 'logo_bg_color'];
 const FONDO_FIELDS  = ['fondo_base64', 'fondo_opacidad'];
 const COLORES_FIELDS = [
@@ -148,6 +148,7 @@ function buildForm(emp) {
     giro:                 emp.giro || '',
     ciudad:               emp.ciudad || '',
     departamento:         emp.departamento || '',
+    cfe_ambiente:         emp.cfe_ambiente || 'PRUEBAS',
     logo_base64:          emp.logo_base64 || null,
     color_primary:        emp.color_primary || '#375f8c',
     color_primary_strong: emp.color_primary_strong || '#294c74',
@@ -540,9 +541,10 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   }, [initialEmpresa, applyPreview]);
 
   useEffect(() => {
+    const timers = msgTimers.current;
     return () => {
       cancelPreviewRef.current?.();
-      Object.values(msgTimers.current).forEach(clearTimeout);
+      Object.values(timers).forEach(clearTimeout);
     };
   }, []);
 
@@ -763,6 +765,21 @@ const saveSection = async (sectionKey, fields) => {
               .map((b) => (
                 <option key={b.id} value={b.nombre}>{b.nombre}</option>
               ))}
+          </AppSelect>
+        </div>
+        {(!form.ciudad || !form.departamento) && (
+          <div className="config-field-row">
+            <span />
+            <p className="config-hint config-hint--warn">
+              ⚠️ Ciudad y Departamento son obligatorios para emitir CFE ante DGI.
+            </p>
+          </div>
+        )}
+        <div className="config-field-row">
+          <label className="config-field-label">Ambiente CFE</label>
+          <AppSelect value={form.cfe_ambiente} onChange={set('cfe_ambiente')}>
+            <option value="PRUEBAS">PRUEBAS</option>
+            <option value="PRODUCCION">PRODUCCION</option>
           </AppSelect>
         </div>
         <SectionActions

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
 
 export const ubicacionesRouter = Router();
+ubicacionesRouter.use(requireAuth);
 
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
@@ -12,14 +13,14 @@ function actorName(authUser) {
 
 // ── DEPARTAMENTOS ─────────────────────────────────────────────────────────────
 
-ubicacionesRouter.get('/departamentos', async (_req, res) => {
+ubicacionesRouter.get('/departamentos', requirePermission('clientes', 'ver'), async (_req, res) => {
   const result = await query(
     `SELECT id, nombre FROM public.departamentos ORDER BY nombre ASC`
   );
   return res.json(result.rows);
 });
 
-ubicacionesRouter.post('/departamentos', async (req, res) => {
+ubicacionesRouter.post('/departamentos', requirePermission('clientes', 'editar'), async (req, res) => {
   const { nombre } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
   const safeNombre = String(nombre || '').trim();
@@ -41,7 +42,7 @@ ubicacionesRouter.post('/departamentos', async (req, res) => {
   }
 });
 
-ubicacionesRouter.put('/departamentos/:id', async (req, res) => {
+ubicacionesRouter.put('/departamentos/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const { nombre } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
@@ -67,7 +68,7 @@ ubicacionesRouter.put('/departamentos/:id', async (req, res) => {
   }
 });
 
-ubicacionesRouter.delete('/departamentos/:id', async (req, res) => {
+ubicacionesRouter.delete('/departamentos/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Id inválido' });
@@ -101,7 +102,7 @@ ubicacionesRouter.delete('/departamentos/:id', async (req, res) => {
 
 // ── BARRIOS (Ciudades) ────────────────────────────────────────────────────────
 
-ubicacionesRouter.get('/barrios', async (req, res) => {
+ubicacionesRouter.get('/barrios', requirePermission('clientes', 'ver'), async (req, res) => {
   const depId = req.query.departamento_id ? Number(req.query.departamento_id) : null;
   let sql = `SELECT b.id, b.nombre, b.departamento_id, d.nombre AS departamento_nombre
              FROM public.barrios b
@@ -116,7 +117,7 @@ ubicacionesRouter.get('/barrios', async (req, res) => {
   return res.json(result.rows);
 });
 
-ubicacionesRouter.post('/barrios', async (req, res) => {
+ubicacionesRouter.post('/barrios', requirePermission('clientes', 'editar'), async (req, res) => {
   const { nombre, departamento_id = null } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
   const safeNombre = String(nombre || '').trim();
@@ -141,7 +142,7 @@ ubicacionesRouter.post('/barrios', async (req, res) => {
   }
 });
 
-ubicacionesRouter.put('/barrios/:id', async (req, res) => {
+ubicacionesRouter.put('/barrios/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const { nombre, departamento_id = null } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
@@ -169,7 +170,7 @@ ubicacionesRouter.put('/barrios/:id', async (req, res) => {
   }
 });
 
-ubicacionesRouter.delete('/barrios/:id', async (req, res) => {
+ubicacionesRouter.delete('/barrios/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Id inválido' });

@@ -325,14 +325,10 @@ function MiniLineChart({ items, valueKey = 'value', valueFormatter = null, class
     ? `${firstX},${paddingTop + innerHeight} ${polyline} ${lastX},${paddingTop + innerHeight}`
     : '';
   const gridSteps = 4;
-  const pointKeysSignature = useMemo(
-    () => items.map((item, idx) => String(item?.key ?? idx)).join('|'),
-    [items],
-  );
 
   const defaultPointKeys = useMemo(
     () => new Set(items.map((item, idx) => String(item?.key ?? idx))),
-    [items, pointKeysSignature],
+    [items],
   );
 
   const [disabledPointKeys, setDisabledPointKeys] = useState(() => new Set());
@@ -557,7 +553,8 @@ export default function Estadisticas({ compact = false }) {
     setStockDesde(initialStockRange.desde);
     setStockHasta(initialStockRange.hasta);
     loadStockSerie(initialStockRange.desde, initialStockRange.hasta);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only: loadStats y loadStockSerie usan los parámetros pasados explícitamente
 
   useEffect(() => {
     const onStatsRefresh = () => {
@@ -566,7 +563,8 @@ export default function Estadisticas({ compact = false }) {
     };
     window.addEventListener('ferco:stats-refresh', onStatsRefresh);
     return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
-  }, [desde, hasta, ownerUsuarioId, stockDesde, stockHasta]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desde, hasta, ownerUsuarioId, stockDesde, stockHasta]); // loadStats/loadStockSerie no están en useCallback, se omiten intencionalmente
 
   useEffect(() => {
     const loadUsuarios = async () => {
@@ -625,7 +623,7 @@ export default function Estadisticas({ compact = false }) {
       });
     }
     return items;
-  }, [stats]);
+  }, [stats, esVendedor]);
 
   const stockGranularity = useMemo(() => (
     daysBetween(stockSerieRange.desde, stockSerieRange.hasta) > 31 ? 'month' : 'day'
