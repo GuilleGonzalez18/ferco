@@ -89,6 +89,10 @@ function ventasButtonId(...parts) {
   return ['nueva-venta', ...parts.map(normalizeButtonIdPart)].join('-');
 }
 
+function ventasFieldId(...parts) {
+  return ['nueva-venta', ...parts.map(normalizeButtonIdPart)].join('-');
+}
+
 function formatMedioPago(value) {
   const v = String(value || 'efectivo').toLowerCase();
   if (v === 'credito') return 'Crédito';
@@ -184,6 +188,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
               -
             </button>
             <AppInput
+              id={ventasFieldId('producto', productoIdPart, 'cantidad', 'input')}
               type="number"
               className="picker-qty-input"
               min="1"
@@ -280,6 +285,7 @@ const DiscountModal = memo(function DiscountModal({
           </AppButton>
         </div>
         <AppInput
+          id={`${idPrefix}-valor`}
           ref={inputRef}
           type="text"
           inputMode="decimal"
@@ -1357,6 +1363,7 @@ export default function Ventas({
                     <strong>{productosFiltrados.length} producto(s) disponibles</strong>
                   </div>
                   <AppInput
+                    id={ventasFieldId('productos', 'busqueda')}
                     type="text"
                     className="table-search-field"
                     placeholder="Buscar por nombre o código..."
@@ -1421,6 +1428,7 @@ export default function Ventas({
                         <label key={`monto-${pago.medio_pago}`}>
                           <span>{formatMedioPago(pago.medio_pago)}</span>
                           <AppInput
+                            id={ventasFieldId('medio-pago', pago.medio_pago, 'monto')}
                             type="number"
                             min="0"
                             step="0.01"
@@ -1449,6 +1457,7 @@ export default function Ventas({
                     <label className="observacion-venta">
                       <span>Observación</span>
                       <AppTextarea
+                        id={ventasFieldId('observacion')}
                         value={observacion}
                         onChange={(e) => setObservacion(e.target.value)}
                         placeholder="Observación (opcional)"
@@ -1537,6 +1546,7 @@ export default function Ventas({
             <label>
               Fecha de entrega
               <AppInput
+                id={ventasFieldId('fecha-entrega')}
                 type="date"
                 min={todayISODate()}
                 value={fechaEntrega}
@@ -1563,11 +1573,11 @@ export default function Ventas({
                       : `${item.unidadesSolicitadas} unidad(es)`}
                   </p>
                   <div className="unidades-edit">
-                    <label htmlFor={`units-${item.id}`}>
+                    <label htmlFor={ventasFieldId('item', itemIdPart, 'unidades')}>
                       {item.modoVenta === 'empaque' ? (item.tipoEmpaque || 'Empaques') : 'Unidades'}
                     </label>
                     <AppInput
-                      id={`units-${item.id}`}
+                      id={ventasFieldId('item', itemIdPart, 'unidades')}
                       type="number"
                       min="1"
                       step="1"
@@ -1849,6 +1859,7 @@ export default function Ventas({
           </div>
           <div className="cliente-busqueda-wrap">
             <AppInput
+              id={ventasFieldId('cliente', 'busqueda')}
               type="text"
               placeholder="Buscar cliente..."
               value={busquedaCliente}
@@ -1859,6 +1870,7 @@ export default function Ventas({
             <form className="nuevo-cliente-form" onSubmit={handleCrearCliente}>
               <p className="nuevo-cliente-form-title">Nuevo cliente</p>
               <AppInput
+                id={ventasFieldId('cliente', 'nuevo', 'nombre')}
                 type="text"
                 placeholder="Nombre *"
                 value={nuevoClienteForm.nombre}
@@ -1866,24 +1878,28 @@ export default function Ventas({
                 required
               />
               <AppInput
+                id={ventasFieldId('cliente', 'nuevo', 'rut')}
                 type="text"
                 placeholder="RUT / Cédula"
                 value={nuevoClienteForm.rut}
                 onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, rut: e.target.value }))}
               />
               <AppInput
+                id={ventasFieldId('cliente', 'nuevo', 'telefono')}
                 type="text"
                 placeholder="Teléfono"
                 value={nuevoClienteForm.telefono}
                 onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, telefono: e.target.value }))}
               />
               <AppInput
+                id={ventasFieldId('cliente', 'nuevo', 'correo')}
                 type="email"
                 placeholder="Correo"
                 value={nuevoClienteForm.correo}
                 onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, correo: e.target.value }))}
               />
               <AppInput
+                id={ventasFieldId('cliente', 'nuevo', 'direccion')}
                 type="text"
                 placeholder="Dirección"
                 value={nuevoClienteForm.direccion}
