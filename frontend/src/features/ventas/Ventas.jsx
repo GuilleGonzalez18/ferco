@@ -74,6 +74,21 @@ function todayISODate() {
   return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
 }
 
+function normalizeButtonIdPart(value) {
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || 'sin-valor';
+}
+
+function ventasButtonId(...parts) {
+  return ['nueva-venta', ...parts.map(normalizeButtonIdPart)].join('-');
+}
+
 function formatMedioPago(value) {
   const v = String(value || 'efectivo').toLowerCase();
   if (v === 'credito') return 'Crédito';
@@ -97,6 +112,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
   const precioEmpaque = roundMoney(producto.precioEmpaque);
   const enCarrito = unidadesEnCarrito > 0;
   const cardRef = useRef(null);
+  const productoIdPart = normalizeButtonIdPart(producto.id ?? producto.ean ?? producto.nombre);
 
   const handleAdd = () => {
     // Lanzar partícula desde el centro de la card hacia el carrito
@@ -142,6 +158,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
         <div className="producto-picker">
           <div className="picker-mode">
             <button
+              id={ventasButtonId('producto', productoIdPart, 'modo', 'unidad')}
               type="button"
               className={`picker-mode-btn ${pickerModo === 'unidad' ? 'active' : ''}`}
               onClick={() => onSetPickerModo(producto.id, 'unidad')}
@@ -149,6 +166,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
               Unidad
             </button>
             <button
+              id={ventasButtonId('producto', productoIdPart, 'modo', 'empaque')}
               type="button"
               className={`picker-mode-btn ${pickerModo === 'empaque' ? 'active' : ''}`}
               onClick={() => onSetPickerModo(producto.id, 'empaque')}
@@ -158,6 +176,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
           </div>
           <div className="picker-qty">
             <button
+              id={ventasButtonId('producto', productoIdPart, 'cantidad', 'restar')}
               type="button"
               className="picker-step"
               onClick={() => onSetPickerCantidad(producto.id, pickerCantidad - 1)}
@@ -173,6 +192,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
               onChange={(e) => onSetPickerCantidad(producto.id, e.target.value)}
             />
             <button
+              id={ventasButtonId('producto', productoIdPart, 'cantidad', 'sumar')}
               type="button"
               className="picker-step"
               onClick={() => onSetPickerCantidad(producto.id, pickerCantidad + 1)}
@@ -181,6 +201,7 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
             </button>
           </div>
           <AppButton
+            id={ventasButtonId('producto', productoIdPart, 'agregar')}
             type="button"
             className="picker-add-btn"
             onClick={handleAdd}
@@ -201,6 +222,7 @@ const DiscountModal = memo(function DiscountModal({
   initialValor,
   onClose,
   onApply,
+  idPrefix = ventasButtonId('descuento-modal'),
 }) {
   const inputRef = useRef(null);
   const [draftTipo, setDraftTipo] = useState(initialTipo === 'fijo' ? 'fijo' : 'porcentaje');
@@ -241,6 +263,7 @@ const DiscountModal = memo(function DiscountModal({
         <p>{description}</p>
         <div className="descuento-modal-tipos">
           <AppButton
+            id={`${idPrefix}-tipo-porcentaje`}
             type="button"
             className={draftTipo === 'porcentaje' ? 'active' : ''}
             onClick={() => setDraftTipo('porcentaje')}
@@ -248,6 +271,7 @@ const DiscountModal = memo(function DiscountModal({
             Porcentual (%)
           </AppButton>
           <AppButton
+            id={`${idPrefix}-tipo-fijo`}
             type="button"
             className={draftTipo === 'fijo' ? 'active' : ''}
             onClick={() => setDraftTipo('fijo')}
@@ -267,10 +291,10 @@ const DiscountModal = memo(function DiscountModal({
           placeholder={draftTipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 500'}
         />
         <div className="descuento-modal-actions">
-          <AppButton type="button" className="secundario" onClick={onClose}>
+          <AppButton id={`${idPrefix}-cancelar`} type="button" className="secundario" onClick={onClose}>
             Cancelar
           </AppButton>
-          <AppButton type="button" onClick={handleApply}>
+          <AppButton id={`${idPrefix}-aplicar`} type="button" onClick={handleApply}>
             Aplicar
           </AppButton>
         </div>
@@ -1289,6 +1313,7 @@ export default function Ventas({
         <div className="ventas-carrito-restaurado-banner">
           <span>🛒 Tenés una venta en progreso guardada.</span>
           <button
+            id={ventasButtonId('carrito-restaurado', 'descartar')}
             type="button"
             className="ventas-carrito-restaurado-descartar"
             onClick={() => {
@@ -1307,6 +1332,7 @@ export default function Ventas({
             Descartar
           </button>
           <button
+            id={ventasButtonId('carrito-restaurado', 'cerrar')}
             type="button"
             className="ventas-carrito-restaurado-cerrar"
             onClick={() => setCarritoRestaurado(false)}
@@ -1338,6 +1364,7 @@ export default function Ventas({
                     onChange={(e) => setBusqueda(e.target.value)}
                   />
                   <AppButton
+                    id={ventasButtonId('vista-productos', 'toggle')}
                     type="button"
                     className="vista-toggle"
                     onClick={() => setVistaProductos((v) => (v === 'grid' ? 'list' : 'grid'))}
@@ -1373,6 +1400,7 @@ export default function Ventas({
                         const activo = Boolean(row?.activo);
                         return (
                           <AppButton
+                            id={ventasButtonId('medio-pago', method.key, 'toggle')}
                             key={method.key}
                             type="button"
                             className={`pago-card ${activo ? 'active' : ''}`}
@@ -1480,6 +1508,7 @@ export default function Ventas({
           <div className="ventas-carrito-mobile-head">
             <h3>Carrito</h3>
             <AppButton
+              id={ventasButtonId('carrito', 'cerrar')}
               type="button"
               className="ventas-carrito-close"
               onClick={closeCarritoDrawer}
@@ -1490,6 +1519,7 @@ export default function Ventas({
           </div>
           <div className="cliente-cabecera">
             <AppButton
+              id={ventasButtonId('cliente', 'toggle')}
               type="button"
               tone="ghost"
               className="cliente-toggle"
@@ -1520,6 +1550,10 @@ export default function Ventas({
           <div className="carrito-list">
             {carritoCalculado.map((item) => (
               <div key={item.id} className={`carrito-item${flashIds.has(item.id) ? ' carrito-item--flash' : ''}`}>
+                {(() => {
+                  const itemIdPart = normalizeButtonIdPart(item.id ?? item.productoId ?? item.nombre);
+                  return (
+                <>
                 <div>
                   <strong>{item.nombre}</strong>
                   <p className="carrito-codigo">Código: {item.ean || '-'}</p>
@@ -1552,7 +1586,7 @@ export default function Ventas({
                         <div className="descuento-linea">
                           <span className="descuento-label">{item.tipoEmpaque || 'Empaque'}:</span>
                           {item.descuentoPacksTipo === 'ninguno' ? (
-                            <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>
+                            <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'crear')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>
                               Dar descuento
                             </AppButton>
                           ) : (
@@ -1562,15 +1596,15 @@ export default function Ventas({
                                   ? `${toNumber(item.descuentoPacksValor)}%`
                                   : money(item.descuentoPacksValor)}
                               </span>
-                              <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>Editar</AppButton>
-                              <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'packs')}>✕</AppButton>
+                              <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'editar')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'packs')}>Editar</AppButton>
+                              <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'eliminar')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'packs')}>✕</AppButton>
                             </>
                           )}
                         </div>
                         <div className="descuento-linea">
                           <span className="descuento-label">Sueltas:</span>
                           {item.descuentoTipo === 'ninguno' ? (
-                            <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>
+                            <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'sueltas', 'crear')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>
                               Dar descuento
                             </AppButton>
                           ) : (
@@ -1580,8 +1614,8 @@ export default function Ventas({
                                   ? `${toNumber(item.descuentoValor)}%`
                                   : money(item.descuentoValor)}
                               </span>
-                              <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>Editar</AppButton>
-                              <AppButton type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'sueltas')}>✕</AppButton>
+                              <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'sueltas', 'editar')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => openDiscountModal(item, 'sueltas')}>Editar</AppButton>
+                              <AppButton id={ventasButtonId('item', itemIdPart, 'descuento', 'sueltas', 'eliminar')} type="button" tone="ghost" size="sm" className="descuento-action-link" onClick={() => removeItemDiscount(item.id, 'sueltas')}>✕</AppButton>
                             </>
                           )}
                         </div>
@@ -1590,6 +1624,7 @@ export default function Ventas({
                       // Solo empaques — descuento sobre packs
                       item.descuentoPacksTipo === 'ninguno' ? (
                         <AppButton
+                          id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'crear')}
                           type="button"
                           tone="ghost"
                           size="sm"
@@ -1607,6 +1642,7 @@ export default function Ventas({
                               : money(item.descuentoPacksValor)}
                           </span>
                           <AppButton
+                            id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'editar')}
                             type="button"
                             tone="ghost"
                             size="sm"
@@ -1616,6 +1652,7 @@ export default function Ventas({
                             Editar
                           </AppButton>
                           <AppButton
+                            id={ventasButtonId('item', itemIdPart, 'descuento', 'packs', 'eliminar')}
                             type="button"
                             tone="ghost"
                             size="sm"
@@ -1630,6 +1667,7 @@ export default function Ventas({
                       // Solo unidades sueltas — descuento sobre sueltas
                       item.descuentoTipo === 'ninguno' ? (
                         <AppButton
+                          id={ventasButtonId('item', itemIdPart, 'descuento', 'sueltas', 'crear')}
                           type="button"
                           tone="ghost"
                           size="sm"
@@ -1647,6 +1685,7 @@ export default function Ventas({
                               : money(item.descuentoValor)}
                           </span>
                           <AppButton
+                            id={ventasButtonId('item', itemIdPart, 'descuento', 'sueltas', 'eliminar')}
                             type="button"
                             tone="ghost"
                             size="sm"
@@ -1671,8 +1710,11 @@ export default function Ventas({
                   {item.descuentoAplicado > 0 && (
                     <small className="linea-descuento">- {money(item.descuentoAplicado)}</small>
                   )}
-                  <AppButton type="button" onClick={() => removeItem(item.id)}>✕</AppButton>
+                  <AppButton id={ventasButtonId('item', itemIdPart, 'eliminar')} type="button" onClick={() => removeItem(item.id)}>✕</AppButton>
                 </div>
+                </>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -1681,6 +1723,7 @@ export default function Ventas({
             <div className="carrito-totales">
               <div className={`carrito-resumen-card${carritoResumenAbierto ? ' open' : ''}`}>
                 <button
+                  id={ventasButtonId('carrito', 'resumen', 'toggle')}
                   type="button"
                   className="carrito-resumen-toggle"
                   aria-expanded={carritoResumenAbierto}
@@ -1730,6 +1773,7 @@ export default function Ventas({
                 <span className="descuento-global-label">Descuento global</span>
                 {descuentoTotalTipo === 'ninguno' ? (
                   <AppButton
+                    id={ventasButtonId('descuento-global', 'crear')}
                     type="button"
                     tone="ghost"
                     size="sm"
@@ -1748,6 +1792,7 @@ export default function Ventas({
                     </span>
                     <div className="descuento-global-actions">
                       <AppButton
+                        id={ventasButtonId('descuento-global', 'editar')}
                         type="button"
                         tone="ghost"
                         size="sm"
@@ -1757,6 +1802,7 @@ export default function Ventas({
                         Editar
                       </AppButton>
                       <AppButton
+                        id={ventasButtonId('descuento-global', 'quitar')}
                         type="button"
                         tone="ghost"
                         size="sm"
@@ -1772,11 +1818,11 @@ export default function Ventas({
             </div>
             <div className="ventas-footer">
               {paso === 1 ? (
-                <AppButton type="button" onClick={goNext}>Siguiente</AppButton>
+                <AppButton id={ventasButtonId('paso', 'productos', 'siguiente')} type="button" onClick={goNext}>Siguiente</AppButton>
               ) : (
                 <>
-                  <AppButton type="button" className="secundario" onClick={goBack}>Atrás</AppButton>
-                  <AppButton type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</AppButton>
+                  <AppButton id={ventasButtonId('paso', 'pago', 'atras')} type="button" className="secundario" onClick={goBack}>Atrás</AppButton>
+                  <AppButton id={ventasButtonId('venta', 'confirmar')} type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</AppButton>
                 </>
               )}
             </div>
@@ -1793,6 +1839,7 @@ export default function Ventas({
           <div className="cliente-dropdown-head">
             <h4>Seleccionar cliente</h4>
             <AppButton
+              id={ventasButtonId('cliente', 'cerrar')}
               type="button"
               className="cliente-cerrar"
               onClick={() => setSelectorClienteAbierto(false)}
@@ -1843,10 +1890,10 @@ export default function Ventas({
                 onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, direccion: e.target.value }))}
               />
               <div className="nuevo-cliente-form-actions">
-                <AppButton type="button" tone="ghost" size="sm" onClick={() => setNuevoClienteOpen(false)} disabled={nuevoClienteSaving}>
+                <AppButton id={ventasButtonId('cliente', 'nuevo', 'cancelar')} type="button" tone="ghost" size="sm" onClick={() => setNuevoClienteOpen(false)} disabled={nuevoClienteSaving}>
                   Cancelar
                 </AppButton>
-                <AppButton type="submit" size="sm" disabled={nuevoClienteSaving || !nuevoClienteForm.nombre.trim()}>
+                <AppButton id={ventasButtonId('cliente', 'nuevo', 'guardar')} type="submit" size="sm" disabled={nuevoClienteSaving || !nuevoClienteForm.nombre.trim()}>
                   {nuevoClienteSaving ? 'Guardando...' : 'Guardar cliente'}
                 </AppButton>
               </div>
@@ -1854,6 +1901,7 @@ export default function Ventas({
           ) : (
             <div className="nuevo-cliente-btn-wrap">
               <AppButton
+                id={ventasButtonId('cliente', 'nuevo', 'abrir')}
                 type="button"
                 tone="ghost"
                 size="sm"
@@ -1870,6 +1918,7 @@ export default function Ventas({
             )}
             {clientesFiltrados.map((c) => (
               <AppButton
+                id={ventasButtonId('cliente', 'opcion', c.id ?? c.nombre)}
                 key={c.id}
                 type="button"
                 className={`cliente-opcion ${String(clienteId) === String(c.id) ? 'active' : ''}`}
@@ -1901,6 +1950,7 @@ export default function Ventas({
         initialValor={descuentoItemModal.valor}
         onClose={closeDiscountModal}
         onApply={applyItemDiscount}
+        idPrefix={ventasButtonId('descuento-item-modal', descuentoItemModal.parte)}
       />
 
       <DiscountModal
@@ -1916,6 +1966,7 @@ export default function Ventas({
         initialValor={descuentoGlobalModal.valor}
         onClose={closeGlobalDiscountModal}
         onApply={applyGlobalDiscount}
+        idPrefix={ventasButtonId('descuento-global-modal')}
       />
 
       <div
@@ -1972,19 +2023,19 @@ export default function Ventas({
             </>
           )}
           <div className="venta-final-actions">
-            <AppButton type="button" className="secundario" onClick={iniciarNuevaVenta}>
+            <AppButton id={ventasButtonId('venta-final', 'nueva-venta')} type="button" className="secundario" onClick={iniciarNuevaVenta}>
               <img src="/newsale.svg" alt="" aria-hidden="true" />
               Nueva venta
             </AppButton>
-            <AppButton type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
+            <AppButton id={ventasButtonId('venta-final', 'whatsapp')} type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
               <img src="/whatsapp.svg" alt="" aria-hidden="true" />
               Enviar por WhatsApp
             </AppButton>
-            <AppButton type="button" onClick={descargarTicketPdf}>
+            <AppButton id={ventasButtonId('venta-final', 'pdf')} type="button" onClick={descargarTicketPdf}>
               <img src="/pdf.svg" alt="" aria-hidden="true" />
               PDF
             </AppButton>
-            <AppButton type="button" onClick={imprimirTicket}>
+            <AppButton id={ventasButtonId('venta-final', 'imprimir')} type="button" onClick={imprimirTicket}>
               <img src="/print.svg" alt="" aria-hidden="true" />
               Imprimir ticket
             </AppButton>

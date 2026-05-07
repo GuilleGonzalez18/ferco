@@ -643,8 +643,19 @@ body.dashboard-scroll-lock {
   animation: dashboardScreenPanelIn 340ms ease both;
 }
 
+.dashboard-screen-shell--full-height {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .dashboard-screen-shell > * {
   min-width: 0;
+}
+
+.dashboard-screen-shell--full-height > * {
+  flex: 1;
+  min-height: 0;
 }
 
 .dashboard-screen-shell > :nth-child(1) {

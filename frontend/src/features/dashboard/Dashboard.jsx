@@ -177,6 +177,14 @@ function buildDefaultLabel(categoria, tipo, metrica) {
   return m?.label ?? cat.label;
 }
 
+function toButtonIdPart(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'item';
+}
+
 // ── useWidgetPrefs: fetches from DB, saves to DB ──────────────────────────────
 
 function useWidgetPrefs() {
@@ -262,7 +270,14 @@ function WidgetCard({ widget, editMode, onRemove, onUpdate, idx }) {
       style={{ animationDelay: `${idx * 100}ms` }}
     >
       {editMode && !editing && (
-        <button type="button" className="widget-remove-btn" onClick={onRemove} title="Quitar widget" aria-label="Quitar widget">
+        <button
+          id={`dashboard-widget-remove-${widget.id ?? idx}`}
+          type="button"
+          className="widget-remove-btn"
+          onClick={onRemove}
+          title="Quitar widget"
+          aria-label="Quitar widget"
+        >
           <FiX />
         </button>
       )}
@@ -321,8 +336,8 @@ function WidgetCard({ widget, editMode, onRemove, onUpdate, idx }) {
             )}
           </div>
           <div className="widget-edit-actions">
-            <button type="button" className="widget-edit-save" onClick={handleSave}><FiCheck /> Guardar</button>
-            <button type="button" className="widget-edit-cancel" onClick={handleCancel}>Cancelar</button>
+            <button id={`dashboard-widget-save-${widget.id ?? idx}`} type="button" className="widget-edit-save" onClick={handleSave}><FiCheck /> Guardar</button>
+            <button id={`dashboard-widget-cancel-${widget.id ?? idx}`} type="button" className="widget-edit-cancel" onClick={handleCancel}>Cancelar</button>
           </div>
         </div>
       )}
@@ -400,7 +415,7 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
 
   if (!open) {
     return (
-      <button type="button" className="dashboard-add-widget-btn" onClick={() => setOpen(true)} title="Agregar widget">
+      <button id="dashboard-widget-add-open" type="button" className="dashboard-add-widget-btn" onClick={() => setOpen(true)} title="Agregar widget">
         <FiPlus /><span>Agregar</span>
       </button>
     );
@@ -414,14 +429,14 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
       {/* Paso: Categoría */}
       {step === WIZARD_STEPS.CATEGORY && (
         <>
-          <p className="add-widget-title">Elegí una categoría</p>
-          <div className="wizard-step-categories">
-            {categorias.map(([key, cat]) => (
-              <button key={key} type="button" className="wizard-category-btn" onClick={() => handleSelectCategoria(key)}>
-                <img src={cat.icon} alt="" />
-                <span>{cat.label}</span>
-              </button>
-            ))}
+            <p className="add-widget-title">Elegí una categoría</p>
+            <div className="wizard-step-categories">
+              {categorias.map(([key, cat]) => (
+                <button id={`dashboard-widget-category-${toButtonIdPart(key)}`} key={key} type="button" className="wizard-category-btn" onClick={() => handleSelectCategoria(key)}>
+                  <img src={cat.icon} alt="" />
+                  <span>{cat.label}</span>
+                </button>
+              ))}
           </div>
         </>
       )}
@@ -432,12 +447,12 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
           <p className="add-widget-title">Tipo de métrica — <strong>{WIDGET_CATALOG[sel.categoria].label}</strong></p>
           <div className="wizard-step-types">
             {Object.entries(WIDGET_CATALOG[sel.categoria].tipos).map(([key, t]) => (
-              <button key={key} type="button" className="wizard-type-btn" onClick={() => handleSelectTipo(key)}>
+              <button id={`dashboard-widget-type-${toButtonIdPart(sel.categoria)}-${toButtonIdPart(key)}`} key={key} type="button" className="wizard-type-btn" onClick={() => handleSelectTipo(key)}>
                 {t.label}
               </button>
             ))}
           </div>
-          <button type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.CATEGORY)}>← Atrás</button>
+          <button id="dashboard-widget-back-category" type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.CATEGORY)}>← Atrás</button>
         </>
       )}
 
@@ -447,12 +462,12 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
           <p className="add-widget-title">¿Qué querés medir?</p>
           <div className="wizard-step-types">
             {WIDGET_CATALOG[sel.categoria].tipos[sel.tipo].metricas.map((m) => (
-              <button key={m.id} type="button" className="wizard-type-btn" onClick={() => handleSelectMetrica(m.id)}>
+              <button id={`dashboard-widget-metric-${toButtonIdPart(sel.categoria)}-${toButtonIdPart(sel.tipo)}-${toButtonIdPart(m.id)}`} key={m.id} type="button" className="wizard-type-btn" onClick={() => handleSelectMetrica(m.id)}>
                 {m.label}
               </button>
             ))}
           </div>
-          <button type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.TYPE)}>← Atrás</button>
+          <button id="dashboard-widget-back-type" type="button" className="widget-add-back-btn" onClick={() => setStep(WIZARD_STEPS.TYPE)}>← Atrás</button>
         </>
       )}
 
@@ -463,14 +478,14 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
           <div className="wizard-step-types">
             {isComparacion
               ? COMPARISON_OPTIONS.map((o) => (
-                  <button key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, true)}>{o.label}</button>
+                  <button id={`dashboard-widget-range-${toButtonIdPart(o.value)}`} key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, true)}>{o.label}</button>
                 ))
               : RANGE_OPTIONS.map((o) => (
-                  <button key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, false)}>{o.label}</button>
+                  <button id={`dashboard-widget-range-${toButtonIdPart(o.value)}`} key={o.value} type="button" className="wizard-type-btn" onClick={() => handleSelectRango(o.value, false)}>{o.label}</button>
                 ))
             }
           </div>
-          <button type="button" className="widget-add-back-btn"
+          <button id="dashboard-widget-back-range" type="button" className="widget-add-back-btn"
             onClick={() => setStep(WIDGET_CATALOG[sel.categoria].tipos[sel.tipo].metricas.length > 1 ? WIZARD_STEPS.METRIC : WIZARD_STEPS.TYPE)}>
             ← Atrás
           </button>
@@ -484,13 +499,13 @@ function AddWidgetCard({ onAdd, canVerEmpresa }) {
           <input type="text" className="widget-edit-input" value={etiqueta}
             onChange={(e) => setEtiqueta(e.target.value)} maxLength={60} autoFocus />
           <div className="widget-edit-actions" style={{ marginTop: '0.6rem' }}>
-            <button type="button" className="widget-edit-save" onClick={handleAdd}><FiCheck /> Agregar</button>
-            <button type="button" className="widget-edit-cancel" onClick={() => setStep(WIZARD_STEPS.RANGE)}>← Atrás</button>
+            <button id="dashboard-widget-add-confirm" type="button" className="widget-edit-save" onClick={handleAdd}><FiCheck /> Agregar</button>
+            <button id="dashboard-widget-back-label" type="button" className="widget-edit-cancel" onClick={() => setStep(WIZARD_STEPS.RANGE)}>← Atrás</button>
           </div>
         </>
       )}
 
-      <button type="button" className="add-widget-cancel" style={{ marginTop: '0.4rem' }} onClick={reset}>Cancelar</button>
+      <button id="dashboard-widget-add-cancel" type="button" className="add-widget-cancel" style={{ marginTop: '0.4rem' }} onClick={reset}>Cancelar</button>
     </div>
   );
 }
@@ -698,6 +713,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
       <aside className={`dashboard-sidebar ${menuMovilAbierto ? 'mobile-open' : ''}`}>
         <div className="dashboard-logo-wrap">
           <button
+            id="dashboard-logo-home"
             type="button"
             className="dashboard-logo-btn"
             onClick={() => handleNavigate('')}
@@ -724,6 +740,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
         <nav className="dashboard-nav">
           {opcionesMenu.map(({ key, label, icon }) => (
             <button
+              id={`dashboard-nav-${toButtonIdPart(key)}`}
               key={key}
               type="button"
               className={pantalla === key ? 'active' : ''}
@@ -738,7 +755,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
             </button>
           ))}
         </nav>
-        <AppButton type="button" tone="danger" className="dashboard-logout" onClick={handleLogout}>
+        <AppButton id="dashboard-logout" type="button" tone="danger" className="dashboard-logout" onClick={handleLogout}>
           <img src="/logout.svg" alt="" className="logout-icon-img" aria-hidden="true" />
           Cerrar sesión
         </AppButton>
@@ -757,6 +774,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
         <div className="dashboard-topbar">
           <div className="dashboard-topbar-content">
             <button
+              id="dashboard-mobile-menu-toggle"
               type="button"
               className={`dashboard-mobile-fab ${menuMovilAbierto ? 'is-open' : ''}`}
               onClick={() => setMenuMovilAbierto((prev) => !prev)}
@@ -772,6 +790,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
             <div className="dashboard-topbar-actions">
               {pantalla === 'nueva-venta' && (
                 <button
+                  id="dashboard-cart-toggle"
                   type="button"
                   key={carritoIconAnim}
                   className={`dashboard-topbar-action ventas-carrito-btn ${ventasCarritoAbierto ? 'active' : ''} ${carritoIconAnim > 0 ? 'carrito-shake' : ''}`}
@@ -787,6 +806,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
 
               {filterHasContent && (
                 <button
+                  id="dashboard-filter-toggle"
                   type="button"
                   className={`dashboard-mobile-fab filter-panel-btn ${filterPanelOpen ? 'is-open' : ''}`}
                   onClick={() => setFilterPanelOpen((prev) => !prev)}
@@ -833,6 +853,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
                 {!widgetsLoading && (
                   <>
                     <button
+                      id="dashboard-widgets-edit-toggle"
                       type="button"
                       className={`dashboard-widgets-btn ${editMode ? 'is-active' : ''}`}
                       onClick={() => setEditMode((v) => !v)}
@@ -846,6 +867,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
                     </button>
                     {editMode && (
                       <button
+                        id="dashboard-widgets-reset"
                         type="button"
                         className="dashboard-widgets-reset"
                         onClick={() => { saveWidgets([]); setEditMode(false); }}
@@ -883,7 +905,10 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
             </>
           )}
           {esPantallaDashboard ? null : (
-            <div key={pantalla} className="dashboard-screen-shell">
+            <div
+              key={pantalla}
+              className={`dashboard-screen-shell ${pantalla === 'nueva-venta' ? 'dashboard-screen-shell--full-height' : ''}`}
+            >
               {contenidoPantalla}
             </div>
           )}
@@ -905,6 +930,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
             <div className="filter-panel-head">
               <h3>Filtros y acciones</h3>
               <button
+                id="dashboard-filter-close"
                 type="button"
                 className="filter-panel-close"
                 onClick={() => setFilterPanelOpen(false)}
