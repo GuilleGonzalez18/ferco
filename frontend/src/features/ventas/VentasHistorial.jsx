@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
@@ -1890,7 +1891,7 @@ export default function VentasHistorial() {
         />
       )}
 
-      {cfeModalData && (
+      {cfeModalData && typeof document !== 'undefined' && createPortal(
         <div className="export-modal-overlay" role="dialog" aria-modal="true" aria-label="CFE JSON">
           <div className="export-modal-backdrop" onClick={() => setCfeModalData(null)} />
           <div className="export-modal cfe-modal">
@@ -1920,7 +1921,8 @@ export default function VentasHistorial() {
               Cerrar
             </AppButton>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

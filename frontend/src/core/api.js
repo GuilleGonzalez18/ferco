@@ -57,6 +57,53 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+async function requestText(path, options = {}) {
+  const token = getToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: {
+        ...authHeaders,
+        ...(options.headers || {}),
+      },
+      ...options,
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error('No se pudo conectar con el backend. Valide con RPG Software.');
+    }
+    throw error;
+  }
+
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        message = data.error || message;
+      } else {
+        const text = await response.text();
+        if (text.trim()) message = text.trim();
+      }
+    } catch {
+      // keep default message
+    }
+
+    if (response.status === 401 && token) {
+      setToken('');
+      window.dispatchEvent(new CustomEvent('ferco:session-expired'));
+    }
+
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+
+  return response.text();
+}
+
 export const api = {
   setAuthToken: (token) => setToken(token),
   clearAuthToken: () => setToken(''),
@@ -183,9 +230,8 @@ export const api = {
   },
   getVentaById: (id) => request(`/ventas/${id}`),
   getVentaCFE: (id) => request(`/ventas/${id}/cfe`),
-  getVentaCFEAnnotated: (id) => fetch(`${API_BASE}/ventas/${id}/cfe?annotated=1`, {
-    headers: { 'Authorization': `Bearer ${getToken()}` },
-  }).then((r) => { if (!r.ok) throw new Error('Error CFE'); return r.text(); }),
+  getVentaCFEAnnotated: (id) => requestText(`/ventas/${id}/cfe?annotated=1`),
+  sendVentaCFE: (id) => request(`/ventas/${id}/cfe/enviar`, { method: 'POST' }),
   updateVentaEntregado: (id, entregado) =>
     request(`/ventas/${id}/entregado`, {
       method: 'PUT',

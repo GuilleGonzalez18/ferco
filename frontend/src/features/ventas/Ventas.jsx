@@ -356,6 +356,7 @@ export default function Ventas({
   const [observacion, setObservacion] = useState('');
   const [ventaFinalizada, setVentaFinalizada] = useState(null);
   const [ticketImpreso, setTicketImpreso] = useState(false);
+  const [cfeLoading, setCfeLoading] = useState(false);
   const [clientes, setClientes] = useState([]);
   const [carritoRestaurado, setCarritoRestaurado] = useState(false);
   const [flashIds, setFlashIds] = useState(new Set());
@@ -1131,6 +1132,52 @@ export default function Ventas({
     setTicketImpreso(true);
   };
 
+  const descargarCfeAnotado = async (ventaId) => {
+    const text = await api.getVentaCFEAnnotated(ventaId);
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cfe-venta-${ventaId}.jsonc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return text;
+  };
+
+  const emitirCfeVentaFinal = async () => {
+    if (!ventaFinalizada?.id) return;
+    setCfeLoading(true);
+    try {
+      await api.sendVentaCFE(ventaFinalizada.id);
+      setVentaFinalizada((prev) => (prev ? {
+        ...prev,
+        cfe: {
+          ...(prev.cfe || {}),
+          autoAttempted: true,
+          autoSent: true,
+          autoError: null,
+        },
+      } : prev));
+      await descargarCfeAnotado(ventaFinalizada.id);
+      await appAlert('CFE emitido correctamente.');
+    } catch (error) {
+      setVentaFinalizada((prev) => (prev ? {
+        ...prev,
+        cfe: {
+          ...(prev.cfe || {}),
+          autoAttempted: true,
+          autoSent: false,
+          autoError: error.message || 'No se pudo emitir el CFE',
+        },
+      } : prev));
+      await appAlert(error.message || 'No se pudo emitir el CFE');
+    } finally {
+      setCfeLoading(false);
+    }
+  };
+
   const enviarTicketWhatsApp = async () => {
     if (!ventaFinalizada) return;
     const data = await buildTicketPdf();
@@ -1281,25 +1328,18 @@ export default function Ventas({
         descuentoTotalTipo,
         descuentoTotalValor,
         total,
+        cfe: ventaCreada?.cfe || null,
       });
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
 
       // Descargar JSON CFE automáticamente (con comentarios JSONC)
       if (ventaCreada?.id) {
-        api.getVentaCFEAnnotated(ventaCreada.id)
-          .then((text) => {
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `cfe-venta-${ventaCreada.id}.jsonc`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          })
+        descargarCfeAnotado(ventaCreada.id)
           .catch(() => {}); // silencioso, no interrumpe el flujo
+      }
+      if (ventaCreada?.cfe?.autoAttempted && ventaCreada?.cfe?.autoError) {
+        await appAlert(`Venta registrada, pero CFE no se emitió: ${ventaCreada.cfe.autoError}`);
       }
     } catch (error) {
       await appAlert(`No se pudo registrar la venta: ${error.message}`);
@@ -2036,12 +2076,29 @@ export default function Ventas({
                 <p>Descuento total <strong>-{money(ventaFinalizada.descuentoGlobal)}</strong></p>
                 <p className="venta-final-total">Total <strong>{money(ventaFinalizada.total)}</strong></p>
               </div>
+              {ventaFinalizada.cfe?.autoSent && (
+                <p className="venta-final-cfe-status venta-final-cfe-status--ok">CFE emitido correctamente.</p>
+              )}
+              {ventaFinalizada.cfe?.autoAttempted && ventaFinalizada.cfe?.autoError && (
+                <p className="venta-final-cfe-status venta-final-cfe-status--error">
+                  Error CFE: {ventaFinalizada.cfe.autoError}
+                </p>
+              )}
             </>
           )}
           <div className="venta-final-actions">
             <AppButton id={ventasButtonId('venta-final', 'nueva-venta')} type="button" className="secundario" onClick={iniciarNuevaVenta}>
               <img src="/newsale.svg" alt="" aria-hidden="true" />
               Nueva venta
+            </AppButton>
+            <AppButton
+              id={ventasButtonId('venta-final', 'emitir-cfe')}
+              type="button"
+              className="cfe"
+              onClick={emitirCfeVentaFinal}
+              disabled={cfeLoading || !ventaFinalizada?.id}
+            >
+              {cfeLoading ? 'Emitiendo CFE...' : 'Emitir CFE'}
             </AppButton>
             <AppButton id={ventasButtonId('venta-final', 'whatsapp')} type="button" className="whatsapp" onClick={enviarTicketWhatsApp}>
               <img src="/whatsapp.svg" alt="" aria-hidden="true" />

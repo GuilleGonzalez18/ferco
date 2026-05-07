@@ -1761,8 +1761,26 @@
   background: #128c7e;
 }
 
+.venta-final-actions .cfe {
+  background: #4057d6;
+}
+
 .venta-final-actions .email {
   background: #1f7a4d;
+}
+
+.venta-final-cfe-status {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.venta-final-cfe-status--ok {
+  color: #117a52;
+}
+
+.venta-final-cfe-status--error {
+  color: #b03535;
 }
 
 @media (max-width: 850px) {

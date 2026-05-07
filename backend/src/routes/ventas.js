@@ -11,7 +11,8 @@ import { sendMail } from '../mailer.js';
 import { getMetodoGanancias, calcularGanancia } from '../gananciaCalculator.js';
 import { buildCFE } from '../cfeBuilder.js';
 import { buildCFEAnnotated } from '../cfeAnnotated.js';
-import { sendServerError } from '../dbErrors.js';
+import { logServerError, sendServerError } from '../dbErrors.js';
+import { sendCFE } from '../cfeSender.js';
 import {
   firstError, respondIfInvalid,
   validateArray, validateMaxLength, validateEnum, validateDateFormat,
@@ -99,6 +100,11 @@ function normalizePaymentMethods(pagos = []) {
     }
     return { medio_pago: medioPago, monto };
   });
+}
+
+function isCfeSendConfigured() {
+  return Boolean(String(process.env.CFE_API_URL || '').trim())
+    && Boolean(String(process.env.CFE_API_TOKEN || '').trim());
 }
 
 async function canViewEmpresaStats(authUser) {
@@ -1509,6 +1515,35 @@ ventasRouter.post('/', requirePermission('nueva-venta', 'usar'), async (req, res
       [ventaId]
     );
     await client.query('COMMIT');
+    let cfe = {
+      autoAttempted: false,
+      autoSent: false,
+      configured: isCfeSendConfigured(),
+      autoError: null,
+      result: null,
+    };
+    if (cfe.configured) {
+      cfe.autoAttempted = true;
+      try {
+        cfe.result = await sendCFE(ventaId);
+        cfe.autoSent = true;
+        await pool.query(
+          `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [
+            'venta',
+            ventaId,
+            'emitir_cfe',
+            'CFE emitido automaticamente al confirmar la venta',
+            authUser?.id || null,
+            actorName(authUser),
+          ]
+        );
+      } catch (cfeError) {
+        cfe.autoError = cfeError.message || 'No se pudo emitir el CFE';
+        logServerError('ventas.create.autoCfe', cfeError);
+      }
+    }
     return res.status(201).json({
       ...ventaResult.rows[0],
       pagos: pagosResult.rows.map((p) => ({
@@ -1518,6 +1553,7 @@ ventasRouter.post('/', requirePermission('nueva-venta', 'usar'), async (req, res
         monto: Number(p.monto || 0),
         created_at: p.created_at,
       })),
+      cfe,
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -1825,10 +1861,12 @@ ventasRouter.delete('/:id', requirePermission('ventas', 'eliminar'), async (req,
 
 ventasRouter.get('/:id/cfe', async (req, res) => {
   const authUser = req.authUser ?? getAuthUserFromRequest(req);
-  if (!isPropietario(authUser)) return res.status(403).json({ error: 'Sin permiso' });
 
   const ventaId = Number(req.params.id);
   if (!Number.isFinite(ventaId)) return res.status(400).json({ error: 'ID inválido' });
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
 
   try {
     const cfe = await buildCFE(ventaId);
@@ -1841,9 +1879,38 @@ ventasRouter.get('/:id/cfe', async (req, res) => {
     if (String(err?.message || '').includes('no encontrada')) {
       return res.status(404).json({ error: 'Venta no encontrada' });
     }
-    return sendServerError(res, err, {
-      fallback: 'No se pudo generar el CFE',
-      context: 'ventas.getCfe',
-    });
+    return res.status(400).json({ error: err?.message || 'No se pudo generar el CFE' });
+  }
+});
+
+ventasRouter.post('/:id/cfe/enviar', async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+  const ventaId = Number(req.params.id);
+  if (!Number.isFinite(ventaId)) return res.status(400).json({ error: 'ID inválido' });
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+  if (!isCfeSendConfigured()) {
+    return res.status(400).json({ error: 'CFE_API_URL y CFE_API_TOKEN deben estar configurados en .env para enviar CFEs.' });
+  }
+
+  try {
+    const result = await sendCFE(ventaId);
+    await pool.query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'venta',
+        ventaId,
+        'emitir_cfe',
+        'CFE emitido manualmente',
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    return res.json({ ok: true, result });
+  } catch (error) {
+    logServerError('ventas.sendCfe', error);
+    return res.status(400).json({ error: error?.message || 'No se pudo emitir el CFE' });
   }
 });
