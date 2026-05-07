@@ -138,7 +138,10 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-container">
+      <div className="login-ambient-glow login-ambient-glow-primary" aria-hidden="true" />
+      <div className="login-ambient-glow login-ambient-glow-secondary" aria-hidden="true" />
       <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-eyebrow">{empresa.nombre}</div>
           {empresa.logo_base64 ? (
             <img src={empresa.logo_base64} alt={empresa.nombre || 'Logo'} className="login-logo" />
           ) : (
@@ -186,6 +189,7 @@ export default function Login({ onLogin }) {
             <AppButton type="submit">Entrar</AppButton>
             <AppButton
               type="button"
+              tone="ghost"
               className="login-link-btn"
               onClick={() => {
                 setForgotEmail(email || '');
@@ -213,6 +217,7 @@ export default function Login({ onLogin }) {
             <AppButton type="button" onClick={handleResetPassword}>Restablecer contraseña</AppButton>
             <AppButton
               type="button"
+              tone="ghost"
               className="login-link-btn"
               onClick={() => {
                 setMode('login');
@@ -230,7 +235,7 @@ export default function Login({ onLogin }) {
           <div className="login-forgot-backdrop" onClick={() => setForgotModalOpen(false)} />
           <div className="login-forgot-modal">
             <h4>Recuperar contraseña</h4>
-            <p>Ingrese su correo electronico para enviar</p>
+            <p>Ingresá tu correo para recibir el código de recuperación y volver a entrar rápido.</p>
             <AppInput
               type="email"
               placeholder="Correo electrónico"
@@ -242,6 +247,7 @@ export default function Login({ onLogin }) {
             <div className="login-forgot-actions">
               <AppButton
                 type="button"
+                tone="ghost"
                 className="login-link-btn"
                 onClick={() => {
                   setForgotModalOpen(false);

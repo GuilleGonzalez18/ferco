@@ -1192,7 +1192,9 @@ ventasRouter.get('/', requirePermission('ventas', 'ver'), async (req, res) => {
   const filterHasta = fecha ? null : (hasta || null);
 
   const canSeeAllSales = isPropietario(authUser);
+  const params = [filterDate, filterDesde, filterHasta];
   const ownerFilter = canSeeAllSales ? '' : 'AND v.usuario_id = $4';
+  if (!canSeeAllSales) params.push(Number(authUser.id));
 
   const result = await pool.query(
     `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
@@ -1215,7 +1217,7 @@ ventasRouter.get('/', requirePermission('ventas', 'ver'), async (req, res) => {
       AND COALESCE(v.eliminada, false) = false
       ${ownerFilter}
       ORDER BY v.fecha DESC, v.id DESC`,
-    [filterDate, filterDesde, filterHasta, Number(authUser.id)]
+    params
   );
   const ventas = result.rows;
   const ventaIds = ventas.map((v) => Number(v.id)).filter((id) => Number.isInteger(id) && id > 0);

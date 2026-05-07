@@ -6,6 +6,7 @@ function joinClassNames(...classNames) {
 
 export default function AppButton({
   tone = 'primary',
+  size = 'md',
   iconOnly = false,
   className = '',
   children,
@@ -17,6 +18,7 @@ export default function AppButton({
       className={joinClassNames(
         'app-button',
         `app-button--${tone}`,
+        `app-button--${size}`,
         iconOnly ? 'app-button--icon-only' : '',
         className
       )}

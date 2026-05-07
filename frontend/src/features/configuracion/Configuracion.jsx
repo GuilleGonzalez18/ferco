@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
+import { extractPaletteFromDataUrl } from '../../shared/lib/brandingPalette';
 import AppButton from '../../shared/components/button/AppButton';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppTextarea from '../../shared/components/fields/AppTextarea';
@@ -43,82 +44,6 @@ function compressImage(dataUrl, maxW, maxH, quality) {
       resolve(canvas.toDataURL(format, hasAlpha ? undefined : quality));
     };
     img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
-
-function toHex(r, g, b) {
-  const clamp = (v) => Math.min(255, Math.max(0, Math.round(v)));
-  return '#' + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, '0')).join('');
-}
-
-function scaleColor(hex, factor) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r * factor, g * factor, b * factor);
-}
-
-function mixWithWhite(hex, amount) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
-}
-
-function extractPaletteFromDataUrl(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const size = 96;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size).data;
-
-      const buckets = {};
-      for (let i = 0; i < data.length; i += 4) {
-        const a = data[i + 3];
-        if (a < 100) continue; // skip transparent
-
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Skip near-white and near-black
-        const brightness = (r + g + b) / 3;
-        if (brightness > 230 || brightness < 25) continue;
-
-        // Skip desaturated colors (grays)
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const saturation = max === 0 ? 0 : (max - min) / max;
-        if (saturation < 0.2) continue;
-
-        // Bucket with 24-step quantization
-        const br = Math.round(r / 24) * 24;
-        const bg = Math.round(g / 24) * 24;
-        const bb = Math.round(b / 24) * 24;
-        const key = `${br},${bg},${bb}`;
-        buckets[key] = (buckets[key] || 0) + 1;
-      }
-
-      const sorted = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
-      if (!sorted.length) { resolve(null); return; }
-
-      const [rv, gv, bv] = sorted[0][0].split(',').map(Number);
-      const primary = toHex(rv, gv, bv);
-      resolve({
-        color_primary: primary,
-        color_primary_strong: scaleColor(primary, 0.75),
-        color_primary_soft: mixWithWhite(primary, 0.85),
-        color_menu_bg: scaleColor(primary, 0.35),
-        color_menu_active: primary,
-      });
-    };
-    img.onerror = () => resolve(null);
     img.src = dataUrl;
   });
 }
