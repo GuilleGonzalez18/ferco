@@ -637,6 +637,7 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
 
   const tituloActual= OPCIONES.find((o) => o.key === pantalla)?.topbarTitle ?? 'Dashboard';
   const esPantallaDashboard = !pantalla;
+  const dashboardGreeting = user?.nombre || user?.username || 'Equipo';
   const contenidoPantalla = useMemo(
     () => {
       switch (pantalla) {
@@ -764,7 +765,10 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
             >
               {menuMovilAbierto ? '✕' : '☰'}
             </button>
-            <span className="dashboard-topbar-title">{tituloActual}</span>
+            <div className="dashboard-topbar-heading">
+              <span className="dashboard-topbar-eyebrow">{empresa?.nombre || 'Mercatus'}</span>
+              <span className="dashboard-topbar-title">{tituloActual}</span>
+            </div>
             <div className="dashboard-topbar-actions">
               {pantalla === 'nueva-venta' && (
                 <button
@@ -804,7 +808,27 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
         </div>
         <div className={`dashboard-body ${esPantallaDashboard ? 'with-kpis' : ''}`}>
           {esPantallaDashboard && (
-            <section className="dashboard-kpis-strip">
+            <>
+              <section className="dashboard-hero-panel">
+                <div className="dashboard-hero-copy">
+                  <span className="dashboard-hero-badge">Centro de operaciones</span>
+                  <h1>Hola, {dashboardGreeting}</h1>
+                  <p>
+                    Seguí el pulso del negocio, accedé rápido a tus módulos y mantené el foco en ventas, stock y seguimiento.
+                  </p>
+                </div>
+                <div className="dashboard-hero-meta">
+                  <div className="dashboard-hero-stat">
+                    <span>Módulos activos</span>
+                    <strong>{opcionesMenu.length}</strong>
+                  </div>
+                  <div className="dashboard-hero-stat">
+                    <span>Perfil actual</span>
+                    <strong>{user?.rol_nombre || user?.tipo || 'Operador'}</strong>
+                  </div>
+                </div>
+              </section>
+              <section className="dashboard-kpis-strip">
               <div className="dashboard-kpis-header">
                 {!widgetsLoading && (
                   <>
@@ -855,9 +879,14 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
                   onAdd={(newWidget) => saveWidgets([...widgets, newWidget])}
                 />
               )}
-            </section>
+              </section>
+            </>
           )}
-          {contenidoPantalla}
+          {esPantallaDashboard ? null : (
+            <div key={pantalla} className="dashboard-screen-shell">
+              {contenidoPantalla}
+            </div>
+          )}
         </div>
 
         {/* Panel de filtros y acciones — mobile */}

@@ -31,9 +31,10 @@ export function calcDescuentoGlobal(tipo, valor, baseNeta) {
 
 /**
  * Distribuye el descuento global entre líneas de forma proporcional a su peso neto.
- * La última línea absorbe el residuo de redondeo para garantizar que la suma sea exacta.
+ * Usa "budget tracking" para garantizar que ningún ítem sea negativo y que la suma
+ * exacta sea igual a descGlobalAmount.
  *
- * Invariante: sum(resultado) === descGlobalAmount (exacto)
+ * Invariante: sum(resultado) === descGlobalAmount, resultado[i] >= 0
  *
  * @param {number[]} netasLinea  arreglo de montos netos por línea (>= 0)
  * @param {number}   descGlobalAmount  descuento total a distribuir
@@ -41,13 +42,14 @@ export function calcDescuentoGlobal(tipo, valor, baseNeta) {
  */
 export function distributeGlobalDiscount(netasLinea, descGlobalAmount) {
   const baseNeta = round2(netasLinea.reduce((acc, n) => acc + n, 0));
-  let distributed = 0;
+  let remaining = descGlobalAmount;
   return netasLinea.map((neta, i) => {
-    const isLast = i === netasLinea.length - 1;
-    const linea = isLast
-      ? round2(descGlobalAmount - distributed)
-      : (baseNeta > 0 ? round2(descGlobalAmount * neta / baseNeta) : 0);
-    distributed = round2(distributed + linea);
+    if (i === netasLinea.length - 1) {
+      return round2(Math.max(0, remaining));
+    }
+    const prop = baseNeta > 0 ? round2(descGlobalAmount * neta / baseNeta) : 0;
+    const linea = round2(Math.min(prop, Math.max(0, remaining)));
+    remaining = round2(remaining - linea);
     return linea;
   });
 }

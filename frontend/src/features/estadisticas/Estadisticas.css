@@ -391,6 +391,73 @@
   padding: 0.35rem 0.5rem;
 }
 
+.stats-recharts-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.stats-recharts-wrap-lg {
+  height: 320px;
+}
+
+.stats-recharts-wrap-md {
+  height: 340px;
+}
+
+.stats-recharts-wrap-sm {
+  height: 240px;
+}
+
+.stats-main.compact .stats-recharts-wrap-lg {
+  height: 260px;
+}
+
+.stats-main.compact .stats-recharts-wrap-md {
+  height: 280px;
+}
+
+.stats-main.compact .stats-recharts-wrap-sm {
+  height: 210px;
+}
+
+.stats-recharts-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+  min-width: 120px;
+  padding: 0.65rem 0.72rem;
+  border-radius: 14px;
+  border: 1px solid rgba(216, 226, 239, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 34px rgba(20, 37, 58, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+.stats-recharts-tooltip strong {
+  color: var(--color-heading);
+  font-size: 0.82rem;
+}
+
+.stats-recharts-tooltip span {
+  color: var(--color-primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.stats-recharts-tooltip small {
+  color: #607086;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.stats-recharts-tooltip small.is-positive {
+  color: #0f6b35;
+}
+
+.stats-recharts-tooltip small.is-negative {
+  color: #b42318;
+}
+
 .stock-cost-card-wide {
   margin-top: 0.75rem;
 }

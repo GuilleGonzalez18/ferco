@@ -1,18 +1,19 @@
 .app-field-control {
   min-height: var(--field-height);
-  padding: var(--field-padding-y) var(--field-padding-x);
-  border: 1px solid var(--field-border);
-  border-radius: var(--field-radius);
+  padding: calc(var(--field-padding-y) + 0.04rem) calc(var(--field-padding-x) + 0.08rem);
+  border: 1px solid color-mix(in srgb, var(--field-border) 88%, #fff);
+  border-radius: 14px;
   font-size: var(--field-font-size);
   font-weight: var(--field-font-weight);
   line-height: 1.25;
-  background: var(--field-bg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 249, 253, 0.98) 100%);
   color: var(--field-color);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  transition: border-color var(--motion-fast, 160ms ease), box-shadow var(--motion-fast, 160ms ease), background-color var(--motion-fast, 160ms ease), transform var(--motion-fast, 160ms ease);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 18px rgba(20, 37, 58, 0.04);
 }
 
 .app-field-control::placeholder {
-  color: #7a8799;
+  color: #93a0b1;
 }
 
 .app-field-control[type='date'] {
@@ -23,13 +24,15 @@
 .app-field-control:focus-visible {
   outline: none;
   border-color: var(--field-focus-border);
-  box-shadow: 0 0 0 3px var(--field-focus-ring);
+  box-shadow: 0 0 0 4px var(--field-focus-ring), 0 14px 28px rgba(20, 37, 58, 0.08);
+  transform: translateY(-1px);
 }
 
 .app-field-control:disabled {
   background: var(--field-disabled-bg);
   color: var(--field-disabled-color);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .table-search-field {
@@ -39,5 +42,6 @@
 }
 
 textarea.app-field-control {
-  min-height: calc(var(--field-height) + 24px);
+  min-height: calc(var(--field-height) + 28px);
+  resize: vertical;
 }

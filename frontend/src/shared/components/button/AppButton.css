@@ -1,18 +1,21 @@
 .app-button {
-  min-height: 40px;
-  border: none;
-  border-radius: 8px;
-  padding: 0.42rem 0.66rem;
-  font-size: 0.82rem;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 0.62rem 0.92rem;
+  font-size: 0.84rem;
   font-weight: 700;
   line-height: 1.2;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  gap: 0.42rem;
+  transition: transform var(--motion-fast, 160ms ease), box-shadow var(--motion-fast, 160ms ease), border-color var(--motion-fast, 160ms ease), filter var(--motion-fast, 160ms ease), background var(--motion-fast, 160ms ease), color var(--motion-fast, 160ms ease);
   text-align: center;
+  box-shadow: 0 10px 22px rgba(20, 37, 58, 0.08);
+  position: relative;
+  overflow: hidden;
 }
 
 .app-button span,
@@ -21,18 +24,19 @@
 }
 
 .app-button:hover {
-  transform: translateY(-1px);
-  filter: brightness(0.96);
+  transform: translateY(-2px);
+  filter: saturate(1.04);
 }
 
 .app-button:active {
   transform: translateY(0);
-  filter: brightness(0.9);
+  filter: saturate(0.98);
+  box-shadow: 0 8px 18px rgba(20, 37, 58, 0.1);
 }
 
 .app-button:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--shadow-focus, 0 0 0 4px rgba(204, 34, 34, 0.18)), 0 10px 22px rgba(20, 37, 58, 0.1);
 }
 
 .app-button:disabled {
@@ -40,31 +44,54 @@
   cursor: not-allowed;
   transform: none;
   filter: none;
+  box-shadow: none;
 }
 
 .app-button--primary {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 96%, #fff) 0%, var(--color-primary-strong) 100%);
   color: #fff;
+  border-color: color-mix(in srgb, var(--color-primary-strong) 55%, transparent);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--color-primary) 26%, transparent);
 }
 
 .app-button--danger {
-  background: #c73b3b;
+  background: linear-gradient(135deg, #d84e4e 0%, #b92f2f 100%);
   color: #fff;
+  border-color: rgba(120, 26, 26, 0.2);
 }
 
 .app-button--neutral {
-  background: #8090a4;
+  background: linear-gradient(135deg, #93a4ba 0%, #73859d 100%);
   color: #fff;
+  border-color: rgba(77, 94, 117, 0.18);
 }
 
 .app-button--ghost {
-  background: transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(244, 248, 252, 0.96) 100%);
   border: 1px solid #cfd9e8;
   color: var(--color-primary);
+  box-shadow: 0 8px 18px rgba(20, 37, 58, 0.06);
+}
+
+.app-button--sm {
+  min-height: 36px;
+  padding: 0.45rem 0.72rem;
+  border-radius: 12px;
+  font-size: 0.76rem;
+}
+
+.app-button--md {
+  min-height: 44px;
+}
+
+.app-button--lg {
+  min-height: 50px;
+  padding: 0.78rem 1.08rem;
+  font-size: 0.9rem;
 }
 
 .app-button--icon-only {
   padding: 0;
-  width: 40px;
-  min-width: 40px;
+  width: 44px;
+  min-width: 44px;
 }

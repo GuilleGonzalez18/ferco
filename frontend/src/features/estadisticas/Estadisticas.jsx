@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import './Estadisticas.css';
 import AppTable from '../../shared/components/table/AppTable';
@@ -8,6 +8,17 @@ import AppButton from '../../shared/components/button/AppButton';
 import { FaFileExcel } from 'react-icons/fa6';
 import { BsFiletypePng } from 'react-icons/bs';
 import { usePermisos } from '../../core/PermisosContext';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 function money(value) {
   const n = Math.round(Number(value || 0));
@@ -256,209 +267,38 @@ function daysBetween(desde, hasta) {
   return Math.floor((d2.getTime() - d1.getTime()) / 86400000) + 1;
 }
 
-function MiniBars({ items, valueKey = 'value', showValues = false, valueFormatter = null, className = '' }) {
-  const max = Math.max(...items.map((it) => Number(it[valueKey] || 0)), 1);
-  return (
-    <div
-      className={`mini-bars ${className}`.trim()}
-      style={{ gridTemplateColumns: `repeat(${Math.max(items.length, 1)}, minmax(46px, 64px))` }}
-    >
-      {items.map((item) => {
-        const value = Number(item[valueKey] || 0);
-        const valueRounded = Math.round(value);
-        const height = value <= 0 ? '0%' : `${Math.max(8, (value / max) * 100)}%`;
-        const barColor = item.barColor || '';
-        const variation = Number(item.variation);
-        const variationExact = Number(item.variationExact);
-        return (
-          <div key={item.key} className="mini-bar-col" title={`${item.label}: ${valueRounded.toLocaleString('es-UY')}`}>
-            {showValues && (
-              <span className="mini-bar-value">
-                {valueFormatter ? valueFormatter(valueRounded) : valueRounded.toLocaleString('es-UY')}
-              </span>
-            )}
-            {Number.isFinite(variation) && (
-              <span className={`mini-bar-delta ${variation >= 0 ? 'up' : 'down'}`}>
-                {variation >= 0 ? '+' : ''}{Math.round(variation)}%
-                {Number.isFinite(variationExact) ? ` (${variationExact >= 0 ? '+' : ''}${variationExact.toLocaleString('es-UY')})` : ''}
-              </span>
-            )}
-            <div className="mini-bar-track">
-              <div className={`mini-bar ${barColor}`} style={{ height }} />
-            </div>
-            <span className="mini-bar-label">{item.label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+function compactMoneyTick(value) {
+  const n = Number(value || 0);
+  if (Math.abs(n) >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(0)}k`;
+  return `$${Math.round(n)}`;
 }
 
-function MiniLineChart({ items, valueKey = 'value', valueFormatter = null, className = '', showPointValues = true }) {
-  const width = 1000;
-  const height = 220;
-  const paddingLeft = 34;
-  const paddingRight = 22;
-  const paddingTop = 18;
-  const paddingBottom = 62;
-  const innerWidth = width - paddingLeft - paddingRight;
-  const innerHeight = height - paddingTop - paddingBottom;
-  const max = Math.max(...items.map((it) => Number(it[valueKey] || 0)), 1);
-  let usedWidth = innerWidth;
-  if (items.length <= 2) usedWidth = innerWidth * 0.55;
-  else if (items.length === 3) usedWidth = innerWidth * 0.72;
-  const startX = paddingLeft + (innerWidth - usedWidth) / 2;
-  const stepX = items.length > 1 ? usedWidth / (items.length - 1) : 0;
-
-  const points = items.map((item, idx) => {
-    const value = Number(item[valueKey] || 0);
-    const ratio = max <= 0 ? 0 : value / max;
-    const x = startX + stepX * idx;
-    const y = paddingTop + (innerHeight - ratio * innerHeight);
-    return { key: String(item?.key ?? idx), label: item.label, subLabel: item.subLabel || '', value, x, y };
-  });
-
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
-  const firstX = points[0]?.x ?? paddingLeft;
-  const lastX = points[points.length - 1]?.x ?? (paddingLeft + innerWidth);
-  const area = points.length
-    ? `${firstX},${paddingTop + innerHeight} ${polyline} ${lastX},${paddingTop + innerHeight}`
-    : '';
-  const gridSteps = 4;
-
-  const defaultPointKeys = useMemo(
-    () => new Set(items.map((item, idx) => String(item?.key ?? idx))),
-    [items],
-  );
-
-  const [disabledPointKeys, setDisabledPointKeys] = useState(() => new Set());
-
-  const activePointKeys = useMemo(() => {
-    const s = new Set(defaultPointKeys);
-    for (const k of disabledPointKeys) s.delete(k);
-    return s;
-  }, [defaultPointKeys, disabledPointKeys]);
-  const formatLabelValue = (value) => (
-    valueFormatter ? valueFormatter(value) : Math.round(value).toLocaleString('es-UY')
-  );
+function StatsChartTooltip({ active, payload, label, valueFormatter = null }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload || {};
+  const rawValue = Number(payload[0]?.value || 0);
+  const formattedValue = valueFormatter ? valueFormatter(rawValue) : rawValue.toLocaleString('es-UY');
 
   return (
-    <div className={`mini-line-chart ${className}`.trim()}>
-      <svg viewBox={`0 0 ${width} ${height}`} className="mini-line-svg" preserveAspectRatio="none" role="img" aria-label="Gráfico lineal">
-        <defs>
-          <linearGradient id="miniLineAreaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(63, 123, 182, 0.30)" />
-            <stop offset="100%" stopColor="rgba(63, 123, 182, 0.02)" />
-          </linearGradient>
-        </defs>
-        {[...Array(gridSteps + 1)].map((_, i) => {
-          const y = paddingTop + (innerHeight / gridSteps) * i;
-          return (
-            <line
-              key={`grid-${i}`}
-              x1={paddingLeft}
-              y1={y}
-              x2={width - paddingRight}
-              y2={y}
-              className="mini-line-grid"
-            />
-          );
-        })}
-        <line
-          x1={paddingLeft}
-          y1={paddingTop + innerHeight}
-          x2={width - paddingRight}
-          y2={paddingTop + innerHeight}
-          className="mini-line-axis"
-        />
-        {points.length > 1 && <polygon points={area} className="mini-line-area" />}
-        {points.length > 1 && <polyline points={polyline} className="mini-line-path" />}
-        {points.length === 1 && (
-          <line
-            x1={paddingLeft}
-            y1={points[0]?.y ?? paddingTop + innerHeight}
-            x2={width - paddingRight}
-            y2={points[0]?.y ?? paddingTop + innerHeight}
-            className="mini-line-path"
-          />
-        )}
-        {points.map((p) => (
-          <g key={`dot-${p.key}`}>
-            {showPointValues && activePointKeys.has(p.key) && (() => {
-              const textValue = formatLabelValue(p.value);
-              const labelChars = Math.max(textValue.length, 4);
-              const labelWidth = Math.max(44, Math.min(170, labelChars * 6.7 + 14));
-              const labelHeight = 18;
-              const bubbleCenterX = Math.max(
-                paddingLeft + (labelWidth / 2) + 2,
-                Math.min(width - paddingRight - (labelWidth / 2) - 2, p.x),
-              );
-              const placeAbove = p.y - 14 >= paddingTop + 2;
-              const bubbleY = placeAbove ? p.y - 24 : p.y + 8;
-              const textY = bubbleY + 12.2;
-              return (
-                <g className={`mini-line-point-pill ${placeAbove ? 'above' : 'below'}`}>
-                  <rect
-                    x={bubbleCenterX - (labelWidth / 2)}
-                    y={bubbleY}
-                    width={labelWidth}
-                    height={labelHeight}
-                    rx="9"
-                    ry="9"
-                    className="mini-line-point-pill-bg"
-                  />
-                  <text
-                    x={bubbleCenterX}
-                    y={textY}
-                    textAnchor="middle"
-                    className="mini-line-point-value"
-                  >
-                    {textValue}
-                  </text>
-                </g>
-              );
-            })()}
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r="5"
-              className={`mini-line-dot ${activePointKeys.has(p.key) ? 'active' : ''}`}
-              onClick={() => {
-                setDisabledPointKeys((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(p.key)) next.delete(p.key);
-                  else next.add(p.key);
-                  return next;
-                });
-              }}
-              style={{ cursor: 'pointer' }}
-            />
-            <title>{`${p.label}: ${valueFormatter ? valueFormatter(p.value) : Math.round(p.value).toLocaleString('es-UY')}`}</title>
-          </g>
-        ))}
-        {points.map((p) => (
-          <g key={`axis-${p.key}`}>
-            <text
-              x={p.x}
-              y={height - 30}
-              textAnchor={p.x === firstX ? 'start' : p.x === lastX ? 'end' : 'middle'}
-              className="mini-line-axis-label"
-            >
-              <tspan x={p.x}>{p.label}</tspan>
-              {p.subLabel ? (
-                <tspan x={p.x} dy="12" className="mini-line-axis-sublabel">
-                  {p.subLabel}
-                </tspan>
-              ) : null}
-            </text>
-          </g>
-        ))}
-      </svg>
+    <div className="stats-recharts-tooltip">
+      <strong>{point.tooltipLabel || label || point.label || '-'}</strong>
+      <span>{formattedValue}</span>
+      {point.subLabel ? <small>{point.subLabel}</small> : null}
+      {Number.isFinite(point.variation) ? (
+        <small className={point.variation >= 0 ? 'is-positive' : 'is-negative'}>
+          {point.variation >= 0 ? '+' : ''}{Math.round(point.variation)}%
+          {Number.isFinite(point.variationExact)
+            ? ` (${point.variationExact >= 0 ? '+' : ''}${point.variationExact.toLocaleString('es-UY')})`
+            : ''}
+        </small>
+      ) : null}
     </div>
   );
 }
 
 export default function Estadisticas({ compact = false }) {
+  const chartId = useId().replaceAll(':', '');
   const stockChartSvgRef = useRef(null);
   const ventasUsuarioChartSvgRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -628,6 +468,8 @@ export default function Estadisticas({ compact = false }) {
   const stockGranularity = useMemo(() => (
     daysBetween(stockSerieRange.desde, stockSerieRange.hasta) > 31 ? 'month' : 'day'
   ), [stockSerieRange.desde, stockSerieRange.hasta]);
+  const stockGradientId = `stats-stock-gradient-${chartId}`;
+  const personalGradientId = `stats-personal-gradient-${chartId}`;
 
   const stockCostoChart = useMemo(() => {
     const rows = stockSerie || [];
@@ -652,15 +494,15 @@ export default function Estadisticas({ compact = false }) {
 
   const stockChartWithVariation = useMemo(() => (
     stockCostoChart.map((item, idx) => {
-      const colors = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12'];
+      const colors = ['#e63946', '#e76f51', '#f4a261', '#2a9d8f', '#3a86ff', '#4361ee', '#560bad', '#8f2d56', '#c9184a', '#43aa8b', '#355070', '#7b2cbf'];
       if (idx === 0) {
-        return { ...item, variation: null, barColor: colors[idx % colors.length] };
+        return { ...item, variation: null, fillColor: colors[idx % colors.length], tooltipLabel: item.label };
       }
       const prev = Number(stockCostoChart[idx - 1].value || 0);
       const current = Number(item.value || 0);
       const variationExact = current - prev;
       const variation = prev === 0 ? (current === 0 ? 0 : 100) : ((variationExact / prev) * 100);
-      return { ...item, variation, variationExact, barColor: colors[idx % colors.length] };
+      return { ...item, variation, variationExact, fillColor: colors[idx % colors.length], tooltipLabel: item.label };
     })
   ), [stockCostoChart]);
 
@@ -1034,13 +876,36 @@ export default function Estadisticas({ compact = false }) {
                 {stockLoading && <div className="stats-msg">Cargando gráfico...</div>}
                 {!stockLoading && stockError && <div className="stats-msg error">{stockError}</div>}
                 {!stockLoading && !stockError && stockChartWithVariation.length ? (
-                  <div ref={stockChartSvgRef}>
-                    <MiniLineChart
-                      items={stockChartWithVariation}
-                      valueKey="value"
-                      valueFormatter={(v) => moneyFull(v)}
-                      className="stock-line-chart"
-                    />
+                  <div ref={stockChartSvgRef} className="stats-recharts-wrap stats-recharts-wrap-lg">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stockChartWithVariation} margin={{ top: 18, right: 18, left: 0, bottom: 8 }}>
+                        <defs>
+                          <linearGradient id={stockGradientId} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4f7bad" stopOpacity={0.34} />
+                            <stop offset="95%" stopColor="#4f7bad" stopOpacity={0.03} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#dce7f4" vertical={false} />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} />
+                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} width={70} />
+                        <Tooltip
+                          content={<StatsChartTooltip valueFormatter={moneyFull} />}
+                          isAnimationActive={false}
+                          animationDuration={0}
+                          wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#355f8a"
+                          strokeWidth={3}
+                          fill={`url(#${stockGradientId})`}
+                          isAnimationActive={false}
+                          dot={{ r: 4, fill: '#ffffff', stroke: '#355f8a', strokeWidth: 2.5 }}
+                          activeDot={{ r: 6, fill: '#ffffff', stroke: '#355f8a', strokeWidth: 3 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 ) : null}
                 {!stockLoading && !stockError && !stockChartWithVariation.length && (
@@ -1074,8 +939,47 @@ export default function Estadisticas({ compact = false }) {
                     </div>
                   </div>
                   {ventasUsuarioStockChart.length ? (
-                    <div ref={ventasUsuarioChartSvgRef}>
-                      <MiniLineChart items={ventasUsuarioStockChart} valueKey="value" valueFormatter={(v) => moneyFull(v)} />
+                    <div ref={ventasUsuarioChartSvgRef} className="stats-recharts-wrap stats-recharts-wrap-md">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={ventasUsuarioStockChart}
+                          margin={{ top: 12, right: 18, left: 0, bottom: 28 }}
+                        >
+                          <CartesianGrid strokeDasharray="4 4" stroke="#dce7f4" vertical={false} />
+                          <XAxis
+                            dataKey="label"
+                            interval={0}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fill: '#50627d', fontSize: 11, fontWeight: 700 }}
+                            angle={-16}
+                            textAnchor="end"
+                            height={58}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={compactMoneyTick}
+                            tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }}
+                            width={70}
+                          />
+                          <Tooltip
+                            content={<StatsChartTooltip valueFormatter={moneyFull} />}
+                            isAnimationActive={false}
+                            animationDuration={0}
+                            wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#4f7bad"
+                            strokeWidth={3}
+                            isAnimationActive={false}
+                            dot={{ r: 4, fill: '#ffffff', stroke: '#4f7bad', strokeWidth: 2.5 }}
+                            activeDot={{ r: 6, fill: '#ffffff', stroke: '#4f7bad', strokeWidth: 3 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
                   ) : (
                     <div className="stats-msg">Sin datos para mostrar.</div>
@@ -1106,7 +1010,32 @@ export default function Estadisticas({ compact = false }) {
                   <h4>Ventas de los últimos 7 días</h4>
                 </div>
                 {ventasUltimos7DiasChart.length ? (
-                  <MiniBars items={ventasUltimos7DiasChart} valueKey="value" />
+                  <div className="stats-recharts-wrap stats-recharts-wrap-sm">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={ventasUltimos7DiasChart} margin={{ top: 12, right: 6, left: 6, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#dce7f4" vertical={false} />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} />
+                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} width={62} />
+                        <Tooltip
+                          content={<StatsChartTooltip valueFormatter={moneyFull} />}
+                          isAnimationActive={false}
+                          animationDuration={0}
+                          wrapperStyle={{ transition: 'none', pointerEvents: 'none' }}
+                        />
+                        <Bar dataKey="value" radius={[10, 10, 0, 0]} fill={`url(#${personalGradientId})`}>
+                          {ventasUltimos7DiasChart.map((item) => (
+                            <Cell key={item.key} fill="#3f7bb6" />
+                          ))}
+                        </Bar>
+                        <defs>
+                          <linearGradient id={personalGradientId} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#5a8fd7" />
+                            <stop offset="100%" stopColor="#375f8c" />
+                          </linearGradient>
+                        </defs>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div className="stats-msg">Sin datos para mostrar.</div>
                 )}
