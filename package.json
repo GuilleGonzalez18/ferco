@@ -7,11 +7,13 @@
     "release": "semantic-release"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.6",
     "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.0",
+    "@types/node": "^25.6.2",
     "semantic-release": "^24.2.7"
   }
 }
