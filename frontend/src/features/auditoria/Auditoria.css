@@ -37,14 +37,14 @@
 }
 
 .auditoria-tab:hover {
-  background: #edf4fb;
-  color: #375f8c;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .auditoria-tab.active {
-  background: #375f8c;
+  background: var(--color-primary);
   color: #fff;
-  box-shadow: 0 10px 18px rgba(55, 95, 140, 0.18);
+  box-shadow: 0 10px 18px var(--field-focus-ring);
 }
 
 

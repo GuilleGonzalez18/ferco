@@ -326,7 +326,7 @@ body.dashboard-scroll-lock {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(227, 232, 240, 0.9);
   padding: 0.95rem 1.4rem;
-  box-shadow: 0 10px 24px rgba(55,95,140,0.08);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 8%, transparent);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -355,7 +355,7 @@ body.dashboard-scroll-lock {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8090a4;
+  color: var(--color-text-muted);
 }
 
 .dashboard-topbar-title {
@@ -591,7 +591,7 @@ body.dashboard-scroll-lock {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid #e3e8f0;
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(55, 95, 140, 0.08);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 8%, transparent);
   backdrop-filter: blur(5px);
 }
 
@@ -617,7 +617,7 @@ body.dashboard-scroll-lock {
   backdrop-filter: blur(4px);
   border: 1px solid #e3e8f0;
   border-radius: 16px;
-  box-shadow: 0 8px 28px rgba(55, 95, 140, 0.12);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 12%, transparent);
   padding: 1.5rem 1.4rem;
   text-align: center;
   animation: landingFadeIn 420ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -736,7 +736,7 @@ body.dashboard-scroll-lock {
   border: 1px solid rgba(220, 230, 244, 0.9);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 248, 252, 0.96) 100%);
-  box-shadow: 0 16px 34px rgba(55, 95, 140, 0.12);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--color-primary) 12%, transparent);
   padding: 0.7rem;
   display: grid;
   grid-template-columns: 34px 1fr;
@@ -800,7 +800,7 @@ body.dashboard-scroll-lock {
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--color-primary, #2563eb);
-  background: rgba(37, 99, 235, 0.08);
+  background: var(--color-primary-soft);
   border-radius: 4px;
   padding: 0.1em 0.4em;
   white-space: nowrap;
@@ -862,8 +862,8 @@ body.dashboard-scroll-lock {
   transition: border-color 0.15s, background 0.15s;
 }
 .widget-icon-option img { width: 16px; height: 16px; object-fit: contain; }
-.widget-icon-option:hover { border-color: var(--color-primary, #2563eb); background: rgba(37,99,235,0.05); }
-.widget-icon-option.selected { border-color: var(--color-primary, #2563eb); background: rgba(37,99,235,0.1); }
+.widget-icon-option:hover { border-color: var(--color-primary, #2563eb); background: var(--color-primary-soft); }
+.widget-icon-option.selected { border-color: var(--color-primary, #2563eb); background: color-mix(in srgb, var(--color-primary-soft) 180%, transparent); }
 
 .widget-edit-actions {
   display: flex;
@@ -916,7 +916,7 @@ body.dashboard-scroll-lock {
 .dashboard-add-widget-btn:hover {
   border-color: var(--color-primary, #2563eb);
   color: var(--color-primary, #2563eb);
-  background: rgba(37,99,235,0.04);
+  background: var(--color-primary-soft);
 }
 .dashboard-add-widget-btn svg { font-size: 1.2rem; }
 
@@ -957,7 +957,7 @@ body.dashboard-scroll-lock {
   color: var(--color-text, #1d2b3e);
 }
 .add-widget-option img { width: 16px; height: 16px; object-fit: contain; }
-.add-widget-option:hover { border-color: var(--color-primary, #2563eb); background: rgba(37,99,235,0.07); }
+.add-widget-option:hover { border-color: var(--color-primary, #2563eb); background: var(--color-primary-soft); }
 .add-widget-cancel {
   align-self: flex-start;
   background: transparent;
@@ -991,7 +991,7 @@ body.dashboard-scroll-lock {
   transition: border-color 0.15s, background 0.15s;
 }
 .wizard-category-btn img { width: 20px; height: 20px; object-fit: contain; }
-.wizard-category-btn:hover { border-color: var(--color-primary, #2563eb); background: rgba(37,99,235,0.07); }
+.wizard-category-btn:hover { border-color: var(--color-primary, #2563eb); background: var(--color-primary-soft); }
 
 /* Wizard de tipos */
 .wizard-step-types {
@@ -1010,7 +1010,7 @@ body.dashboard-scroll-lock {
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.wizard-type-btn:hover { border-color: var(--color-primary, #2563eb); background: rgba(37,99,235,0.07); }
+.wizard-type-btn:hover { border-color: var(--color-primary, #2563eb); background: var(--color-primary-soft); }
 
 .widget-add-back-btn {
   background: transparent;
@@ -1115,7 +1115,7 @@ body.dashboard-scroll-lock {
 
 .dashboard-kpi-card span {
   display: block;
-  color: #5f7390;
+  color: var(--color-text-muted);
   font-size: 0.82rem;
   font-weight: var(--weight-semibold);
   line-height: 1.1;
@@ -1127,7 +1127,7 @@ body.dashboard-scroll-lock {
 .dashboard-kpi-card strong {
   display: block;
   margin-top: 0.14rem;
-  color: #1f4266;
+  color: var(--color-primary-strong);
   font-size: var(--font-md);
   font-weight: var(--weight-semibold);
   line-height: 1.1;
@@ -1394,14 +1394,14 @@ body.dashboard-scroll-lock {
 
 .filter-panel-head h3 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
 .filter-panel-close {
   border: 1px solid #d7e2f0;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   border-radius: 7px;
   width: 30px;
   height: 30px;
