@@ -145,7 +145,7 @@
 
 .stock-item-info small {
   font-size: 0.69rem;
-  color: #708094;
+  color: var(--color-text-muted);
   font-weight: 700;
   line-height: 1.1;
 }
@@ -153,14 +153,14 @@
 .stock-item-qty {
   min-width: 42px;
   text-align: center;
-  color: #1f4266;
+  color: var(--color-primary);
   font-size: 0.96rem;
 }
 
 .stock-grande {
   font-size: 2rem;
   font-weight: 800;
-  color: #1f4266;
+  color: var(--color-primary);
   text-align: center;
 }
 
@@ -249,7 +249,8 @@
 
 .stock-history-btn {
   margin-top: 0;
-  background: #8090a4;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .stock-history-row {
@@ -352,14 +353,14 @@
 
 .control-stock-panel-head h3 {
   margin: 0;
-  color: #375f8c;
+  color: var(--color-primary);
   font-size: 0.95rem;
 }
 
 .control-stock-panel-close {
   border: 1px solid #d7e2f0;
   background: #fff;
-  color: #375f8c;
+  color: var(--color-primary);
   border-radius: 7px;
   width: 30px;
   height: 30px;

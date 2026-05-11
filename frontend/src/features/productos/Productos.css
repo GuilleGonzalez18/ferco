@@ -168,7 +168,7 @@
 }
 
 .productos-total-card span {
-  color: #5f7085;
+  color: var(--color-text-muted);
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -233,7 +233,7 @@
 }
 
 .producto-codigo {
-  color: #708094;
+  color: var(--color-text-muted);
   font-size: 0.7rem;
   font-weight: 700;
 }

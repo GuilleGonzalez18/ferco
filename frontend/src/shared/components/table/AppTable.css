@@ -306,7 +306,7 @@
   .app-table-wrap:not(.mobile-table) .app-table tbody td::before {
     content: attr(data-label);
     font-weight: 700;
-    color: #375f8c;
+    color: var(--color-primary);
     font-size: 0.73rem;
     flex-shrink: 0;
     text-align: left;

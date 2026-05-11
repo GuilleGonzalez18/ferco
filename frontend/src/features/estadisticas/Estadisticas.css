@@ -226,7 +226,7 @@
   background: #fff;
   border: 1px solid #e2e8f3;
   border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(55, 95, 140, 0.08);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 8%, transparent);
   padding: 0.8rem;
   animation: statsCardIn 360ms ease both;
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
@@ -243,7 +243,7 @@
 
 .stats-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(55, 95, 140, 0.16);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 16%, transparent);
   border-color: #c9d7ea;
 }
 
@@ -267,7 +267,7 @@
 
 .stats-kicker {
   display: inline-flex;
-  background: #edf3fb;
+  background: var(--color-primary-soft);
   color: var(--color-primary);
   border-radius: 999px;
   font-size: 0.72rem;
@@ -279,7 +279,7 @@
 .stats-card h4 {
   margin: 0 0 0.35rem;
   font-size: 1rem;
-  color: #213a57;
+  color: var(--color-primary-strong);
 }
 
 .stats-big-number {
@@ -291,7 +291,7 @@
 .stats-card p {
   margin: 0.15rem 0;
   font-size: 0.82rem;
-  color: #61728a;
+  color: var(--color-text-muted);
 }
 
 .stats-table-card {
@@ -299,7 +299,7 @@
   background: #fff;
   border: 1px solid #e2e8f3;
   border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(55, 95, 140, 0.06);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 6%, transparent);
   padding: 0.75rem;
   animation: statsCardIn 420ms ease both;
   animation-delay: 240ms;
@@ -307,11 +307,11 @@
 
 .chart-card {
   background:
-    linear-gradient(to top, rgba(239, 245, 255, 0.8), rgba(255, 255, 255, 0.92)),
+    linear-gradient(to top, color-mix(in srgb, var(--color-primary-soft) 80%, transparent), rgba(255, 255, 255, 0.92)),
     repeating-linear-gradient(
       to top,
-      rgba(112, 142, 179, 0.13) 0px,
-      rgba(112, 142, 179, 0.13) 1px,
+      color-mix(in srgb, var(--color-primary) 13%, transparent) 0px,
+      color-mix(in srgb, var(--color-primary) 13%, transparent) 1px,
       transparent 1px,
       transparent 34px
     );
@@ -376,17 +376,17 @@
 .stats-chart-range {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  color: #60758f;
+  color: var(--color-text-muted);
   font-weight: 700;
 }
 
 .stats-chart-legend {
   margin: 0.45rem 0 0;
   font-size: 0.74rem;
-  color: #4a607b;
+  color: var(--color-primary);
   font-weight: 600;
-  background: #f3f7fc;
-  border: 1px solid #dce7f4;
+  background: var(--color-primary-soft);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: 8px;
   padding: 0.35rem 0.5rem;
 }
@@ -510,9 +510,9 @@
   margin: 0 0 0.6rem;
   display: inline-flex;
   align-items: center;
-  background: #edf3fb;
-  color: #355a84;
-  border: 1px solid #d4e2f3;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: 999px;
   padding: 0.24rem 0.62rem;
   font-size: 0.76rem;
@@ -541,9 +541,9 @@
 .mini-bar-value {
   font-size: 0.66rem;
   font-weight: 800;
-  color: #2d4f74;
+  color: var(--color-primary-strong);
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #d7e3f2;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: 999px;
   padding: 0.08rem 0.32rem;
   line-height: 1.1;
@@ -581,7 +581,7 @@
 .mini-bar {
   width: 100%;
   border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, #5887bc, var(--color-primary));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 55%, white), var(--color-primary));
   animation: barGrow 420ms ease both;
   transition: filter 180ms ease, transform 180ms ease;
 }
@@ -647,7 +647,7 @@
 
 .mini-line-path {
   fill: none;
-  stroke: #3f7bb6;
+  stroke: var(--color-primary);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -659,7 +659,7 @@
 
 .mini-line-dot {
   fill: #fff;
-  stroke: #2f5f90;
+  stroke: var(--color-primary-strong);
   stroke-width: 2.5;
   transition: stroke-width 140ms ease, fill 140ms ease;
 }
@@ -670,12 +670,12 @@
 }
 
 .stock-line-chart .mini-line-path {
-  stroke: #4f7bad;
+  stroke: var(--color-primary);
   stroke-width: 3.2;
 }
 
 .stock-line-chart .mini-line-dot {
-  stroke: #355f8a;
+  stroke: var(--color-primary-strong);
 }
 
 .mini-line-point-value {
