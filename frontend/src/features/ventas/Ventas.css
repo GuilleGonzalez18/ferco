@@ -1222,9 +1222,9 @@
 }
 
 .pago-card.active {
-  border-color: #3f7bb6;
-  background: linear-gradient(180deg, #eaf4ff 0%, #dcefff 100%);
-  box-shadow: 0 10px 20px rgba(55, 95, 140, 0.2);
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: 0 10px 20px var(--field-focus-ring);
 }
 
 .pago-inputs {

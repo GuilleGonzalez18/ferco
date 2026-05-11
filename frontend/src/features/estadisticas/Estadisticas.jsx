@@ -77,7 +77,7 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function exportHtmlTableToExcel({ filename, title, headers, rows }) {
+function exportHtmlTableToExcel({ filename, title, headers, rows, primaryColor = '#cc2222' }) {
   const headHtml = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
   const bodyHtml = rows.map((row, idx) => {
     const zebra = idx % 2 === 0 ? '#f7faff' : '#ffffff';
@@ -86,10 +86,10 @@ function exportHtmlTableToExcel({ filename, title, headers, rows }) {
   }).join('');
   const html = `
     <html><head><meta charset="UTF-8" /></head><body>
-      <h3 style="color:#375f8c;margin:0 0 10px">${escapeHtml(title)}</h3>
+      <h3 style="color:${primaryColor};margin:0 0 10px">${escapeHtml(title)}</h3>
       <table border="1" style="border-collapse:collapse;width:100%">
         <thead>
-          <tr style="background:#375f8c;color:#fff">${headHtml}</tr>
+          <tr style="background:${primaryColor};color:#fff">${headHtml}</tr>
         </thead>
         <tbody>${bodyHtml}</tbody>
       </table>
@@ -301,6 +301,20 @@ export default function Estadisticas({ compact = false }) {
   const chartId = useId().replaceAll(':', '');
   const stockChartSvgRef = useRef(null);
   const ventasUsuarioChartSvgRef = useRef(null);
+
+  // Lee los CSS vars del tema en cada render para que los gráficos usen el color configurado
+  const themeColor = useMemo(() => {
+    const root = document.documentElement;
+    const cs = getComputedStyle(root);
+    return {
+      primary: cs.getPropertyValue('--color-primary').trim() || '#cc2222',
+      primaryStrong: cs.getPropertyValue('--color-primary-strong').trim() || '#8f0e0e',
+      primarySoft: cs.getPropertyValue('--color-primary-soft').trim() || '#fce8e8',
+      textMuted: cs.getPropertyValue('--color-text-muted').trim() || '#526278',
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only: los colores del tema no cambian durante la sesión
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
@@ -516,6 +530,7 @@ export default function Estadisticas({ compact = false }) {
         item.label,
         moneyFull(item.value),
       ]),
+      primaryColor: themeColor.primary,
     });
   };
 
@@ -530,6 +545,7 @@ export default function Estadisticas({ compact = false }) {
         qty(item.salesCount || 0),
         moneyFull(item.value),
       ]),
+      primaryColor: themeColor.primary,
     });
   };
 
@@ -881,13 +897,13 @@ export default function Estadisticas({ compact = false }) {
                       <AreaChart data={stockChartWithVariation} margin={{ top: 18, right: 18, left: 0, bottom: 8 }}>
                         <defs>
                           <linearGradient id={stockGradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4f7bad" stopOpacity={0.34} />
-                            <stop offset="95%" stopColor="#4f7bad" stopOpacity={0.03} />
+                            <stop offset="5%" stopColor={themeColor.primary} stopOpacity={0.34} />
+                            <stop offset="95%" stopColor={themeColor.primary} stopOpacity={0.03} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="4 4" stroke="#dce7f4" vertical={false} />
-                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} />
-                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} width={70} />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }} />
+                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }} width={70} />
                         <Tooltip
                           content={<StatsChartTooltip valueFormatter={moneyFull} />}
                           isAnimationActive={false}
@@ -897,12 +913,12 @@ export default function Estadisticas({ compact = false }) {
                         <Area
                           type="monotone"
                           dataKey="value"
-                          stroke="#355f8a"
+                          stroke={themeColor.primary}
                           strokeWidth={3}
                           fill={`url(#${stockGradientId})`}
                           isAnimationActive={false}
-                          dot={{ r: 4, fill: '#ffffff', stroke: '#355f8a', strokeWidth: 2.5 }}
-                          activeDot={{ r: 6, fill: '#ffffff', stroke: '#355f8a', strokeWidth: 3 }}
+                          dot={{ r: 4, fill: '#ffffff', stroke: themeColor.primary, strokeWidth: 2.5 }}
+                          activeDot={{ r: 6, fill: '#ffffff', stroke: themeColor.primary, strokeWidth: 3 }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -951,7 +967,7 @@ export default function Estadisticas({ compact = false }) {
                             interval={0}
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fill: '#50627d', fontSize: 11, fontWeight: 700 }}
+                            tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }}
                             angle={-16}
                             textAnchor="end"
                             height={58}
@@ -960,7 +976,7 @@ export default function Estadisticas({ compact = false }) {
                             tickLine={false}
                             axisLine={false}
                             tickFormatter={compactMoneyTick}
-                            tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }}
+                            tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }}
                             width={70}
                           />
                           <Tooltip
@@ -972,11 +988,11 @@ export default function Estadisticas({ compact = false }) {
                           <Line
                             type="monotone"
                             dataKey="value"
-                            stroke="#4f7bad"
+                            stroke={themeColor.primary}
                             strokeWidth={3}
                             isAnimationActive={false}
-                            dot={{ r: 4, fill: '#ffffff', stroke: '#4f7bad', strokeWidth: 2.5 }}
-                            activeDot={{ r: 6, fill: '#ffffff', stroke: '#4f7bad', strokeWidth: 3 }}
+                            dot={{ r: 4, fill: '#ffffff', stroke: themeColor.primary, strokeWidth: 2.5 }}
+                            activeDot={{ r: 6, fill: '#ffffff', stroke: themeColor.primary, strokeWidth: 3 }}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -1014,8 +1030,8 @@ export default function Estadisticas({ compact = false }) {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={ventasUltimos7DiasChart} margin={{ top: 12, right: 6, left: 6, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="4 4" stroke="#dce7f4" vertical={false} />
-                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} />
-                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: '#6b7890', fontSize: 11, fontWeight: 700 }} width={62} />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }} />
+                        <YAxis tickLine={false} axisLine={false} tickFormatter={compactMoneyTick} tick={{ fill: themeColor.textMuted, fontSize: 11, fontWeight: 700 }} width={62} />
                         <Tooltip
                           content={<StatsChartTooltip valueFormatter={moneyFull} />}
                           isAnimationActive={false}
@@ -1024,13 +1040,13 @@ export default function Estadisticas({ compact = false }) {
                         />
                         <Bar dataKey="value" radius={[10, 10, 0, 0]} fill={`url(#${personalGradientId})`}>
                           {ventasUltimos7DiasChart.map((item) => (
-                            <Cell key={item.key} fill="#3f7bb6" />
+                            <Cell key={item.key} fill={themeColor.primary} />
                           ))}
                         </Bar>
                         <defs>
                           <linearGradient id={personalGradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#5a8fd7" />
-                            <stop offset="100%" stopColor="#375f8c" />
+                            <stop offset="0%" stopColor={themeColor.primary} />
+                            <stop offset="100%" stopColor={themeColor.primaryStrong} />
                           </linearGradient>
                         </defs>
                       </BarChart>
