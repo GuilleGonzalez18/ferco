@@ -1,10 +1,17 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import {
+  firstError, respondIfInvalid,
+  validateEmail, validateRequired, validateMaxLength, validateEnum,
+} from '../middleware/validate.js';
+
+const TIPOS_DOCUMENTO = ['RUT', 'CI', 'PASAPORTE', 'DNI', 'OTRO'];
 
 
 export const clientesRouter = Router();
+clientesRouter.use(requireAuth);
 
 function normalizeHora(value) {
   const raw = String(value || '').trim();
@@ -71,18 +78,24 @@ function actorName(authUser) {
   return full || authUser?.username || authUser?.correo || null;
 }
 
-clientesRouter.get('/', async (_req, res) => {
+clientesRouter.get('/', requirePermission('clientes', 'ver'), async (_req, res) => {
   const result = await query(
-    `SELECT id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
-            tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-            departamento_id, barrio_id
-     FROM public.clientes
-     ORDER BY id DESC`
+    `SELECT c.id, c.nombre, c.rut, c.direccion, c.telefono, c.correo,
+            c.horario_apertura, c.horario_cierre,
+            c.tiene_reapertura, c.horario_reapertura, c.horario_cierre_reapertura,
+            c.departamento_id, c.barrio_id,
+            d.nombre AS departamento_nombre,
+            b.nombre AS barrio_nombre,
+            c.tipo_documento, c.numero_documento, c.ciudad, c.codigo_postal
+     FROM public.clientes c
+     LEFT JOIN public.departamentos d ON d.id = c.departamento_id
+     LEFT JOIN public.barrios b ON b.id = c.barrio_id
+     ORDER BY c.id DESC`
   );
   res.json(result.rows);
 });
 
-clientesRouter.post('/', async (req, res) => {
+clientesRouter.post('/', requirePermission('clientes', 'agregar'), async (req, res) => {
   const {
     nombre,
     rut,
@@ -96,8 +109,28 @@ clientesRouter.post('/', async (req, res) => {
     horario_cierre_reapertura = null,
     departamento_id = null,
     barrio_id = null,
+    tipo_documento = null,
+    numero_documento = null,
+    ciudad = null,
+    codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErrPost = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(rut, 50, 'RUT'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(correo, 100, 'Correo'),
+    correo ? (!validateEmail(correo) ? 'El correo no tiene un formato válido' : null) : null,
+    validateMaxLength(direccion, 500, 'Dirección'),
+    validateMaxLength(ciudad, 100, 'Ciudad'),
+    validateMaxLength(codigo_postal, 20, 'Código postal'),
+    validateMaxLength(numero_documento, 50, 'Número de documento'),
+    validateEnum(tipo_documento, TIPOS_DOCUMENTO, 'Tipo de documento'),
+  );
+  if (respondIfInvalid(res, validationErrPost)) return;
+
   const horarios = normalizeHorariosPayload({
     horario_apertura,
     horario_cierre,
@@ -110,11 +143,11 @@ clientesRouter.post('/', async (req, res) => {
   try {
     const result = await query(
       `INSERT INTO public.clientes
-        (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        (nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre, tiene_reapertura, horario_reapertura, horario_cierre_reapertura, departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
                  tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-                 departamento_id, barrio_id`,
+                 departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal`,
       [
         nombre,
         rut,
@@ -128,6 +161,10 @@ clientesRouter.post('/', async (req, res) => {
         horarios.horario_cierre_reapertura,
         departamento_id,
         barrio_id,
+        tipo_documento || null,
+        numero_documento || null,
+        ciudad || null,
+        codigo_postal || null,
       ]
     );
     await query(
@@ -148,8 +185,10 @@ clientesRouter.post('/', async (req, res) => {
   }
 });
 
-clientesRouter.put('/:id', async (req, res) => {
+clientesRouter.put('/:id', requirePermission('clientes', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID de cliente inválido' });
+
   const {
     nombre,
     rut,
@@ -163,8 +202,28 @@ clientesRouter.put('/:id', async (req, res) => {
     horario_cierre_reapertura = null,
     departamento_id = null,
     barrio_id = null,
+    tipo_documento = null,
+    numero_documento = null,
+    ciudad = null,
+    codigo_postal = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErrPut = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(rut, 50, 'RUT'),
+    validateMaxLength(telefono, 50, 'Teléfono'),
+    validateMaxLength(correo, 100, 'Correo'),
+    correo ? (!validateEmail(correo) ? 'El correo no tiene un formato válido' : null) : null,
+    validateMaxLength(direccion, 500, 'Dirección'),
+    validateMaxLength(ciudad, 100, 'Ciudad'),
+    validateMaxLength(codigo_postal, 20, 'Código postal'),
+    validateMaxLength(numero_documento, 50, 'Número de documento'),
+    validateEnum(tipo_documento, TIPOS_DOCUMENTO, 'Tipo de documento'),
+  );
+  if (respondIfInvalid(res, validationErrPut)) return;
+
   const horarios = normalizeHorariosPayload({
     horario_apertura,
     horario_cierre,
@@ -188,11 +247,15 @@ clientesRouter.put('/:id', async (req, res) => {
            horario_reapertura = $9,
            horario_cierre_reapertura = $10,
            departamento_id = $11,
-           barrio_id = $12
-       WHERE id = $13
+           barrio_id = $12,
+           tipo_documento = $13,
+           numero_documento = $14,
+           ciudad = $15,
+           codigo_postal = $16
+       WHERE id = $17
        RETURNING id, nombre, rut, direccion, telefono, correo, horario_apertura, horario_cierre,
                  tiene_reapertura, horario_reapertura, horario_cierre_reapertura,
-                 departamento_id, barrio_id`,
+                 departamento_id, barrio_id, tipo_documento, numero_documento, ciudad, codigo_postal`,
       [
         nombre,
         rut,
@@ -206,6 +269,10 @@ clientesRouter.put('/:id', async (req, res) => {
         horarios.horario_cierre_reapertura,
         departamento_id,
         barrio_id,
+        tipo_documento || null,
+        numero_documento || null,
+        ciudad || null,
+        codigo_postal || null,
         id,
       ]
     );
@@ -228,7 +295,7 @@ clientesRouter.put('/:id', async (req, res) => {
   }
 });
 
-clientesRouter.delete('/:id', async (req, res) => {
+clientesRouter.delete('/:id', requirePermission('clientes', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prev = await query(`SELECT id, nombre FROM public.clientes WHERE id = $1`, [id]);

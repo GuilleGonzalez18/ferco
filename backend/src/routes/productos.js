@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, hasPermission, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
+import {
+  firstError, respondIfInvalid,
+  validateRequired, validateMaxLength, validateNumber,
+} from '../middleware/validate.js';
 
 export const productosRouter = Router();
+productosRouter.use(requireAuth);
 
 function toMoney(value) {
   return Math.round(Number(value || 0) * 100) / 100;
@@ -17,26 +22,34 @@ function actorName(authUser) {
 async function getProductoRowById(id) {
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.iva_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque,
+            ti.nombre AS iva_nombre, ti.porcentaje AS iva_porcentaje, ti.codigo AS iva_codigo
      FROM public.productos p
      LEFT JOIN public.empaques e ON e.id = p.empaque_id
+     LEFT JOIN public.tipos_iva ti ON ti.id = p.iva_id
      WHERE p.id = $1`,
     [id]
   );
   return result.rows[0] || null;
 }
 
-productosRouter.get('/', async (req, res) => {
+productosRouter.get('/', requirePermission('productos', 'ver'), async (req, res) => {
   const includeArchived = String(req.query.includeArchived || '').toLowerCase() === 'true';
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+  if (includeArchived && !(await hasPermission(authUser, 'productos', 'ver_archivados'))) {
+    return res.status(403).json({ error: 'Sin permiso para ver productos archivados' });
+  }
   const result = await query(
     `SELECT p.id, p.nombre, ROUND(COALESCE(p.costo, 0), 2)::numeric AS costo, ROUND(COALESCE(p.precio, 0), 2)::numeric AS precio,
-            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.activo,
+            p.stock, p.unidad, p.imagen, p.ean, p.cantidad_empaque, p.empaque_id, p.iva_id, p.activo,
             e.nombre AS empaque_nombre,
-            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque
+            ROUND(COALESCE(p.precio_empaque, 0), 2)::numeric AS precio_empaque,
+            ti.nombre AS iva_nombre, ti.porcentaje AS iva_porcentaje, ti.codigo AS iva_codigo
        FROM public.productos p
        LEFT JOIN public.empaques e ON e.id = p.empaque_id
+       LEFT JOIN public.tipos_iva ti ON ti.id = p.iva_id
       WHERE ($1::boolean = true OR p.activo = true)
        ORDER BY p.activo DESC, p.id DESC`,
     [includeArchived]
@@ -44,7 +57,7 @@ productosRouter.get('/', async (req, res) => {
   res.json(result.rows);
 });
 
-productosRouter.post('/', async (req, res) => {
+productosRouter.post('/', requirePermission('productos', 'agregar'), async (req, res) => {
   const {
     nombre,
     costo = 0,
@@ -56,8 +69,21 @@ productosRouter.post('/', async (req, res) => {
     cantidad_empaque = null,
     empaque_id = null,
     precio_empaque = 0,
+    iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErr = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(unidad, 20, 'Unidad'),
+    validateMaxLength(ean, 100, 'EAN'),
+    validateNumber(precio, 'Precio', { required: true, min: 0 }),
+    validateNumber(costo, 'Costo', { min: 0 }),
+    validateNumber(precio_empaque, 'Precio de empaque', { min: 0 }),
+  );
+  if (respondIfInvalid(res, validationErr)) return;
+
   const costoInt = toMoney(costo);
   const precioInt = toMoney(precio);
   const precioEmpaqueInt = toMoney(precio_empaque);
@@ -78,13 +104,27 @@ productosRouter.post('/', async (req, res) => {
     }
   }
 
+  const ivaIdSafe = iva_id == null || iva_id === '' ? null : Number(iva_id);
+  if (ivaIdSafe !== null && (!Number.isInteger(ivaIdSafe) || ivaIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Tipo de IVA inválido' });
+  }
+  if (ivaIdSafe !== null) {
+    const ivaQ = await query(
+      `SELECT id FROM public.tipos_iva WHERE id = $1 AND activo = true`,
+      [ivaIdSafe]
+    );
+    if (!ivaQ.rowCount) {
+      return res.status(400).json({ error: 'Tipo de IVA no encontrado o inactivo' });
+    }
+  }
+
   try {
     const result = await query(
       `INSERT INTO public.productos
-        (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (nombre, costo, precio, stock, unidad, imagen, ean, cantidad_empaque, empaque_id, precio_empaque, iva_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
-      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt]
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, ivaIdSafe]
     );
     await query(
       `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -124,8 +164,10 @@ productosRouter.post('/', async (req, res) => {
   }
 });
 
-productosRouter.put('/:id', async (req, res) => {
+productosRouter.put('/:id', requirePermission('productos', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'ID de producto inválido' });
+
   const {
     nombre,
     costo = 0,
@@ -137,8 +179,21 @@ productosRouter.put('/:id', async (req, res) => {
     cantidad_empaque = null,
     empaque_id = null,
     precio_empaque = 0,
+    iva_id = null,
   } = req.body;
   const authUser = getAuthUserFromRequest(req);
+
+  const validationErr = firstError(
+    validateRequired(nombre, 'Nombre'),
+    validateMaxLength(nombre, 255, 'Nombre'),
+    validateMaxLength(unidad, 20, 'Unidad'),
+    validateMaxLength(ean, 100, 'EAN'),
+    validateNumber(precio, 'Precio', { required: true, min: 0 }),
+    validateNumber(costo, 'Costo', { min: 0 }),
+    validateNumber(precio_empaque, 'Precio de empaque', { min: 0 }),
+  );
+  if (respondIfInvalid(res, validationErr)) return;
+
   const costoInt = toMoney(costo);
   const precioInt = toMoney(precio);
   const precioEmpaqueInt = toMoney(precio_empaque);
@@ -158,6 +213,20 @@ productosRouter.put('/:id', async (req, res) => {
     }
   }
 
+  const ivaIdSafe = iva_id == null || iva_id === '' ? null : Number(iva_id);
+  if (ivaIdSafe !== null && (!Number.isInteger(ivaIdSafe) || ivaIdSafe <= 0)) {
+    return res.status(400).json({ error: 'Tipo de IVA inválido' });
+  }
+  if (ivaIdSafe !== null) {
+    const ivaQ = await query(
+      `SELECT id FROM public.tipos_iva WHERE id = $1 AND activo = true`,
+      [ivaIdSafe]
+    );
+    if (!ivaQ.rowCount) {
+      return res.status(400).json({ error: 'Tipo de IVA no encontrado o inactivo' });
+    }
+  }
+
   const prevResult = await query(`SELECT id, nombre, stock FROM public.productos WHERE id = $1 AND activo = true`, [id]);
   if (!prevResult.rowCount) return res.status(404).json({ error: 'Producto no encontrado' });
   const prev = prevResult.rows[0];
@@ -174,10 +243,11 @@ productosRouter.put('/:id', async (req, res) => {
            ean = $7,
            cantidad_empaque = $8,
            empaque_id = $9,
-           precio_empaque = $10
-       WHERE id = $11
+           precio_empaque = $10,
+           iva_id = $11
+       WHERE id = $12
        RETURNING *`,
-      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, id]
+      [nombre, costoInt, precioInt, stock, unidad, imagen, ean, cantidad_empaque, empaqueIdSafe, precioEmpaqueInt, ivaIdSafe, id]
     );
     const actualizado = result.rows[0];
     const stockAnterior = Number(prev.stock || 0);
@@ -223,7 +293,7 @@ productosRouter.put('/:id', async (req, res) => {
   }
 });
 
-productosRouter.delete('/:id', async (req, res) => {
+productosRouter.delete('/:id', requirePermission('productos', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = true`, [id]);
@@ -250,7 +320,7 @@ productosRouter.delete('/:id', async (req, res) => {
   return res.status(204).send();
 });
 
-productosRouter.patch('/:id/restaurar', async (req, res) => {
+productosRouter.patch('/:id/restaurar', requirePermission('productos', 'eliminar'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
   const prevResult = await query(`SELECT id, nombre FROM public.productos WHERE id = $1 AND activo = false`, [id]);
@@ -283,7 +353,7 @@ productosRouter.patch('/:id/restaurar', async (req, res) => {
   return res.json(restoredRow);
 });
 
-productosRouter.patch('/:id/stock', async (req, res) => {
+productosRouter.patch('/:id/stock', requirePermission('stock', 'editar'), async (req, res) => {
   const id = Number(req.params.id);
   const { stock } = req.body;
   const authUser = getAuthUserFromRequest(req);
@@ -332,7 +402,7 @@ productosRouter.patch('/:id/stock', async (req, res) => {
   return res.json(result.rows[0]);
 });
 
-productosRouter.get('/:id/movimientos', async (req, res) => {
+productosRouter.get('/:id/movimientos', requirePermission('stock', 'ver'), async (req, res) => {
   const id = Number(req.params.id);
   const limitRaw = Number(req.query.limit || 10);
   const limit = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 10;

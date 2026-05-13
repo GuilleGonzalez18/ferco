@@ -1,8 +1,22 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import {
+  getAuthUserFromRequest,
+  hasPermission,
+  isPropietario,
+  requireAuth,
+  requirePermission,
+} from '../auth.js';
 import { sendMail } from '../mailer.js';
 import { getMetodoGanancias, calcularGanancia } from '../gananciaCalculator.js';
+import { buildCFE } from '../cfeBuilder.js';
+import { buildCFEAnnotated } from '../cfeAnnotated.js';
+import { logServerError, sendServerError } from '../dbErrors.js';
+import { sendCFE, buildCfeConfig } from '../cfeSender.js';
+import {
+  firstError, respondIfInvalid,
+  validateArray, validateMaxLength, validateEnum, validateDateFormat,
+} from '../middleware/validate.js';
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -15,6 +29,7 @@ function roundMoney(value) {
 }
 
 export const ventasRouter = Router();
+ventasRouter.use(requireAuth);
 const ESTADOS_ENTREGA = new Set(['pendiente', 'entregado', 'cancelado']);
 const MEDIOS_PAGO = new Set(['credito', 'debito', 'efectivo', 'transferencia']);
 const ACTIVE_SALES_CONDITION = 'v.cancelada = false AND COALESCE(v.eliminada, false) = false';
@@ -87,19 +102,31 @@ function normalizePaymentMethods(pagos = []) {
   });
 }
 
-function normalizeTipo(tipo) {
-  const value = String(tipo || '').trim().toLowerCase();
-  if (value === 'admin' || value === 'propietario') return 'propietario';
-  return 'vendedor';
+async function getEmpresaCfeConfig() {
+  try {
+    const res = await pool.query('SELECT cfe_ambiente FROM public.config_empresa LIMIT 1');
+    return buildCfeConfig(res.rows[0] || {});
+  } catch {
+    return null;
+  }
 }
 
-async function tienePermisoEmpresaStats(rolId) {
-  if (!rolId) return false;
+async function canViewEmpresaStats(authUser) {
+  if (isPropietario(authUser)) return true;
+  return hasPermission(authUser, 'estadisticas', 'ver_empresa');
+}
+
+async function canAccessVenta(authUser, ventaId) {
+  if (isPropietario(authUser)) return true;
+
   const result = await pool.query(
-    `SELECT 1 FROM public.permisos_rol
-     WHERE rol_id = $1 AND recurso = 'estadisticas' AND accion = 'ver_empresa' AND habilitado = true
+    `SELECT 1
+     FROM public.ventas
+     WHERE id = $1
+       AND usuario_id = $2
+       AND COALESCE(eliminada, false) = false
      LIMIT 1`,
-    [Number(rolId)]
+    [ventaId, Number(authUser.id)]
   );
   return result.rowCount > 0;
 }
@@ -164,16 +191,10 @@ function getDateRangeByPeriod(baseDateInput, period) {
   return null;
 }
 
-ventasRouter.get('/dashboard/resumen', async (req, res) => {
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
+ventasRouter.get('/dashboard/resumen', requirePermission('estadisticas', 'ver'), async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
-  let esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
-  if (!esPropietario && authUser.rol_id) {
-    esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
-  }
+  let esPropietario = await canViewEmpresaStats(authUser);
   const userClauseVentas = esPropietario ? '' : 'AND v.usuario_id = $1';
   const userParams = esPropietario ? [] : [Number(authUser.id)];
 
@@ -418,18 +439,16 @@ async function fetchWidgetValue({ category, type, metric, desde, hasta, userId, 
   return 0;
 }
 
-ventasRouter.get('/dashboard/widget', async (req, res) => {
+ventasRouter.get('/dashboard/widget', requirePermission('estadisticas', 'ver'), async (req, res) => {
   const { category, type, metric, range, comparison_period } = req.query;
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   const ALLOWED_CATEGORIES = ['ventas', 'productos', 'clientes', 'usuarios', 'stock', 'ganancia'];
   const ALLOWED_TYPES = ['cantidad', 'promedio', 'comparacion'];
   if (!ALLOWED_CATEGORIES.includes(category)) return res.status(400).json({ error: `Categoría desconocida: ${category}` });
   if (!ALLOWED_TYPES.includes(type)) return res.status(400).json({ error: `Tipo desconocido: ${type}` });
 
-  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
-  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+  let canEmpresa = await canViewEmpresaStats(authUser);
 
   if (category === 'ganancia' && !canEmpresa) {
     return res.status(403).json({ error: 'Sin permiso para ver ganancias' });
@@ -453,7 +472,10 @@ ventasRouter.get('/dashboard/widget', async (req, res) => {
     const raw = await fetchWidgetValue({ category, type, metric, desde, hasta, userId, canEmpresa });
     return res.json({ raw });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron obtener las estadísticas del widget',
+      context: 'ventas.getDashboardWidgetValue',
+    });
   }
 });
 
@@ -470,12 +492,10 @@ const DEFAULT_WIDGETS_FOR_USER = (canEmpresa) => [
   ] : []),
 ];
 
-ventasRouter.get('/dashboard/widgets', async (req, res) => {
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+ventasRouter.get('/dashboard/widgets', requirePermission('estadisticas', 'ver'), async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
-  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
-  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+  let canEmpresa = await canViewEmpresaStats(authUser);
 
   try {
     const q = await pool.query(
@@ -486,19 +506,20 @@ ventasRouter.get('/dashboard/widgets', async (req, res) => {
     if (q.rows.length > 0) return res.json(q.rows);
     return res.json(DEFAULT_WIDGETS_FOR_USER(canEmpresa).map((w, i) => ({ ...w, id: null, posicion: i })));
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron obtener los widgets del dashboard',
+      context: 'ventas.getDashboardWidgets',
+    });
   }
 });
 
-ventasRouter.put('/dashboard/widgets', async (req, res) => {
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+ventasRouter.put('/dashboard/widgets', requirePermission('estadisticas', 'ver'), async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   const widgets = req.body;
   if (!Array.isArray(widgets)) return res.status(400).json({ error: 'Se esperaba un array de widgets' });
 
-  let canEmpresa = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
-  if (!canEmpresa && authUser.rol_id) canEmpresa = await tienePermisoEmpresaStats(authUser.rol_id);
+  let canEmpresa = await canViewEmpresaStats(authUser);
 
   // Rechazar widgets de ganancia si no tiene permiso
   if (!canEmpresa && widgets.some((w) => w.categoria === 'ganancia')) {
@@ -523,7 +544,10 @@ ventasRouter.put('/dashboard/widgets', async (req, res) => {
     return res.json(inserted);
   } catch (err) {
     await client.query('ROLLBACK');
-    return res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron guardar los widgets del dashboard',
+      context: 'ventas.putDashboardWidgets',
+    });
   } finally {
     client.release();
   }
@@ -531,16 +555,10 @@ ventasRouter.put('/dashboard/widgets', async (req, res) => {
 
 
 
-ventasRouter.get('/estadisticas/resumen', async (req, res) => {
+ventasRouter.get('/estadisticas/resumen', requirePermission('estadisticas', 'ver'), async (req, res) => {
   const { desde, hasta, usuarioId } = req.query;
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-  let esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
-  if (!esPropietario && authUser.rol_id) {
-    esPropietario = await tienePermisoEmpresaStats(authUser.rol_id);
-  }
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+  let esPropietario = await canViewEmpresaStats(authUser);
   const targetUsuarioId = esPropietario && usuarioId ? Number(usuarioId) : Number(authUser.id);
 
   if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(String(desde))) {
@@ -1032,9 +1050,8 @@ ventasRouter.get('/estadisticas/resumen', async (req, res) => {
   });
 });
 
-ventasRouter.get('/entregas/resumen', async (req, res) => {
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) return res.status(401).json({ error: 'No autorizado' });
+ventasRouter.get('/entregas/resumen', requirePermission('ventas', 'ver'), async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   const periodo = String(req.query.periodo || 'dia').toLowerCase();
   const fechaBase = req.query.fechaBase ? String(req.query.fechaBase) : null;
@@ -1066,7 +1083,7 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
     return res.status(400).json({ error: 'No se pudo calcular el rango de fechas solicitado' });
   }
 
-  const esPropietario = authUser.rol_nombre === 'propietario' || normalizeTipo(authUser.tipo) === 'propietario';
+  const esPropietario = isPropietario(authUser);
   const params = [range.desde, range.hasta];
   const userFilter = esPropietario ? '' : 'AND v.usuario_id = $3';
   if (!esPropietario) params.push(Number(authUser.id));
@@ -1163,8 +1180,9 @@ ventasRouter.get('/entregas/resumen', async (req, res) => {
   });
 });
 
-ventasRouter.get('/', async (req, res) => {
+ventasRouter.get('/', requirePermission('ventas', 'ver'), async (req, res) => {
   const { fecha, desde, hasta } = req.query;
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha))) {
     return res.status(400).json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD' });
@@ -1182,6 +1200,11 @@ ventasRouter.get('/', async (req, res) => {
   const filterDate = fecha || null;
   const filterDesde = fecha ? null : (desde || null);
   const filterHasta = fecha ? null : (hasta || null);
+
+  const canSeeAllSales = isPropietario(authUser);
+  const params = [filterDate, filterDesde, filterHasta];
+  const ownerFilter = canSeeAllSales ? '' : 'AND v.usuario_id = $4';
+  if (!canSeeAllSales) params.push(Number(authUser.id));
 
   const result = await pool.query(
     `SELECT v.id, v.usuario_id, v.cliente_id, v.fecha, v.fecha_entrega, v.observacion,
@@ -1202,8 +1225,9 @@ ventasRouter.get('/', async (req, res) => {
         ($1::date IS NULL AND DATE(v.fecha) BETWEEN COALESCE($2::date, DATE(v.fecha)) AND COALESCE($3::date, DATE(v.fecha)))
       )
       AND COALESCE(v.eliminada, false) = false
+      ${ownerFilter}
       ORDER BY v.fecha DESC, v.id DESC`,
-    [filterDate, filterDesde, filterHasta]
+    params
   );
   const ventas = result.rows;
   const ventaIds = ventas.map((v) => Number(v.id)).filter((id) => Number.isInteger(id) && id > 0);
@@ -1230,10 +1254,15 @@ ventasRouter.get('/', async (req, res) => {
   return res.json(ventas.map((v) => ({ ...v, pagos: pagosByVentaId[Number(v.id)] || [] })));
 });
 
-ventasRouter.get('/:id', async (req, res) => {
+ventasRouter.get('/:id', requirePermission('ventas', 'ver'), async (req, res) => {
   const ventaId = Number(req.params.id);
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
   const ventaResult = await pool.query(
@@ -1260,6 +1289,10 @@ ventasRouter.get('/:id', async (req, res) => {
 
   const detalleResult = await pool.query(
     `SELECT vd.id, vd.venta_id, vd.producto_id, vd.cantidad, vd.precio_unitario,
+            vd.packs, vd.unidades_sueltas, vd.unidades_por_empaque, vd.tipo_empaque,
+            vd.precio_empaque, vd.precio_unidad, vd.modo_venta,
+            vd.descuento_tipo, vd.descuento_valor, vd.descuento_aplicado,
+            vd.descuento_packs_tipo, vd.descuento_packs_valor, vd.descuento_packs_aplicado,
             p.nombre AS producto_nombre
      FROM public.venta_detalle vd
      LEFT JOIN public.productos p ON p.id = vd.producto_id
@@ -1288,7 +1321,7 @@ ventasRouter.get('/:id', async (req, res) => {
   });
 });
 
-ventasRouter.post('/', async (req, res) => {
+ventasRouter.post('/', requirePermission('nueva-venta', 'usar'), async (req, res) => {
   const {
     cliente_id = null,
     fecha_entrega = null,
@@ -1302,11 +1335,20 @@ ventasRouter.post('/', async (req, res) => {
     detalle = [],
   } = req.body;
 
+  const ventaErr = firstError(
+    validateArray(detalle, 'Detalle de venta', { min: 1, max: 500 }),
+    validateMaxLength(observacion, 1000, 'Observación'),
+    validateDateFormat(fecha_entrega, 'Fecha de entrega'),
+    validateEnum(
+      descuento_total_tipo,
+      ['ninguno', 'porcentaje', 'fijo'],
+      'Tipo de descuento'
+    ),
+  );
+  if (respondIfInvalid(res, ventaErr)) return;
+
   const client = await pool.connect();
-  const authUser = getAuthUserFromRequest(req);
-  if (!authUser?.id) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
   const usuarioVentaId = Number(authUser.id);
 
   try {
@@ -1389,9 +1431,32 @@ ventasRouter.post('/', async (req, res) => {
 
     for (const item of detalle) {
       await client.query(
-        `INSERT INTO public.venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4)`,
-        [ventaId, Number(item.producto_id), Math.floor(toNumber(item.cantidad)), toNumber(item.precio_unitario)]
+        `INSERT INTO public.venta_detalle
+          (venta_id, producto_id, cantidad, precio_unitario,
+           packs, unidades_sueltas, unidades_por_empaque, tipo_empaque,
+           precio_empaque, precio_unidad, modo_venta,
+           descuento_tipo, descuento_valor, descuento_aplicado,
+           descuento_packs_tipo, descuento_packs_valor, descuento_packs_aplicado)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+        [
+          ventaId,
+          Number(item.producto_id),
+          Math.floor(toNumber(item.cantidad)),
+          toNumber(item.precio_unitario),
+          item.packs != null ? Math.floor(toNumber(item.packs)) : null,
+          item.unidades_sueltas != null ? Math.floor(toNumber(item.unidades_sueltas)) : null,
+          item.unidades_por_empaque != null ? Math.floor(toNumber(item.unidades_por_empaque)) : null,
+          item.tipo_empaque || null,
+          item.precio_empaque != null ? toNumber(item.precio_empaque) : null,
+          item.precio_unidad != null ? toNumber(item.precio_unidad) : null,
+          item.modo_venta || 'unidad',
+          item.descuento_tipo || 'ninguno',
+          toNumber(item.descuento_valor),
+          toNumber(item.descuento_aplicado),
+          item.descuento_packs_tipo || 'ninguno',
+          toNumber(item.descuento_packs_valor),
+          toNumber(item.descuento_packs_aplicado),
+        ]
       );
     }
     if (pagosNormalizados.length > 0) {
@@ -1454,6 +1519,36 @@ ventasRouter.post('/', async (req, res) => {
       [ventaId]
     );
     await client.query('COMMIT');
+    const cfeConfig = await getEmpresaCfeConfig();
+    let cfe = {
+      autoAttempted: false,
+      autoSent: false,
+      configured: Boolean(cfeConfig),
+      autoError: null,
+      result: null,
+    };
+    if (cfeConfig) {
+      cfe.autoAttempted = true;
+      try {
+        cfe.result = await sendCFE(ventaId, cfeConfig);
+        cfe.autoSent = true;
+        await pool.query(
+          `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [
+            'venta',
+            ventaId,
+            'emitir_cfe',
+            'CFE emitido automaticamente al confirmar la venta',
+            authUser?.id || null,
+            actorName(authUser),
+          ]
+        );
+      } catch (cfeError) {
+        cfe.autoError = cfeError.message || 'No se pudo emitir el CFE';
+        logServerError('ventas.create.autoCfe', cfeError);
+      }
+    }
     return res.status(201).json({
       ...ventaResult.rows[0],
       pagos: pagosResult.rows.map((p) => ({
@@ -1463,6 +1558,7 @@ ventasRouter.post('/', async (req, res) => {
         monto: Number(p.monto || 0),
         created_at: p.created_at,
       })),
+      cfe,
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -1472,16 +1568,20 @@ ventasRouter.post('/', async (req, res) => {
   }
 });
 
-ventasRouter.put('/:id/entregado', async (req, res) => {
+ventasRouter.put('/:id/entregado', requirePermission('ventas', 'ver'), async (req, res) => {
   const ventaId = Number(req.params.id);
   const { entregado } = req.body || {};
-  const authUser = getAuthUserFromRequest(req);
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
   }
   if (typeof entregado !== 'boolean') {
     return res.status(400).json({ error: 'El campo entregado debe ser booleano' });
+  }
+
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
   const result = await pool.query(
@@ -1519,19 +1619,22 @@ ventasRouter.put('/:id/entregado', async (req, res) => {
   return res.json(result.rows[0]);
 });
 
-ventasRouter.put('/:id/estado-entrega', async (req, res) => {
+ventasRouter.put('/:id/estado-entrega', requirePermission('ventas', 'ver'), async (req, res) => {
   return res.status(405).json({
     error: 'El estado de entrega se actualiza únicamente con el campo entregado',
   });
 });
 
-ventasRouter.post('/:id/enviar-email', async (req, res) => {
+ventasRouter.post('/:id/enviar-email', requirePermission('ventas', 'ver'), async (req, res) => {
   const ventaId = Number(req.params.id);
   const { pdfBase64, fileName } = req.body || {};
-  const authUser = getAuthUserFromRequest(req);
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
   const mailFrom = process.env.SMTP_FROM || process.env.SMTP_USER || '';
@@ -1613,12 +1716,16 @@ ventasRouter.post('/:id/enviar-email', async (req, res) => {
   return res.json({ ok: true, to });
 });
 
-ventasRouter.put('/:id/cancelar', async (req, res) => {
+ventasRouter.put('/:id/cancelar', requirePermission('ventas', 'eliminar'), async (req, res) => {
   const ventaId = Number(req.params.id);
-  const authUser = getAuthUserFromRequest(req);
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
   const client = await pool.connect();
@@ -1681,12 +1788,16 @@ ventasRouter.put('/:id/cancelar', async (req, res) => {
   }
 });
 
-ventasRouter.delete('/:id', async (req, res) => {
+ventasRouter.delete('/:id', requirePermission('ventas', 'eliminar'), async (req, res) => {
   const ventaId = Number(req.params.id);
-  const authUser = getAuthUserFromRequest(req);
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
 
   if (!Number.isInteger(ventaId) || ventaId <= 0) {
     return res.status(400).json({ error: 'Id de venta inválido' });
+  }
+
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
   }
 
   const client = await pool.connect();
@@ -1748,5 +1859,65 @@ ventasRouter.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: error.message });
   } finally {
     client.release();
+  }
+});
+
+// ── CFE JSON builder (solo lectura, sin envío a DGI) ─────────────────────────
+
+ventasRouter.get('/:id/cfe', async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+
+  const ventaId = Number(req.params.id);
+  if (!Number.isFinite(ventaId)) return res.status(400).json({ error: 'ID inválido' });
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+
+  try {
+    const cfe = await buildCFE(ventaId);
+    if (req.query.annotated === '1') {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send(buildCFEAnnotated(cfe));
+    }
+    return res.json(cfe);
+  } catch (err) {
+    if (String(err?.message || '').includes('no encontrada')) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    return res.status(400).json({ error: err?.message || 'No se pudo generar el CFE' });
+  }
+});
+
+ventasRouter.post('/:id/cfe/enviar', async (req, res) => {
+  const authUser = req.authUser ?? getAuthUserFromRequest(req);
+  const ventaId = Number(req.params.id);
+  if (!Number.isFinite(ventaId)) return res.status(400).json({ error: 'ID inválido' });
+  if (!(await canAccessVenta(authUser, ventaId))) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+
+  const cfeConfig = await getEmpresaCfeConfig();
+  if (!cfeConfig) {
+    return res.status(400).json({ error: 'El envío de CFE no está habilitado o no está configurado para este ambiente.' });
+  }
+
+  try {
+    const result = await sendCFE(ventaId, cfeConfig);
+    await pool.query(
+      `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        'venta',
+        ventaId,
+        'emitir_cfe',
+        'CFE emitido manualmente',
+        authUser?.id || null,
+        actorName(authUser),
+      ]
+    );
+    return res.json({ ok: true, result });
+  } catch (error) {
+    logServerError('ventas.sendCfe', error);
+    return res.status(502).json({ error: error?.message || 'No se pudo emitir el CFE' });
   }
 });

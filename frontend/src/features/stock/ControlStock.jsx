@@ -11,12 +11,15 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export default function ControlStock({ productos = [], setProductos }) {
+export default function ControlStock({
+  productos = [],
+  setProductos,
+  onSelectedProductoChange,
+}) {
   const [busqueda, setBusqueda] = useState('');
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [productoIdActivo, setProductoIdActivo] = useState(null);
-  const [detalleOpen, setDetalleOpen] = useState(false);
   const [cantidad, setCantidad] = useState('');
   const [cargando, setCargando] = useState(false);
   const [historialOpen, setHistorialOpen] = useState(false);
@@ -26,12 +29,7 @@ export default function ControlStock({ productos = [], setProductos }) {
   const closeTimerRef = useRef(null);
 
   const handleSelectProducto = useCallback((p) => {
-    setProductoIdActivo(p.id);
-    setDetalleOpen(true);
-  }, []);
-
-  const handleCerrarDetalle = useCallback(() => {
-    setDetalleOpen(false);
+    setProductoIdActivo((prev) => (Number(prev) === Number(p.id) ? null : p.id));
   }, []);
 
   const productosFiltrados = useMemo(() => {
@@ -69,6 +67,19 @@ export default function ControlStock({ productos = [], setProductos }) {
     () => productos.find((p) => Number(p.id) === Number(productoIdActivo)) || null,
     [productos, productoIdActivo]
   );
+
+  useEffect(() => {
+    if (typeof onSelectedProductoChange !== 'function') return;
+    if (!productoActivo) {
+      onSelectedProductoChange(null);
+      return;
+    }
+    onSelectedProductoChange({
+      id: productoActivo.id,
+      nombre: productoActivo.nombre || 'Producto',
+      stock: Math.floor(toNumber(productoActivo.stock)),
+    });
+  }, [productoActivo, onSelectedProductoChange]);
 
   const stockColumns = useMemo(
     () => [
@@ -134,8 +145,11 @@ export default function ControlStock({ productos = [], setProductos }) {
     }
   };
 
-  const abrirHistorial = async () => {
-    if (!productoActivo) return;
+  const abrirHistorial = async (producto) => {
+    if (!producto) return;
+    if (Number(productoIdActivo) !== Number(producto.id)) {
+      setProductoIdActivo(producto.id);
+    }
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
@@ -144,7 +158,7 @@ export default function ControlStock({ productos = [], setProductos }) {
     setHistorialOpen(true);
     setHistorialLoading(true);
     try {
-      const rows = await api.getMovimientosProducto(productoActivo.id, 10);
+      const rows = await api.getMovimientosProducto(producto.id, 10);
       setHistorial(rows);
     } catch (error) {
       setHistorial([]);
@@ -178,6 +192,7 @@ export default function ControlStock({ productos = [], setProductos }) {
       <div className="control-stock-head">
         <AppInput
           type="text"
+          className="table-search-field"
           placeholder="Buscar producto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -194,66 +209,46 @@ export default function ControlStock({ productos = [], setProductos }) {
             tableClassName="control-stock-table"
             emptyMessage="Sin productos para mostrar."
             stickyHeader
+            minWidth={420}
             expandedRowId={productoIdActivo}
             onRowClick={handleSelectProducto}
+            renderExpandedRow={(p) => (
+              <div className="stock-inline-panel">
+                <div className="stock-inline-main">
+                  {p.imagenPreview && (
+                    <div className="stock-panel-imagen-wrap">
+                      <img src={p.imagenPreview} alt={p.nombre} className="stock-panel-imagen" />
+                    </div>
+                  )}
+                  <p className="stock-inline-name">{p.nombre}</p>
+                  <div className="stock-grande">{Math.floor(toNumber(p.stock))}</div>
+                </div>
+                <div className="stock-inline-actions-wrap">
+                  <label className="stock-cantidad">
+                    Cantidad
+                    <AppInput
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={cantidad}
+                      onChange={(e) => setCantidad(e.target.value)}
+                    />
+                  </label>
+                  <div className="stock-actions">
+                    <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
+                    <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
+                    <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
+                  </div>
+                  <div className="stock-history-row">
+                    <AppButton type="button" className="stock-history-btn" onClick={() => abrirHistorial(p)} disabled={cargando}>
+                      Historial de stock
+                    </AppButton>
+                  </div>
+                </div>
+              </div>
+            )}
           />
         </section>
-
-        {/* Overlay para cerrar el drawer en mobile */}
-        <div
-          className={`stock-detalle-overlay ${detalleOpen ? 'open' : ''}`}
-          onClick={handleCerrarDetalle}
-          aria-hidden="true"
-        />
-
-        <aside key={productoActivo?.id || 'none'} className={`control-stock-panel ${productoActivo ? 'is-active' : ''} ${detalleOpen ? 'detalle-open' : ''}`}>
-          <div className="stock-detalle-handle" aria-hidden="true" />
-          <div className="stock-detalle-mobile-head">
-            <span className="stock-detalle-title">{productoActivo?.nombre || 'Detalle'}</span>
-            <AppButton
-              type="button"
-              tone="ghost"
-              iconOnly
-              className="stock-detalle-close-btn"
-              onClick={handleCerrarDetalle}
-              aria-label="Cerrar detalle"
-            >
-              ✕
-            </AppButton>
-          </div>
-          {!productoActivo && <p className="stock-empty">Selecciona un producto para gestionar su stock.</p>}
-          {productoActivo && (
-            <>
-              {productoActivo.imagenPreview && (
-                <div className="stock-panel-imagen-wrap">
-                  <img src={productoActivo.imagenPreview} alt={productoActivo.nombre} className="stock-panel-imagen" />
-                </div>
-              )}
-              <p className="stock-producto">{productoActivo.nombre}</p>
-              <div className="stock-grande">{Math.floor(toNumber(productoActivo.stock))}</div>
-              <label className="stock-cantidad">
-                Cantidad
-                <AppInput
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={cantidad}
-                  onChange={(e) => setCantidad(e.target.value)}
-                />
-              </label>
-              <div className="stock-actions">
-                <AppButton type="button" onClick={() => ajustarStock('sumar')} disabled={cargando}>Agregar stock</AppButton>
-                <AppButton type="button" onClick={() => ajustarStock('quitar')} disabled={cargando}>Quitar stock</AppButton>
-                <AppButton type="button" onClick={() => ajustarStock('fijar')} disabled={cargando}>Fijar stock</AppButton>
-              </div>
-              <div className="stock-history-row">
-                <AppButton type="button" className="stock-history-btn" onClick={abrirHistorial} disabled={cargando}>
-                  Historial de stock
-                </AppButton>
-              </div>
-            </>
-          )}
-        </aside>
       </div>
 
       {historialOpen && (

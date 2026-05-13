@@ -1,30 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
+import { extractPaletteFromDataUrl } from '../../shared/lib/brandingPalette';
 import AppButton from '../../shared/components/button/AppButton';
 import AppInput from '../../shared/components/fields/AppInput';
 import './SetupWizard.css';
-
-// ── Helpers de color (misma lógica que Configuracion.jsx) ─────────────────────
-
-function toHex(r, g, b) {
-  const clamp = (v) => Math.min(255, Math.max(0, Math.round(v)));
-  return '#' + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, '0')).join('');
-}
-
-function scaleColor(hex, factor) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r * factor, g * factor, b * factor);
-}
-
-function mixWithWhite(hex, amount) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
-}
 
 function compressImage(dataUrl, maxW, maxH, quality) {
   return new Promise((resolve) => {
@@ -48,72 +28,6 @@ function compressImage(dataUrl, maxW, maxH, quality) {
   });
 }
 
-function extractPaletteFromDataUrl(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const size = 128;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size).data;
-      const buckets = {};
-      for (let i = 0; i < data.length; i += 4) {
-        const a = data[i + 3];
-        if (a < 100) continue;
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const brightness = (r + g + b) / 3;
-        if (brightness > 235 || brightness < 20) continue;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        if (max === 0) continue;
-        const saturation = (max - min) / max;
-        if (saturation < 0.25) continue;  // ignorar grises y colores apagados
-        // Buckets más finos para mejor separación de colores
-        const step = 16;
-        const br = Math.round(r / step) * step;
-        const bg = Math.round(g / step) * step;
-        const bb = Math.round(b / step) * step;
-        const key = `${br},${bg},${bb}`;
-        if (!buckets[key]) buckets[key] = { count: 0, saturation, r: br, g: bg, b: bb };
-        buckets[key].count += 1;
-        buckets[key].saturation = Math.max(buckets[key].saturation, saturation);
-      }
-      if (!Object.keys(buckets).length) { resolve(null); return; }
-
-      // Puntaje: frecuencia × saturación^2 para priorizar colores vibrantes
-      const scored = Object.values(buckets)
-        .map((b) => ({ ...b, score: b.count * b.saturation * b.saturation }))
-        .sort((a, b) => b.score - a.score);
-
-      // Seleccionar top candidatos que sean visualmente distintos entre sí (distancia mínima en RGB)
-      const MIN_DIST = 80;
-      const picks = [];
-      for (const c of scored) {
-        const tooClose = picks.some((p) => {
-          const dr = c.r - p.r, dg = c.g - p.g, db = c.b - p.b;
-          return Math.sqrt(dr * dr + dg * dg + db * db) < MIN_DIST;
-        });
-        if (!tooClose) picks.push(c);
-        if (picks.length >= 5) break;
-      }
-
-      // El color primario es el más vibrante de los candidatos (mayor saturación)
-      const primary = toHex(picks[0].r, picks[0].g, picks[0].b);
-      resolve({
-        color_primary: primary,
-        color_primary_strong: scaleColor(primary, 0.75),
-        color_primary_soft: mixWithWhite(primary, 0.85),
-        color_menu_bg: scaleColor(primary, 0.35),
-        color_menu_active: primary,
-      });
-    };
-    img.onerror = () => resolve(null);
-    img.src = dataUrl;
-  });
-}
-
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const STEPS = ['Empresa', 'Logo y colores', 'Dirección', 'Listo'];
@@ -128,6 +42,7 @@ const DEFAULTS_COLORS = {
   color_text: '#1d2b3e',
   color_text_muted: '#526278',
   color_menu_text: '#e6ecf4',
+  color_logout_bg: '#d32f2f',
 };
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -195,6 +110,7 @@ export default function SetupWizard({ onComplete }) {
         color_text: form.color_text,
         color_text_muted: form.color_text_muted,
         color_menu_text: form.color_menu_text,
+        color_logout_bg: form.color_logout_bg,
         fondo_base64: '',
         configurado: true,
       });

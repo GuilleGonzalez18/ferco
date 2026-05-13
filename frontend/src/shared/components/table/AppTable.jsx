@@ -54,44 +54,61 @@ export default function AppTable({
   headerRowClassName = '',
   emptyColSpan,
   stickyHeader = false,
+  minWidth,
+  stickyMaxHeight,
+  mobileLayout = 'cards',
 }) {
   const wrapRef = useRef(null);
   const [viewportHeight, setViewportHeight] = useState(null);
   const colSpan = emptyColSpan || Math.max(columns.length, 1);
-  const computedMinWidth = Math.max(680, columns.length * 120);
+  const parsedMinWidth = Number(minWidth);
+  const computedMinWidth = Number.isFinite(parsedMinWidth) && parsedMinWidth > 0
+    ? parsedMinWidth
+    : Math.max(680, columns.length * 120);
+  const useCardLayoutOnMobile = mobileLayout !== 'table';
 
   useEffect(() => {
-    if (!stickyHeader) return;
+    if (!stickyHeader || stickyMaxHeight) return;
 
     const updateHeight = () => {
       const el = wrapRef.current;
       if (!el) return;
       const { top } = el.getBoundingClientRect();
       const bottomGap = 16;
-      const available = Math.floor(window.innerHeight - top - bottomGap);
+      const viewport = window.visualViewport?.height || window.innerHeight;
+      const available = Math.floor(viewport - top - bottomGap);
       setViewportHeight(Math.max(220, available));
     };
 
     updateHeight();
     window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', updateHeight);
+    window.visualViewport?.addEventListener('resize', updateHeight);
 
     return () => {
       window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('orientationchange', updateHeight);
+      window.visualViewport?.removeEventListener('resize', updateHeight);
     };
-  }, [stickyHeader, columns.length, rows.length]);
+  }, [stickyHeader, stickyMaxHeight, columns.length, rows.length]);
 
   const wrapperStyle = {
     '--app-table-min-width': `${computedMinWidth}px`,
   };
 
-  if (stickyHeader && viewportHeight !== null) {
-    wrapperStyle['--app-table-max-height'] = `${viewportHeight}px`;
+  if (stickyHeader) {
+    if (stickyMaxHeight) {
+      wrapperStyle['--app-table-max-height'] =
+        typeof stickyMaxHeight === 'number' ? `${stickyMaxHeight}px` : String(stickyMaxHeight);
+    } else if (viewportHeight !== null) {
+      wrapperStyle['--app-table-max-height'] = `${viewportHeight}px`;
+    }
   }
 
   return (
     <div
       ref={wrapRef}
-      className={`app-table-wrap ${stickyHeader ? 'is-sticky-header' : ''} ${className}`.trim()}
+      className={`app-table-wrap ${stickyHeader ? 'is-sticky-header' : ''} ${useCardLayoutOnMobile ? '' : 'mobile-table'} ${className}`.trim()}
       style={wrapperStyle}
     >
       <table className={`app-table ${tableClassName}`.trim()}>
@@ -125,7 +142,7 @@ export default function AppTable({
             return (
               <Fragment key={key}>
                 <tr
-                  className={`app-table-row ${isExpanded ? 'is-expanded' : ''} ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
+                  className={`app-table-row ${isExpanded ? 'is-expanded app-table-row-expanded-anchor' : ''} ${onRowClick ? 'is-clickable' : ''} ${customRowClassName}`.trim()}
                   onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
                 >
                   {columns.map((column) => {
@@ -137,6 +154,7 @@ export default function AppTable({
                         key={`${column.key || column.label || column.header}-${key}`}
                         className={`${alignClass} ${cellClassName}`.trim()}
                         data-label={getHeaderLabel(column)}
+                        data-mobile-hide={column.mobileHide ? 'true' : undefined}
                       >
                         {value}
                       </td>

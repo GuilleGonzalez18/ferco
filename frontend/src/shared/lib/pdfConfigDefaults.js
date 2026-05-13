@@ -3,6 +3,8 @@
  * Cada tipo (factura, remito) tiene su propia config independiente.
  */
 
+import { PDF_FONT_FAMILY } from './typography';
+
 // Campos de empresa visibles en el encabezado del documento
 const EMPRESA_FIELDS_DEFAULTS = {
   mostrarRazonSocial: true,
@@ -25,7 +27,7 @@ export const PDF_DEFAULTS_FACTURA = {
   ...CLIENTE_FIELDS_DEFAULTS,
   piePagina:    '',
   notas:        '',
-  fontFamily:   'helvetica',
+  fontFamily:   PDF_FONT_FAMILY,
   fontSizeBase: 10,
   logoTamano:   40,   // mm en el PDF
   logoPosicion: 'izquierda', // 'izquierda' | 'derecha' | 'centro' | 'cabecera'
@@ -37,7 +39,7 @@ export const PDF_DEFAULTS_REMITO = {
   ...CLIENTE_FIELDS_DEFAULTS,
   piePagina:    '',
   notas:        '',
-  fontFamily:   'helvetica',
+  fontFamily:   PDF_FONT_FAMILY,
   fontSizeBase: 10,
   logoTamano:   40,   // mm en el PDF
   logoPosicion: 'izquierda', // 'izquierda' | 'derecha' | 'centro' | 'cabecera'

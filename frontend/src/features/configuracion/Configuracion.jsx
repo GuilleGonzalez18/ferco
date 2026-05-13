@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
+import { extractPaletteFromDataUrl } from '../../shared/lib/brandingPalette';
 import AppButton from '../../shared/components/button/AppButton';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppTextarea from '../../shared/components/fields/AppTextarea';
 import AppSelect from '../../shared/components/fields/AppSelect';
+import { appConfirm } from '../../shared/lib/appDialog';
 import './Configuracion.css';
 
 const TABS = [
@@ -47,85 +49,9 @@ function compressImage(dataUrl, maxW, maxH, quality) {
   });
 }
 
-function toHex(r, g, b) {
-  const clamp = (v) => Math.min(255, Math.max(0, Math.round(v)));
-  return '#' + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, '0')).join('');
-}
-
-function scaleColor(hex, factor) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r * factor, g * factor, b * factor);
-}
-
-function mixWithWhite(hex, amount) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return toHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
-}
-
-function extractPaletteFromDataUrl(dataUrl) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const size = 96;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size).data;
-
-      const buckets = {};
-      for (let i = 0; i < data.length; i += 4) {
-        const a = data[i + 3];
-        if (a < 100) continue; // skip transparent
-
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Skip near-white and near-black
-        const brightness = (r + g + b) / 3;
-        if (brightness > 230 || brightness < 25) continue;
-
-        // Skip desaturated colors (grays)
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const saturation = max === 0 ? 0 : (max - min) / max;
-        if (saturation < 0.2) continue;
-
-        // Bucket with 24-step quantization
-        const br = Math.round(r / 24) * 24;
-        const bg = Math.round(g / 24) * 24;
-        const bb = Math.round(b / 24) * 24;
-        const key = `${br},${bg},${bb}`;
-        buckets[key] = (buckets[key] || 0) + 1;
-      }
-
-      const sorted = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
-      if (!sorted.length) { resolve(null); return; }
-
-      const [rv, gv, bv] = sorted[0][0].split(',').map(Number);
-      const primary = toHex(rv, gv, bv);
-      resolve({
-        color_primary: primary,
-        color_primary_strong: scaleColor(primary, 0.75),
-        color_primary_soft: mixWithWhite(primary, 0.85),
-        color_menu_bg: scaleColor(primary, 0.35),
-        color_menu_active: primary,
-      });
-    };
-    img.onerror = () => resolve(null);
-    img.src = dataUrl;
-  });
-}
-
 // ── TAB EMPRESA ───────────────────────────────────────────────────────────────
 
-const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website'];
+const DATOS_FIELDS  = ['nombre', 'razon_social', 'rut', 'direccion', 'telefono', 'correo', 'website', 'giro', 'ciudad', 'departamento', 'cfe_ambiente'];
 const LOGO_FIELDS   = ['logo_base64', 'logo_tamano', 'logo_bg_color'];
 const FONDO_FIELDS  = ['fondo_base64', 'fondo_opacidad'];
 const COLORES_FIELDS = [
@@ -145,6 +71,10 @@ function buildForm(emp) {
     telefono:             emp.telefono || '',
     correo:               emp.correo || '',
     website:              emp.website || '',
+    giro:                 emp.giro || '',
+    ciudad:               emp.ciudad || '',
+    departamento:         emp.departamento || '',
+    cfe_ambiente:         emp.cfe_ambiente || 'LOCAL',
     logo_base64:          emp.logo_base64 || null,
     color_primary:        emp.color_primary || '#375f8c',
     color_primary_strong: emp.color_primary_strong || '#294c74',
@@ -188,11 +118,11 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor, 
 
   // Map jsPDF font names to CSS font families
   const fontMap = {
-    helvetica: 'Arial, sans-serif',
+    helvetica: "Inter, 'Segoe UI', Tahoma, sans-serif",
     times:     'Times New Roman, serif',
     courier:   'Courier New, monospace',
   };
-  const cssFont    = fontMap[pdfConfig?.fontFamily] || 'Arial, sans-serif';
+  const cssFont    = fontMap[pdfConfig?.fontFamily] || "Inter, 'Segoe UI', Tahoma, sans-serif";
   const baseFontSz = pdfConfig?.fontSizeBase || 10;
   const notas      = pdfConfig?.notas    || '';
   const piePagina  = pdfConfig?.piePagina || '';
@@ -247,11 +177,11 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor, 
 
   const empresaInfoBlock = (
     <div style={{ fontSize: baseFontSz - 2, color: '#666', lineHeight: 1.5, marginBottom: 4 }}>
-      {pdfConfig?.mostrarRazonSocial !== false && <div>Ferco Distribuciones S.A.</div>}
+      {pdfConfig?.mostrarRazonSocial !== false && <div>Mercatus S.A.</div>}
       {pdfConfig?.mostrarRut         !== false && <div>RUT: 21-123456-7</div>}
       {pdfConfig?.mostrarDireccion   !== false && <div>Av. Rivera 2400, Montevideo</div>}
       {pdfConfig?.mostrarTelefono    !== false && <div>Tel: 099 000 111</div>}
-      {pdfConfig?.mostrarEmail       !== false && <div>ventas@ferco.com</div>}
+      {pdfConfig?.mostrarEmail       !== false && <div>ventas@mercatus.com</div>}
     </div>
   );
 
@@ -502,6 +432,8 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   const [paletaSugerida, setPaletaSugerida] = useState(null);
   const [subTab, setSubTab]   = useState('datos');
   const [pdfDocTab, setPdfDocTab] = useState('factura');
+  const [departamentosEmp, setDepartamentosEmp] = useState([]);
+  const [barriosEmp, setBarriosEmp] = useState([]);
   const fileRef  = useRef(null);
   const fondoRef = useRef(null);
   const msgTimers = useRef({});
@@ -535,10 +467,17 @@ function TabEmpresa({ empresa: initialEmpresa, onSaved, applyPreview, cancelPrev
   }, [initialEmpresa, applyPreview]);
 
   useEffect(() => {
+    const timers = msgTimers.current;
     return () => {
       cancelPreviewRef.current?.();
-      Object.values(msgTimers.current).forEach(clearTimeout);
+      Object.values(timers).forEach(clearTimeout);
     };
+  }, []);
+
+  useEffect(() => {
+    Promise.all([api.getDepartamentos(), api.getBarrios()])
+      .then(([deps, bars]) => { setDepartamentosEmp(deps); setBarriosEmp(bars); })
+      .catch(() => {});
   }, []);
 
   const isDirty = useCallback((fields) => fields.some((f) => form[f] !== saved[f]), [form, saved]);
@@ -723,6 +662,81 @@ const saveSection = async (sectionKey, fields) => {
           <label className="config-field-label">Sitio web</label>
           <AppInput value={form.website} onChange={set('website')} placeholder="https://..." />
         </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Giro comercial</label>
+          <AppInput value={form.giro} onChange={set('giro')} placeholder="Giro comercial" />
+        </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Departamento</label>
+          <AppSelect
+            value={form.departamento}
+            onChange={(e) => setForm((prev) => ({ ...prev, departamento: e.target.value, ciudad: '' }))}
+          >
+            <option value="">— Seleccionar —</option>
+            {departamentosEmp.map((d) => (
+              <option key={d.id} value={d.nombre}>{d.nombre}</option>
+            ))}
+          </AppSelect>
+        </div>
+        <div className="config-field-row">
+          <label className="config-field-label">Ciudad</label>
+          <AppSelect
+            value={form.ciudad}
+            onChange={set('ciudad')}
+            disabled={!form.departamento}
+          >
+            <option value="">— Seleccionar —</option>
+            {barriosEmp
+              .filter((b) => !form.departamento || b.departamento_nombre === form.departamento)
+              .map((b) => (
+                <option key={b.id} value={b.nombre}>{b.nombre}</option>
+              ))}
+          </AppSelect>
+        </div>
+        {(!form.ciudad || !form.departamento) && (
+          <div className="config-field-row">
+            <span />
+            <p className="config-hint config-hint--warn">
+              ⚠️ Ciudad y Departamento son obligatorios para emitir CFE ante DGI.
+            </p>
+          </div>
+        )}
+        <div className="config-field-row">
+          <label className="config-field-label">Estado CFE</label>
+          <span
+            className={`config-cfe-badge config-cfe-badge--${initialEmpresa?.cfe_habilitado ? 'on' : 'off'}`}
+          >
+            {initialEmpresa?.cfe_habilitado ? '✓ Habilitado' : '✗ Deshabilitado'}
+          </span>
+        </div>
+        {initialEmpresa?.cfe_habilitado && (
+          <div className="config-field-row">
+            <label className="config-field-label">Ambiente CFE</label>
+            <AppSelect
+              value={form.cfe_ambiente}
+              onChange={async (e) => {
+                const val = e.target.value;
+                if (val === 'PRODUCCION') {
+                  const ok = await appConfirm(
+                    '⚠️ Ha seleccionado Producción.\n\n' +
+                    'Con esto activo, todas las transacciones realizadas quedarán registradas ante la DGI.\n\n' +
+                    'Habilítese SOLO si se pasó por el proceso de Testing y Homologación, es decir, realizó pruebas para asegurar que el sistema se comunica correctamente con la DGI.',
+                    { confirmText: 'Confirmar Producción', cancelText: 'Cancelar' }
+                  );
+                  if (!ok) {
+                    setForm((prev) => ({ ...prev, cfe_ambiente: 'PRUEBAS' }));
+                    return;
+                  }
+                }
+                setForm((prev) => ({ ...prev, cfe_ambiente: val }));
+              }}
+            >
+              <option value="LOCAL">Local (solo JSON)</option>
+              <option value="PRUEBAS">Pruebas</option>
+              <option value="PRODUCCION">Producción</option>
+            </AppSelect>
+          </div>
+        )}
         <SectionActions
           dirty={isDirty(DATOS_FIELDS)}
           saving={savingSection === 'datos'}

@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { getAuthUserFromRequest } from '../auth.js';
+import { getAuthUserFromRequest, requireAuth, requirePermission } from '../auth.js';
 import { sendDbError } from '../dbErrors.js';
 
 export const empaquesRouter = Router();
+empaquesRouter.use(requireAuth);
 
 function actorName(authUser) {
   const full = `${authUser?.nombre || ''} ${authUser?.apellido || ''}`.trim();
   return full || authUser?.username || authUser?.correo || null;
 }
 
-empaquesRouter.get('/', async (_req, res) => {
+empaquesRouter.get('/', requirePermission('productos', 'ver'), async (_req, res) => {
   const result = await query(
     `SELECT id, nombre, activo, created_at
      FROM public.empaques
@@ -20,7 +21,7 @@ empaquesRouter.get('/', async (_req, res) => {
   return res.json(result.rows);
 });
 
-empaquesRouter.post('/', async (req, res) => {
+empaquesRouter.post('/', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const { nombre } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
   const safeNombre = String(nombre || '').trim();
@@ -56,7 +57,7 @@ empaquesRouter.post('/', async (req, res) => {
   }
 });
 
-empaquesRouter.put('/:id', async (req, res) => {
+empaquesRouter.put('/:id', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const id = Number(req.params.id);
   const { nombre } = req.body || {};
   const authUser = getAuthUserFromRequest(req);
@@ -100,7 +101,7 @@ empaquesRouter.put('/:id', async (req, res) => {
   }
 });
 
-empaquesRouter.delete('/:id', async (req, res) => {
+empaquesRouter.delete('/:id', requirePermission('productos', 'gestionar_empaques'), async (req, res) => {
   const id = Number(req.params.id);
   const authUser = getAuthUserFromRequest(req);
 

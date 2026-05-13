@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
 import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import { getPdfConfig } from '../../shared/lib/pdfConfigDefaults';
 import './VentasHistorial.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { RiFileExcel2Line } from 'react-icons/ri';
@@ -16,6 +18,7 @@ import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
 import AppButton from '../../shared/components/button/AppButton';
+import { PDF_FONT_FAMILY, PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function todayISO() {
   const now = new Date();
@@ -162,6 +165,7 @@ function escapeHtml(value) {
 
 export default function VentasHistorial() {
   const { empresa } = useConfig();
+  const cfeHabilitado = empresa?.cfe_habilitado === true;
   const [desde, setDesde] = useState(todayISO());
   const [hasta, setHasta] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
@@ -187,17 +191,31 @@ export default function VentasHistorial() {
   const [modalTipoImpresionVentaId, setModalTipoImpresionVentaId] = useState(null);
   const [entregasDesde, setEntregasDesde] = useState(todayISO());
   const [entregasHasta, setEntregasHasta] = useState(todayISO());
+  const [cfeModalData, setCfeModalData] = useState(null);
+  const [loadingCfeId, setLoadingCfeId] = useState(null);
 
   const replicarVenta = async (ventaId) => {
     setPrintingId(ventaId);
     try {
       const venta = await api.getVentaById(ventaId);
-      sessionStorage.setItem('ferco_replicar_venta', JSON.stringify(venta));
-      window.dispatchEvent(new CustomEvent('ferco:navigate', { detail: 'nueva-venta' }));
+      sessionStorage.setItem('mercatus_replicar_venta', JSON.stringify(venta));
+      window.dispatchEvent(new CustomEvent('mercatus:navigate', { detail: 'nueva-venta' }));
     } catch (err) {
       await appAlert(err.message || 'No se pudo preparar la replicación de la venta.');
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  const verCFE = async (ventaId) => {
+    setLoadingCfeId(ventaId);
+    try {
+      const text = await api.getVentaCFEAnnotated(ventaId);
+      setCfeModalData({ ventaId, json: text });
+    } catch (err) {
+      await appAlert(err.message || 'No se pudo generar el CFE.');
+    } finally {
+      setLoadingCfeId(null);
     }
   };
 
@@ -300,7 +318,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -455,11 +473,19 @@ export default function VentasHistorial() {
       body: (venta.detalle || []).map((item) => {
         const cant = Number(item.cantidad || 0);
         const precio = Number(item.precio_unitario || 0);
-        const desc = Number(item.descuento_item || 0);
+        const desc = Number(item.descuento_aplicado || item.descuento_item || 0);
         const subtotal = cant * precio - desc;
-        const presentacion = item.embalaje_nombre
-          ? `${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre}`
-          : `${cant} unidades`;
+        const packs = Number(item.packs ?? -1);
+        const sueltas = Number(item.unidades_sueltas ?? 0);
+        const tipoEmpaque = item.tipo_empaque || '';
+        let presentacion;
+        if (packs >= 0) {
+          if (packs > 0 && sueltas > 0) presentacion = `${packs} ${tipoEmpaque} + ${sueltas} u.`;
+          else if (packs > 0) presentacion = `${packs} ${tipoEmpaque}`;
+          else presentacion = `${sueltas} unidades`;
+        } else {
+          presentacion = `${cant} unidades`;
+        }
         return [
           item.producto_nombre || `Producto #${item.producto_id}`,
           cant,
@@ -469,7 +495,7 @@ export default function VentasHistorial() {
           formatCurrency(subtotal),
         ];
       }),
-      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase ? cfg.fontSizeBase - 1 : 9, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
     });
 
@@ -541,7 +567,7 @@ export default function VentasHistorial() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 14;
 
-    doc.setFont(cfg.fontFamily || 'helvetica');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY);
 
     const headerY = 10;
     const lineH = 5;
@@ -618,10 +644,10 @@ export default function VentasHistorial() {
     }
 
     doc.setFontSize(14);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'bold');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'bold');
     doc.text('REMITO', col1X, contentStartY + 9);
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
     doc.text(`Remito de Factura N° ${venta.id}`, col1X, contentStartY + 15);
 
     // Datos de empresa bajo el título
@@ -640,7 +666,7 @@ export default function VentasHistorial() {
       empresaY2 += linesCount * (lineH - 1);
     });
     doc.setFontSize(cfg.fontSizeBase || 10);
-    doc.setFont(cfg.fontFamily || 'helvetica', 'normal');
+    doc.setFont(cfg.fontFamily || PDF_FONT_FAMILY, 'normal');
 
     // Start infoY AFTER empresa lines to prevent overlap
     let infoY = Math.max(contentStartY + titleH, empresaY2 + 2);
@@ -672,9 +698,17 @@ export default function VentasHistorial() {
 
     const tableBody = (venta.detalle || []).map((item) => {
       const cant = Number(item.cantidad || 0);
-      const presentacion = item.embalaje_nombre
-        ? `${cant} (${item.cantidad_por_embalaje || 1} ${item.embalaje_nombre})`
-        : `${cant} u.`;
+      const packs = Number(item.packs ?? -1);
+      const sueltas = Number(item.unidades_sueltas ?? 0);
+      const tipoEmpaque = item.tipo_empaque || '';
+      let presentacion;
+      if (packs >= 0) {
+        if (packs > 0 && sueltas > 0) presentacion = `${packs} ${tipoEmpaque} + ${sueltas} u.`;
+        else if (packs > 0) presentacion = `${packs} ${tipoEmpaque}`;
+        else presentacion = `${sueltas} u.`;
+      } else {
+        presentacion = `${cant} u.`;
+      }
       const row = [
         item.producto_nombre || `Producto #${item.producto_id}`,
         presentacion,
@@ -689,7 +723,7 @@ export default function VentasHistorial() {
       startY: cursorY,
       head: tableHead,
       body: tableBody,
-      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || 'helvetica' },
+      styles: { fontSize: cfg.fontSizeBase || 10, font: cfg.fontFamily || PDF_FONT_FAMILY },
       headStyles: { fillColor: getPrimaryRgb() },
       columnStyles: cfg.mostrarCosto
         ? { 1: { halign: 'center', cellWidth: 40 }, 2: { halign: 'right', cellWidth: 35 } }
@@ -873,12 +907,12 @@ export default function VentasHistorial() {
     try {
       await api.cancelarVenta(ventaId);
       window.dispatchEvent(
-        new CustomEvent('ferco:stats-refresh', {
+        new CustomEvent('mercatus:stats-refresh', {
           detail: { source: 'venta-cancelada', ventaId },
         })
       );
       window.dispatchEvent(
-        new CustomEvent('ferco:stock-refresh', {
+        new CustomEvent('mercatus:stock-refresh', {
           detail: { source: 'venta-cancelada', ventaId },
         })
       );
@@ -916,12 +950,12 @@ export default function VentasHistorial() {
     try {
       await api.deleteVenta(ventaId);
       window.dispatchEvent(
-        new CustomEvent('ferco:stats-refresh', {
+        new CustomEvent('mercatus:stats-refresh', {
           detail: { source: 'venta-eliminada', ventaId },
         })
       );
       window.dispatchEvent(
-        new CustomEvent('ferco:stock-refresh', {
+        new CustomEvent('mercatus:stock-refresh', {
           detail: { source: 'venta-eliminada', ventaId },
         })
       );
@@ -1060,7 +1094,7 @@ export default function VentasHistorial() {
           <head>
             <meta charset="UTF-8" />
             <style>
-              body { font-family: Arial, sans-serif; }
+              body { font-family: ${PRINT_FONT_FAMILY_CSS}; }
               .title { font-size: 18px; font-weight: 700; color: #375f8c; margin-bottom: 8px; }
               .meta { font-size: 13px; margin-bottom: 4px; color: #1f2933; }
               table { border-collapse: collapse; width: 100%; table-layout: fixed; margin-top: 10px; }
@@ -1314,6 +1348,7 @@ export default function VentasHistorial() {
         </button>
       ),
       mobileLabel: 'Vendedor',
+      mobileHide: true,
       render: (v) => v.usuario_nombre || '-',
     },
     {
@@ -1331,6 +1366,7 @@ export default function VentasHistorial() {
       key: 'pago',
       header: 'Pago',
       mobileLabel: 'Pago',
+      mobileHide: true,
       render: (v) => <span className="pago-resumen-cell">{formatPagosResumen(v.pagos)}</span>,
     },
     {
@@ -1439,6 +1475,17 @@ export default function VentasHistorial() {
             <img src="/print.svg" alt="" aria-hidden="true" />
             <small>Imprimir</small>
           </AppButton>
+          <AppButton
+            type="button"
+            className="reprint-btn"
+            onClick={() => verCFE(v.id)}
+            disabled={loadingCfeId === v.id}
+            title="Ver CFE (JSON)"
+            aria-label="Ver CFE"
+            style={{ display: cfeHabilitado ? undefined : 'none' }}
+          >
+            <small>{loadingCfeId === v.id ? '...' : 'CFE'}</small>
+          </AppButton>
         </div>
         {loadingDetalleId === v.id ? (
           <p>Cargando detalle...</p>
@@ -1462,6 +1509,7 @@ export default function VentasHistorial() {
 
   return (
     <div className="ventas-historial-main">
+      <FilterSlot>
       <div className="ventas-historial-toolbar">
         <div className="ventas-filtros-group">
           <div className="ventas-range-stack">
@@ -1517,7 +1565,7 @@ export default function VentasHistorial() {
                 Este mes
               </AppButton>
             </div>
-            <div className="ventas-range-inputs">
+            <div className="ventas-date-estado-row">
               <label className="ventas-fecha-filter">
                 <span>Desde</span>
                 <AppInput type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -1526,17 +1574,17 @@ export default function VentasHistorial() {
                 <span>Hasta</span>
                 <AppInput type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
               </label>
+              <label className="ventas-fecha-filter">
+                <span>Estado</span>
+                <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
+                  <option value="todos">Todos</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="entregado">Entregadas</option>
+                  <option value="canceladas">Canceladas</option>
+                </AppSelect>
+              </label>
             </div>
           </div>
-          <label className="ventas-fecha-filter">
-            <span>Estado</span>
-            <AppSelect value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)}>
-              <option value="todos">Todos</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="entregado">Entregadas</option>
-              <option value="canceladas">Canceladas</option>
-            </AppSelect>
-          </label>
         </div>
         <div className="ventas-export-group">
           <AppButton
@@ -1544,6 +1592,7 @@ export default function VentasHistorial() {
             className="ventas-export-btn"
             onClick={() => setModalTicketsOpen(true)}
             disabled={printingBatch || loading}
+            title="Tickets para entrega"
           >
             <AiFillPrinter />
             {printingBatch ? 'Procesando tickets...' : 'Tickets para entrega + Remito'}
@@ -1558,11 +1607,14 @@ export default function VentasHistorial() {
               setModalExportOpen(true);
             }}
             disabled={exportingEntregas}
+            title="Imprimir entregas"
           >
-            {exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}
+            <PiFilePdfBold />
+            <span className="btn-label">{exportingEntregas ? 'Procesando...' : 'Imprimir entregas'}</span>
           </AppButton>
         </div>
       </div>
+      </FilterSlot>
 
       {modalTicketsOpen && (
         <div className="export-modal-overlay" role="dialog" aria-modal="true">
@@ -1832,12 +1884,47 @@ export default function VentasHistorial() {
           rows={ventasOrdenadas}
           rowKey="id"
           stickyHeader
+          minWidth={980}
           emptyMessage="No hay ventas para los filtros seleccionados."
           onRowClick={(v) => toggleDetalleVenta(v.id)}
           rowClassName={(v) => (v.cancelada ? 'venta-row-cancelada' : (v.entregado ? 'venta-row-entregada' : ''))}
           expandedRowId={expandedVentaId}
           renderExpandedRow={(v) => renderExpandedVenta(v)}
         />
+      )}
+
+      {cfeModalData && typeof document !== 'undefined' && createPortal(
+        <div className="export-modal-overlay" role="dialog" aria-modal="true" aria-label="CFE JSON">
+          <div className="export-modal-backdrop" onClick={() => setCfeModalData(null)} />
+          <div className="export-modal cfe-modal">
+            <h4>CFE — Venta #{cfeModalData.ventaId}</h4>
+            <pre className="cfe-json-pre">{cfeModalData.json}</pre>
+            <div className="export-modal-actions">
+              <AppButton
+                type="button"
+                onClick={() => {
+                  const blob = new Blob([cfeModalData.json], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `cfe-venta-${cfeModalData.ventaId}.jsonc`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Descargar JSON
+              </AppButton>
+            </div>
+            <AppButton
+              type="button"
+              className="export-modal-close"
+              onClick={() => setCfeModalData(null)}
+            >
+              Cerrar
+            </AppButton>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { query } from '../db.js';
+import { requireAuth, requirePermission } from '../auth.js';
 
 export const auditoriaRouter = Router();
+auditoriaRouter.use(requireAuth);
 
 function toIsoDate(date) {
   const y = date.getFullYear();
@@ -65,7 +67,7 @@ function parseStockSeriesRange(req, res) {
   return { desde, hasta, todayIso };
 }
 
-auditoriaRouter.get('/eventos', async (req, res) => {
+auditoriaRouter.get('/eventos', requirePermission('auditoria', 'ver'), async (req, res) => {
   const range = parseDateRange(req, res);
   if (!range) return;
 
@@ -87,7 +89,7 @@ auditoriaRouter.get('/eventos', async (req, res) => {
   return res.json(result.rows);
 });
 
-auditoriaRouter.get('/stock-costo-serie', async (req, res) => {
+auditoriaRouter.get('/stock-costo-serie', requirePermission('auditoria', 'ver'), async (req, res) => {
   const range = parseStockSeriesRange(req, res);
   if (!range) return;
   const { desde, hasta, todayIso } = range;
@@ -162,7 +164,7 @@ auditoriaRouter.get('/stock-costo-serie', async (req, res) => {
   return res.json({ desde, hasta, serie });
 });
 
-auditoriaRouter.get('/movimientos-stock', async (req, res) => {
+auditoriaRouter.get('/movimientos-stock', requirePermission('auditoria', 'ver'), async (req, res) => {
   const range = parseDateRange(req, res);
   if (!range) return;
 

@@ -39,14 +39,25 @@ export function PermisosProvider({ children, userTipo, userRolId, userRolNombre 
       // Preferir rolId (numérico) sobre el nombre para la consulta
       const rows = await api.getPermisos(userRolId ?? tipo);
       setPermisos(buildMap(rows));
-    } catch {
-      setPermisos(null);
+    } catch (err) {
+      // Si el servidor rechaza la sesión (401), no aplicar permisos por defecto
+      if (err?.status === 401) {
+        setPermisos({});
+      } else {
+        setPermisos(null);
+      }
     } finally {
       setLoading(false);
     }
   }, [userRolId, tipo, userTipo]);
 
   useEffect(() => { loadPermisos(); }, [loadPermisos]);
+
+  // Refrescar permisos cuando el admin los guarda desde Configuración
+  useEffect(() => {
+    window.addEventListener('mercatus:permisos-updated', loadPermisos);
+    return () => window.removeEventListener('mercatus:permisos-updated', loadPermisos);
+  }, [loadPermisos]);
 
   const can = useCallback((recurso, accion) => {
     if (esPropietario && !permisos) return true; // fallback: propietario tiene todo

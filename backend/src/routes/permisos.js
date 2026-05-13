@@ -1,16 +1,24 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { requireAuth, requirePropietario } from '../auth.js';
+import { isPropietario, requireAuth, requirePropietario } from '../auth.js';
+import { sendServerError } from '../dbErrors.js';
+import {
+  firstError, respondIfInvalid,
+  validateRequired, validateMaxLength, validateBoolean, validateIdentifier, validateArray,
+} from '../middleware/validate.js';
 
 export const permisosRouter = Router();
 
 // ── GET /api/permisos/roles ────────────────────────────────────────────────────
-permisosRouter.get('/roles', requireAuth, async (_req, res) => {
+permisosRouter.get('/roles', requireAuth, requirePropietario, async (_req, res) => {
   try {
     const result = await query('SELECT * FROM public.roles ORDER BY es_sistema DESC, nombre ASC');
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron obtener los roles',
+      context: 'permisos.getRoles',
+    });
   }
 });
 
@@ -39,7 +47,10 @@ permisosRouter.post('/roles', requireAuth, requirePropietario, async (req, res) 
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ya existe un rol con ese nombre' });
-    res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudo crear el rol',
+      context: 'permisos.postRoles',
+    });
   }
 });
 
@@ -59,7 +70,10 @@ permisosRouter.delete('/roles/:id', requireAuth, requirePropietario, async (req,
     await query('DELETE FROM public.roles WHERE id = $1', [id]);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudo eliminar el rol',
+      context: 'permisos.deleteRol',
+    });
   }
 });
 
@@ -67,6 +81,10 @@ permisosRouter.delete('/roles/:id', requireAuth, requirePropietario, async (req,
 permisosRouter.get('/:rolId', requireAuth, async (req, res) => {
   const rolId = parseInt(req.params.rolId, 10);
   if (!rolId || rolId <= 0) return res.status(400).json({ error: 'ID de rol inválido' });
+  const authUser = req.authUser;
+  if (!isPropietario(authUser) && Number(authUser?.rol_id) !== rolId) {
+    return res.status(403).json({ error: 'No autorizado para consultar permisos de otro rol' });
+  }
   try {
     const result = await query(
       'SELECT recurso, accion, habilitado FROM public.permisos_rol WHERE rol_id = $1',
@@ -74,7 +92,10 @@ permisosRouter.get('/:rolId', requireAuth, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron obtener los permisos del rol',
+      context: 'permisos.getRol',
+    });
   }
 });
 
@@ -85,6 +106,23 @@ permisosRouter.put('/:rolId', requireAuth, requirePropietario, async (req, res) 
   if (!rolId || rolId <= 0) return res.status(400).json({ error: 'ID de rol inválido' });
   const permisos = req.body;
   if (!Array.isArray(permisos)) return res.status(400).json({ error: 'Se espera un array de permisos' });
+
+  const arraySizeErr = validateArray(permisos, 'Permisos', { min: 0, max: 500 });
+  if (respondIfInvalid(res, arraySizeErr)) return;
+
+  for (let i = 0; i < permisos.length; i++) {
+    const { recurso, accion, habilitado } = permisos[i] ?? {};
+    const itemErr = firstError(
+      validateRequired(recurso, `permisos[${i}].recurso`),
+      validateMaxLength(recurso, 50, `permisos[${i}].recurso`),
+      validateIdentifier(recurso, `permisos[${i}].recurso`),
+      validateRequired(accion, `permisos[${i}].accion`),
+      validateMaxLength(accion, 50, `permisos[${i}].accion`),
+      validateIdentifier(accion, `permisos[${i}].accion`),
+      validateBoolean(habilitado, `permisos[${i}].habilitado`),
+    );
+    if (respondIfInvalid(res, itemErr)) return;
+  }
   try {
     const rolQ = await query('SELECT id FROM public.roles WHERE id = $1', [rolId]);
     if (!rolQ.rows.length) return res.status(404).json({ error: 'Rol no encontrado' });
@@ -101,7 +139,10 @@ permisosRouter.put('/:rolId', requireAuth, requirePropietario, async (req, res) 
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendServerError(res, err, {
+      fallback: 'No se pudieron actualizar los permisos del rol',
+      context: 'permisos.putRol',
+    });
   }
 });
 

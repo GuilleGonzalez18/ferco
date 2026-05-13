@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../core/api';
 import './Usuarios.css';
+import { FilterSlot } from '../../shared/lib/filterPanel';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
 import AppTable from '../../shared/components/table/AppTable';
 import AppInput from '../../shared/components/fields/AppInput';
@@ -139,7 +140,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         const actualizado = await api.updateUsuario(editandoId, payload);
         setUsuarios((prev) => prev.map((u) => (u.id === editandoId ? actualizado : u)));
         if (Number(actualizado.id) === currentUserId && typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('ferco:user-updated', { detail: actualizado }));
+          window.dispatchEvent(new CustomEvent('mercatus:user-updated', { detail: actualizado }));
         }
       } else {
         const creado = await api.createUsuario(payload);
@@ -287,6 +288,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         </button>
       ),
       mobileLabel: 'Teléfono',
+      mobileHide: true,
       render: (u) => u.telefono || '-',
     },
     {
@@ -297,6 +299,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         </button>
       ),
       mobileLabel: 'Dirección',
+      mobileHide: true,
       render: (u) => u.direccion || '-',
     },
   ];
@@ -307,34 +310,36 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
       <div className="usuarios-toolbar">
         <AppInput
           type="text"
-          className="buscar-usuario"
+          className="buscar-usuario table-search-field"
           placeholder="Buscar usuario..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
         {puedeAgregar && (
-          <AppButton
-            type="button"
-            className="icon-btn"
-            onClick={() => {
-              setEditandoId(null);
-              const vendedor = roles.find((r) => r.nombre === 'vendedor') || roles[0];
-              setNuevo({
-                nombre: '',
-                apellido: '',
-                username: '',
-                correo: '',
-                password: '',
-                rol_id: vendedor ? String(vendedor.id) : '',
-                telefono: '',
-                direccion: '',
-              });
-              setMostrarForm(true);
-            }}
-          >
-            <img src="/add.svg" alt="" aria-hidden="true" />
-            <span>USUARIO</span>
-          </AppButton>
+          <FilterSlot>
+            <AppButton
+              type="button"
+              className="icon-btn"
+              onClick={() => {
+                setEditandoId(null);
+                const vendedor = roles.find((r) => r.nombre === 'vendedor') || roles[0];
+                setNuevo({
+                  nombre: '',
+                  apellido: '',
+                  username: '',
+                  correo: '',
+                  password: '',
+                  rol_id: vendedor ? String(vendedor.id) : '',
+                  telefono: '',
+                  direccion: '',
+                });
+                setMostrarForm(true);
+              }}
+            >
+              <img src="/add.svg" alt="" aria-hidden="true" />
+              <span>USUARIO</span>
+            </AppButton>
+          </FilterSlot>
         )}
       </div>
       )}

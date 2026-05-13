@@ -1,17 +1,26 @@
 {
-  "name": "ferco-posta-release",
+  "name": "mercatus-release",
   "private": true,
+  "type": "module",
   "version": "1.0.26",
-  "description": "Release automation for ferco-posta",
+  "description": "Release automation for Mercatus",
   "scripts": {
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "test": "npm test --prefix backend",
+    "test:integration": "node scripts/run-integration.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.6",
     "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.0",
-    "semantic-release": "^24.2.7"
+    "@types/node": "^25.6.2",
+    "semantic-release": "^24.2.7",
+    "wait-on": "^8.0.5"
   }
 }
