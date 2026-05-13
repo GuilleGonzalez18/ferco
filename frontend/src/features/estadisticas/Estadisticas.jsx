@@ -415,8 +415,8 @@ export default function Estadisticas({ compact = false }) {
       loadStats(desde, hasta, ownerUsuarioId);
       loadStockSerie(stockDesde, stockHasta);
     };
-    window.addEventListener('ferco:stats-refresh', onStatsRefresh);
-    return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
+    window.addEventListener('mercatus:stats-refresh', onStatsRefresh);
+    return () => window.removeEventListener('mercatus:stats-refresh', onStatsRefresh);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [desde, hasta, ownerUsuarioId, stockDesde, stockHasta]); // loadStats/loadStockSerie no están en useCallback, se omiten intencionalmente
 

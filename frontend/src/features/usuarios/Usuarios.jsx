@@ -140,7 +140,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
         const actualizado = await api.updateUsuario(editandoId, payload);
         setUsuarios((prev) => prev.map((u) => (u.id === editandoId ? actualizado : u)));
         if (Number(actualizado.id) === currentUserId && typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('ferco:user-updated', { detail: actualizado }));
+          window.dispatchEvent(new CustomEvent('mercatus:user-updated', { detail: actualizado }));
         }
       } else {
         const creado = await api.createUsuario(payload);

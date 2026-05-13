@@ -42,8 +42,8 @@ function AppShell({ user, onLogout }) {
     };
     const onStockRefresh = () => loadProductos();
     loadProductos();
-    window.addEventListener('ferco:stock-refresh', onStockRefresh);
-    return () => window.removeEventListener('ferco:stock-refresh', onStockRefresh);
+    window.addEventListener('mercatus:stock-refresh', onStockRefresh);
+    return () => window.removeEventListener('mercatus:stock-refresh', onStockRefresh);
   }, []);
 
   if (loading) return null;
@@ -73,7 +73,7 @@ function AppShell({ user, onLogout }) {
   );
 }
 
-const USER_KEY = 'ferco_user';
+const USER_KEY = 'mercatus_user';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -84,8 +84,8 @@ function App() {
       localStorage.removeItem(USER_KEY);
       setUser(null);
     };
-    window.addEventListener('ferco:session-expired', onSessionExpired);
-    return () => window.removeEventListener('ferco:session-expired', onSessionExpired);
+    window.addEventListener('mercatus:session-expired', onSessionExpired);
+    return () => window.removeEventListener('mercatus:session-expired', onSessionExpired);
   }, []);
 
   useEffect(() => {
@@ -125,8 +125,8 @@ function App() {
         return next;
       });
     };
-    window.addEventListener('ferco:user-updated', onUserUpdated);
-    return () => window.removeEventListener('ferco:user-updated', onUserUpdated);
+    window.addEventListener('mercatus:user-updated', onUserUpdated);
+    return () => window.removeEventListener('mercatus:user-updated', onUserUpdated);
   }, []);
 
   const handleLogout = () => {

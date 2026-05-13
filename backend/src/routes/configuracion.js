@@ -5,6 +5,7 @@ import { sendServerError } from '../dbErrors.js';
 import {
   firstError, respondIfInvalid,
   validateMaxLength, validateHexColor, validateNumber, validateBase64Size,
+  validateEnum,
 } from '../middleware/validate.js';
 
 const BASE64_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -18,7 +19,11 @@ configuracionRouter.get('/empresa', async (req, res) => {
     const result = await query(
       'SELECT *, pdf_factura, pdf_remito FROM public.config_empresa LIMIT 1'
     );
-    res.json(result.rows[0] ?? {});
+    const empresa = result.rows[0] ?? {};
+    res.json({
+      ...empresa,
+      cfe_habilitado: process.env.CFE_HABILITADO === 'true',
+    });
   } catch (err) {
     return sendServerError(res, err, {
       fallback: 'No se pudo obtener la configuración de la empresa',
@@ -39,6 +44,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
     fondo_opacidad, logo_tamano, logo_bg_color,
     configurado,
     pdf_factura, pdf_remito,
+    cfe_ambiente,
   } = req.body;
 
   const configErr = firstError(
@@ -65,6 +71,9 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
     validateHexColor(logo_bg_color, 'Color fondo logo'),
     validateNumber(fondo_opacidad, 'Opacidad del fondo', { min: 0, max: 1 }),
     validateNumber(logo_tamano, 'Tamaño del logo', { min: 10, max: 300 }),
+    cfe_ambiente != null
+      ? validateEnum(cfe_ambiente, ['LOCAL', 'PRUEBAS', 'PRODUCCION'], 'Ambiente CFE')
+      : null,
   );
   if (respondIfInvalid(res, configErr)) return;
 
@@ -103,6 +112,7 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
         logo_bg_color        = COALESCE($25::varchar, logo_bg_color),
         pdf_factura          = COALESCE($26::jsonb, pdf_factura),
         pdf_remito           = COALESCE($27::jsonb, pdf_remito),
+        cfe_ambiente         = COALESCE($28::varchar, cfe_ambiente),
         updated_at           = now()
       WHERE id = (SELECT id FROM public.config_empresa LIMIT 1)
       RETURNING *`,
@@ -119,9 +129,13 @@ configuracionRouter.put('/empresa', requireAuth, requirePropietario, async (req,
        logo_tamano ?? null,
        logo_bg_color ?? null,
        pdf_factura != null ? JSON.stringify(pdf_factura) : null,
-       pdf_remito != null ? JSON.stringify(pdf_remito) : null]
+       pdf_remito != null ? JSON.stringify(pdf_remito) : null,
+       cfe_ambiente ?? null]
     );
-    res.json(result.rows[0]);
+    res.json({
+      ...result.rows[0],
+      cfe_habilitado: process.env.CFE_HABILITADO === 'true',
+    });
   } catch (err) {
     return sendServerError(res, err, {
       fallback: 'No se pudo actualizar la configuración de la empresa',

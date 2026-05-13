@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const TOKEN_KEY = 'ferco_auth_token';
+const TOKEN_KEY = 'mercatus_auth_token';
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -45,7 +45,7 @@ async function request(path, options = {}) {
     // Token expirado o revocado: limpiar sesión y notificar
     if (response.status === 401 && token) {
       setToken('');
-      window.dispatchEvent(new CustomEvent('ferco:session-expired'));
+      window.dispatchEvent(new CustomEvent('mercatus:session-expired'));
     }
 
     const err = new Error(message);
@@ -93,7 +93,7 @@ async function requestText(path, options = {}) {
 
     if (response.status === 401 && token) {
       setToken('');
-      window.dispatchEvent(new CustomEvent('ferco:session-expired'));
+      window.dispatchEvent(new CustomEvent('mercatus:session-expired'));
     }
 
     const err = new Error(message);

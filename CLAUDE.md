@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Ferco is a point-of-sale / inventory management web app for a ferretería (hardware store). It is a Spanish-language SPA with a React frontend and an Express + PostgreSQL backend.
+Mercatus is a stock and sales management system for import and distribution companies. It is a Spanish-language SPA with a React frontend and an Express + PostgreSQL backend.
 
 ## Development Commands
 

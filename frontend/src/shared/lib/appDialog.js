@@ -1,4 +1,4 @@
-const APP_DIALOG_EVENT = 'ferco:app-dialog';
+const APP_DIALOG_EVENT = 'mercatus:app-dialog';
 
 let nextDialogId = 1;
 const pendingResolvers = new Map();

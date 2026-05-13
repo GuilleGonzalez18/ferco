@@ -6,7 +6,7 @@ dotenv.config();
 const dumpPath = process.env.DUMP_FILE;
 const host = process.env.PGHOST || process.env.DB_HOST || 'localhost';
 const port = process.env.PGPORT || process.env.DB_PORT || '5432';
-const database = process.env.PGDATABASE || process.env.DB_NAME || 'ferco_db';
+const database = process.env.PGDATABASE || process.env.DB_NAME || 'mercatus_db';
 const user = process.env.PGUSER || process.env.DB_USER || 'postgres';
 const password = process.env.PGPASSWORD || process.env.DB_PASSWORD || '';
 const psqlBin = process.env.PSQL_BIN || 'psql';

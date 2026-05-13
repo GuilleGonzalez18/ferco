@@ -18,7 +18,7 @@ const FIELD_COMMENTS = {
   CFEFchVenc:       'Fecha de vencimiento del documento (AAAA-MM-DD)',
   CFETipoTraslado:  'Tipo de traslado: 1=Venta, 2=Traslados internos. Obligatorio para eRemitos',
   CFEAdenda:        'Adenda libre del CFE (sin límite). Para saltos de línea usar "|"',
-  CFENumReferencia: 'Número identificador interno del ERP (ID de venta en Ferco)',
+  CFENumReferencia: 'Número identificador interno del ERP (ID de venta en Mercatus)',
   CFEImpFormato:    'Formato del PDF: 1=Rollo 80mm, 2=Hoja A4 español, 4=A4 español/inglés, 5=Rollo 110mm, 6=A5, 7=Rollo 70mm',
   CFEIdCompra:      'Número de orden/pedido del comprador (opcional, máx 50 chars)',
   CFEIdCompraApodo: 'Nombre visible del campo CFEIdCompra. Por defecto imprime "Número Interno"',

@@ -318,6 +318,7 @@ export default function Ventas({
   onCarritoCountChange,
 }) {
   const { empresa } = useConfig();
+  const cfeHabilitado = empresa?.cfe_habilitado === true;
   const [paso, setPaso] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [vistaProductos, setVistaProductos] = useState('grid');
@@ -366,7 +367,7 @@ export default function Ventas({
 
   // Clave única por empresa+usuario para aislamiento multitenancy y multiusuario
   const carritoKey = empresa?.id && user?.id
-    ? `ferco_carrito_${empresa.id}_${user.id}`
+    ? `mercatus_carrito_${empresa.id}_${user.id}`
     : null;
 
   // Persistir carrito en localStorage al cambiar state relevante
@@ -434,17 +435,17 @@ export default function Ventas({
   }, []);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem('ferco_replicar_venta');
+    const raw = sessionStorage.getItem('mercatus_replicar_venta');
     if (!raw) return;
     let venta = null;
     try {
       venta = JSON.parse(raw);
     } catch {
-      sessionStorage.removeItem('ferco_replicar_venta');
+      sessionStorage.removeItem('mercatus_replicar_venta');
       return;
     }
     if (!venta || typeof venta !== 'object') {
-      sessionStorage.removeItem('ferco_replicar_venta');
+      sessionStorage.removeItem('mercatus_replicar_venta');
       return;
     }
 
@@ -516,7 +517,7 @@ export default function Ventas({
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
     });
-    sessionStorage.removeItem('ferco_replicar_venta');
+    sessionStorage.removeItem('mercatus_replicar_venta');
   }, [productos]);
 
   // Restaurar carrito guardado (solo si no hay replicar_venta y carritoKey disponible)
@@ -525,7 +526,7 @@ export default function Ventas({
     // Marcar que el restore fue intentado (habilita el save useEffect)
     carritoRestoreAttempted.current = true;
     // Si hay una replicación pendiente, no restaurar (el otro useEffect lo maneja)
-    if (sessionStorage.getItem('ferco_replicar_venta')) return;
+    if (sessionStorage.getItem('mercatus_replicar_venta')) return;
     const raw = localStorage.getItem(carritoKey);
     if (!raw) return;
     let snapshot = null;
@@ -948,10 +949,6 @@ export default function Ventas({
   );
 
   const goNext = () => {
-    if (carrito.length === 0) {
-      appAlert('Agrega al menos un producto al carrito.');
-      return;
-    }
     setPaso(2);
     closeCarritoDrawer();
   };
@@ -1172,7 +1169,10 @@ export default function Ventas({
           autoError: error.message || 'No se pudo emitir el CFE',
         },
       } : prev));
-      await appAlert(error.message || 'No se pudo emitir el CFE');
+      await appAlert(
+        'Error de comunicación con el proveedor de CFE.\n\n' +
+        'Reintente nuevamente. Si el problema persiste, valide con RPG Software.'
+      );
     } finally {
       setCfeLoading(false);
     }
@@ -1290,7 +1290,7 @@ export default function Ventas({
       });
 
       window.dispatchEvent(
-        new CustomEvent('ferco:stats-refresh', {
+        new CustomEvent('mercatus:stats-refresh', {
           detail: { source: 'venta-creada', ventaId: ventaCreada?.id ?? null },
         })
       );
@@ -1881,7 +1881,7 @@ export default function Ventas({
             </div>
             <div className="ventas-footer">
               {paso === 1 ? (
-                <AppButton id={ventasButtonId('paso', 'productos', 'siguiente')} type="button" onClick={goNext}>Siguiente</AppButton>
+                <AppButton id={ventasButtonId('paso', 'productos', 'siguiente')} type="button" onClick={goNext} disabled={carrito.length === 0}>Siguiente</AppButton>
               ) : (
                 <>
                   <AppButton id={ventasButtonId('paso', 'pago', 'atras')} type="button" className="secundario" onClick={goBack}>Atrás</AppButton>
@@ -2110,6 +2110,7 @@ export default function Ventas({
               className="cfe"
               onClick={emitirCfeVentaFinal}
               disabled={cfeLoading || !ventaFinalizada?.id}
+              style={{ display: cfeHabilitado ? undefined : 'none' }}
             >
               {cfeLoading ? 'Emitiendo CFE...' : 'Emitir CFE'}
             </AppButton>

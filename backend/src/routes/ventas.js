@@ -12,7 +12,7 @@ import { getMetodoGanancias, calcularGanancia } from '../gananciaCalculator.js';
 import { buildCFE } from '../cfeBuilder.js';
 import { buildCFEAnnotated } from '../cfeAnnotated.js';
 import { logServerError, sendServerError } from '../dbErrors.js';
-import { sendCFE } from '../cfeSender.js';
+import { sendCFE, buildCfeConfig } from '../cfeSender.js';
 import {
   firstError, respondIfInvalid,
   validateArray, validateMaxLength, validateEnum, validateDateFormat,
@@ -102,9 +102,13 @@ function normalizePaymentMethods(pagos = []) {
   });
 }
 
-function isCfeSendConfigured() {
-  return Boolean(String(process.env.CFE_API_URL || '').trim())
-    && Boolean(String(process.env.CFE_API_TOKEN || '').trim());
+async function getEmpresaCfeConfig() {
+  try {
+    const res = await pool.query('SELECT cfe_ambiente FROM public.config_empresa LIMIT 1');
+    return buildCfeConfig(res.rows[0] || {});
+  } catch {
+    return null;
+  }
 }
 
 async function canViewEmpresaStats(authUser) {
@@ -1515,17 +1519,18 @@ ventasRouter.post('/', requirePermission('nueva-venta', 'usar'), async (req, res
       [ventaId]
     );
     await client.query('COMMIT');
+    const cfeConfig = await getEmpresaCfeConfig();
     let cfe = {
       autoAttempted: false,
       autoSent: false,
-      configured: isCfeSendConfigured(),
+      configured: Boolean(cfeConfig),
       autoError: null,
       result: null,
     };
-    if (cfe.configured) {
+    if (cfeConfig) {
       cfe.autoAttempted = true;
       try {
-        cfe.result = await sendCFE(ventaId);
+        cfe.result = await sendCFE(ventaId, cfeConfig);
         cfe.autoSent = true;
         await pool.query(
           `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
@@ -1890,12 +1895,14 @@ ventasRouter.post('/:id/cfe/enviar', async (req, res) => {
   if (!(await canAccessVenta(authUser, ventaId))) {
     return res.status(404).json({ error: 'Venta no encontrada' });
   }
-  if (!isCfeSendConfigured()) {
-    return res.status(400).json({ error: 'CFE_API_URL y CFE_API_TOKEN deben estar configurados en .env para enviar CFEs.' });
+
+  const cfeConfig = await getEmpresaCfeConfig();
+  if (!cfeConfig) {
+    return res.status(400).json({ error: 'El envío de CFE no está habilitado o no está configurado para este ambiente.' });
   }
 
   try {
-    const result = await sendCFE(ventaId);
+    const result = await sendCFE(ventaId, cfeConfig);
     await pool.query(
       `INSERT INTO public.auditoria_eventos (entidad, entidad_id, accion, detalle, usuario_id, usuario_nombre)
        VALUES ($1,$2,$3,$4,$5,$6)`,
@@ -1911,6 +1918,6 @@ ventasRouter.post('/:id/cfe/enviar', async (req, res) => {
     return res.json({ ok: true, result });
   } catch (error) {
     logServerError('ventas.sendCfe', error);
-    return res.status(400).json({ error: error?.message || 'No se pudo emitir el CFE' });
+    return res.status(502).json({ error: error?.message || 'No se pudo emitir el CFE' });
   }
 });
