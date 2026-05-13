@@ -1,4 +1,18 @@
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'path';
 import { query } from '../db.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const barriosRawSql = readFileSync(
+  join(__dirname, '../../../scripts/localidades_uruguay.sql'),
+  'utf8'
+);
+// Extrae solo el INSERT INTO barrios del archivo y lo hace idempotente
+const barriosInsertMatch = barriosRawSql.match(/INSERT INTO barrios[\s\S]+/);
+if (!barriosInsertMatch) throw new Error('No se encontró INSERT INTO barrios en localidades_uruguay.sql');
+const barriosSeedSql = barriosInsertMatch[0].trimEnd().replace(/\s*ON CONFLICT DO NOTHING\s*;?\s*$/i, '') + '\nON CONFLICT DO NOTHING;';
 
 const statements = [
   `
@@ -876,6 +890,43 @@ const statements = [
   // === CFE AMBIENTE DEFAULT FIX (v17) ===
   // Cambia el default a LOCAL y normaliza cualquier valor NULL que pueda existir
   `ALTER TABLE public.config_empresa ALTER COLUMN cfe_ambiente SET DEFAULT 'LOCAL';`,
+  // === SEED DEPARTAMENTOS URUGUAY (v18) ===
+  `
+  INSERT INTO public.departamentos (id, nombre) OVERRIDING SYSTEM VALUE
+  VALUES
+    (1, 'Artigas'),
+    (2, 'Salto'),
+    (3, 'Rivera'),
+    (4, 'Rio Negro'),
+    (5, 'Tacuarembo'),
+    (6, 'Soriano'),
+    (7, 'Flores'),
+    (8, 'Florida'),
+    (9, 'Treinta y Tres'),
+    (10, 'Montevideo'),
+    (11, 'Maldonado'),
+    (12, 'San Jose'),
+    (13, 'Canelones'),
+    (14, 'Lavalleja'),
+    (15, 'Rocha'),
+    (16, 'Paysandu'),
+    (17, 'Cerro Largo'),
+    (18, 'Colonia'),
+    (19, 'Durazno')
+  ON CONFLICT DO NOTHING;
+  `,
+  // === SEED BARRIOS/LOCALIDADES URUGUAY (v18) ===
+  `CREATE EXTENSION IF NOT EXISTS unaccent;`,
+  // Elimina duplicados antes de crear el índice único (puede haber datos de corridas anteriores)
+  `
+  DELETE FROM public.barrios a
+  USING public.barrios b
+  WHERE a.id > b.id
+    AND a.nombre = b.nombre
+    AND a.departamento_id = b.departamento_id;
+  `,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_barrios_nombre_departamento ON public.barrios (nombre, departamento_id);`,
+  barriosSeedSql,
 ];
 
 export async function runMigration() {
