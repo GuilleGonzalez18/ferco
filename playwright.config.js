@@ -13,6 +13,28 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
+  webServer: [
+    {
+      command: process.platform === 'win32'
+        ? 'cd backend && npm run dev'
+        : 'npm run dev --prefix backend',
+      url: 'http://localhost:3001/api/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: process.platform === 'win32'
+        ? 'cd frontend && npm run dev'
+        : 'npm run dev --prefix frontend',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+  ],
   projects: [
     {
       name: 'chromium',

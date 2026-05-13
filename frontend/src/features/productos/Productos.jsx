@@ -501,7 +501,7 @@ export default function Productos({ productos = [], setProductos }) {
       </head>
       <body>
         <div class="header">
-          <img class="logo" src="/mercatus-logo.png" alt="Ferco" />
+          <img class="logo" src="/mercatus-logo.png" alt="Mercatus" />
           <div>
             <h1>Catálogo de Productos</h1>
             <div class="meta">Actualizado: ${updatedAt}</div>

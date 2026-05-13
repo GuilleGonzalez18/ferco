@@ -75,8 +75,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
       onNavigate(target);
       setMenuMovilAbierto(false);
     };
-    window.addEventListener('ferco:navigate', onNavigateEvent);
-    return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
+    window.addEventListener('mercatus:navigate', onNavigateEvent);
+    return () => window.removeEventListener('mercatus:navigate', onNavigateEvent);
   }, [onNavigate]);
 
   useEffect(() => {
@@ -93,8 +93,8 @@ export default function Dashboard({ user, pantalla, productos, setProductos, onN
     };
 
     loadResumen();
-    window.addEventListener('ferco:stats-refresh', onStatsRefresh);
-    return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
+    window.addEventListener('mercatus:stats-refresh', onStatsRefresh);
+    return () => window.removeEventListener('mercatus:stats-refresh', onStatsRefresh);
   }, [user?.id, user?.rol_nombre, user?.tipo]);
 
   const money = (value) => {

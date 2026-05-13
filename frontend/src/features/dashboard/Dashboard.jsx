@@ -638,16 +638,16 @@ function DashboardInner({ user, pantalla, productos, setProductos, onNavigate, o
       setMenuMovilAbierto(false);
       setVentasCarritoAbierto(false);
     };
-    window.addEventListener('ferco:navigate', onNavigateEvent);
-    return () => window.removeEventListener('ferco:navigate', onNavigateEvent);
+    window.addEventListener('mercatus:navigate', onNavigateEvent);
+    return () => window.removeEventListener('mercatus:navigate', onNavigateEvent);
   }, [onNavigate]);
 
   useEffect(() => {
     const onStatsRefresh = () => {
-      window.dispatchEvent(new CustomEvent('ferco:widget-refresh'));
+      window.dispatchEvent(new CustomEvent('mercatus:widget-refresh'));
     };
-    window.addEventListener('ferco:stats-refresh', onStatsRefresh);
-    return () => window.removeEventListener('ferco:stats-refresh', onStatsRefresh);
+    window.addEventListener('mercatus:stats-refresh', onStatsRefresh);
+    return () => window.removeEventListener('mercatus:stats-refresh', onStatsRefresh);
   }, []);
 
   const tituloActual= OPCIONES.find((o) => o.key === pantalla)?.topbarTitle ?? 'Dashboard';

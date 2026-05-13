@@ -165,6 +165,7 @@ function escapeHtml(value) {
 
 export default function VentasHistorial() {
   const { empresa } = useConfig();
+  const cfeHabilitado = empresa?.cfe_habilitado === true;
   const [desde, setDesde] = useState(todayISO());
   const [hasta, setHasta] = useState(todayISO());
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
@@ -197,8 +198,8 @@ export default function VentasHistorial() {
     setPrintingId(ventaId);
     try {
       const venta = await api.getVentaById(ventaId);
-      sessionStorage.setItem('ferco_replicar_venta', JSON.stringify(venta));
-      window.dispatchEvent(new CustomEvent('ferco:navigate', { detail: 'nueva-venta' }));
+      sessionStorage.setItem('mercatus_replicar_venta', JSON.stringify(venta));
+      window.dispatchEvent(new CustomEvent('mercatus:navigate', { detail: 'nueva-venta' }));
     } catch (err) {
       await appAlert(err.message || 'No se pudo preparar la replicación de la venta.');
     } finally {
@@ -906,12 +907,12 @@ export default function VentasHistorial() {
     try {
       await api.cancelarVenta(ventaId);
       window.dispatchEvent(
-        new CustomEvent('ferco:stats-refresh', {
+        new CustomEvent('mercatus:stats-refresh', {
           detail: { source: 'venta-cancelada', ventaId },
         })
       );
       window.dispatchEvent(
-        new CustomEvent('ferco:stock-refresh', {
+        new CustomEvent('mercatus:stock-refresh', {
           detail: { source: 'venta-cancelada', ventaId },
         })
       );
@@ -949,12 +950,12 @@ export default function VentasHistorial() {
     try {
       await api.deleteVenta(ventaId);
       window.dispatchEvent(
-        new CustomEvent('ferco:stats-refresh', {
+        new CustomEvent('mercatus:stats-refresh', {
           detail: { source: 'venta-eliminada', ventaId },
         })
       );
       window.dispatchEvent(
-        new CustomEvent('ferco:stock-refresh', {
+        new CustomEvent('mercatus:stock-refresh', {
           detail: { source: 'venta-eliminada', ventaId },
         })
       );
@@ -1481,6 +1482,7 @@ export default function VentasHistorial() {
             disabled={loadingCfeId === v.id}
             title="Ver CFE (JSON)"
             aria-label="Ver CFE"
+            style={{ display: cfeHabilitado ? undefined : 'none' }}
           >
             <small>{loadingCfeId === v.id ? '...' : 'CFE'}</small>
           </AppButton>

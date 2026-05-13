@@ -7,6 +7,7 @@ import AppButton from '../../shared/components/button/AppButton';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppTextarea from '../../shared/components/fields/AppTextarea';
 import AppSelect from '../../shared/components/fields/AppSelect';
+import { appConfirm } from '../../shared/lib/appDialog';
 import './Configuracion.css';
 
 const TABS = [
@@ -73,7 +74,7 @@ function buildForm(emp) {
     giro:                 emp.giro || '',
     ciudad:               emp.ciudad || '',
     departamento:         emp.departamento || '',
-    cfe_ambiente:         emp.cfe_ambiente || 'PRUEBAS',
+    cfe_ambiente:         emp.cfe_ambiente || 'LOCAL',
     logo_base64:          emp.logo_base64 || null,
     color_primary:        emp.color_primary || '#375f8c',
     color_primary_strong: emp.color_primary_strong || '#294c74',
@@ -176,11 +177,11 @@ function PdfPreviewMock({ tipo, logoSrc, logoBgColor, logoTamano, primaryColor, 
 
   const empresaInfoBlock = (
     <div style={{ fontSize: baseFontSz - 2, color: '#666', lineHeight: 1.5, marginBottom: 4 }}>
-      {pdfConfig?.mostrarRazonSocial !== false && <div>Ferco Distribuciones S.A.</div>}
+      {pdfConfig?.mostrarRazonSocial !== false && <div>Mercatus S.A.</div>}
       {pdfConfig?.mostrarRut         !== false && <div>RUT: 21-123456-7</div>}
       {pdfConfig?.mostrarDireccion   !== false && <div>Av. Rivera 2400, Montevideo</div>}
       {pdfConfig?.mostrarTelefono    !== false && <div>Tel: 099 000 111</div>}
-      {pdfConfig?.mostrarEmail       !== false && <div>ventas@ferco.com</div>}
+      {pdfConfig?.mostrarEmail       !== false && <div>ventas@mercatus.com</div>}
     </div>
   );
 
@@ -701,12 +702,41 @@ const saveSection = async (sectionKey, fields) => {
           </div>
         )}
         <div className="config-field-row">
-          <label className="config-field-label">Ambiente CFE</label>
-          <AppSelect value={form.cfe_ambiente} onChange={set('cfe_ambiente')}>
-            <option value="PRUEBAS">PRUEBAS</option>
-            <option value="PRODUCCION">PRODUCCION</option>
-          </AppSelect>
+          <label className="config-field-label">Estado CFE</label>
+          <span
+            className={`config-cfe-badge config-cfe-badge--${initialEmpresa?.cfe_habilitado ? 'on' : 'off'}`}
+          >
+            {initialEmpresa?.cfe_habilitado ? '✓ Habilitado' : '✗ Deshabilitado'}
+          </span>
         </div>
+        {initialEmpresa?.cfe_habilitado && (
+          <div className="config-field-row">
+            <label className="config-field-label">Ambiente CFE</label>
+            <AppSelect
+              value={form.cfe_ambiente}
+              onChange={async (e) => {
+                const val = e.target.value;
+                if (val === 'PRODUCCION') {
+                  const ok = await appConfirm(
+                    '⚠️ Ha seleccionado Producción.\n\n' +
+                    'Con esto activo, todas las transacciones realizadas quedarán registradas ante la DGI.\n\n' +
+                    'Habilítese SOLO si se pasó por el proceso de Testing y Homologación, es decir, realizó pruebas para asegurar que el sistema se comunica correctamente con la DGI.',
+                    { confirmText: 'Confirmar Producción', cancelText: 'Cancelar' }
+                  );
+                  if (!ok) {
+                    setForm((prev) => ({ ...prev, cfe_ambiente: 'PRUEBAS' }));
+                    return;
+                  }
+                }
+                setForm((prev) => ({ ...prev, cfe_ambiente: val }));
+              }}
+            >
+              <option value="LOCAL">Local (solo JSON)</option>
+              <option value="PRUEBAS">Pruebas</option>
+              <option value="PRODUCCION">Producción</option>
+            </AppSelect>
+          </div>
+        )}
         <SectionActions
           dirty={isDirty(DATOS_FIELDS)}
           saving={savingSection === 'datos'}

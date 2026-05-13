@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 
 function randomInt(min, max) {
@@ -71,7 +72,7 @@ async function main() {
   const apellidos = ['Pérez', 'Gómez', 'Fernández', 'Rodríguez', 'López', 'Martínez', 'Silva', 'Díaz', 'Suárez', 'Méndez'];
   const barrios = ['Centro', 'Cordón', 'Pocitos', 'Unión', 'Buceo', 'Malvín', 'Prado', 'Colón', 'Sayago', 'Parque Batlle'];
   const familiasProductos = ['Arroz', 'Yerba', 'Aceite', 'Azúcar', 'Fideos', 'Harina', 'Leche', 'Galletas', 'Atún', 'Detergente'];
-  const marcas = ['Ferco', 'Nativa', 'Río', 'Sol', 'Campo', 'Premium', 'Del Sur', 'Andes', 'Monte', 'Doña Ana'];
+  const marcas = ['Mercatus', 'Nativa', 'Río', 'Sol', 'Campo', 'Premium', 'Del Sur', 'Andes', 'Monte', 'Doña Ana'];
   const unidades = ['unidad', 'kg', 'lt', 'pack', 'caja'];
   const nombresEmpaques = ['pack', 'caja', 'bolsa', 'bandeja'];
   const imagenesProductos = [
@@ -289,6 +290,23 @@ async function main() {
         );
         pagosCreados += 2;
       }
+    }
+
+    // ── Usuario E2E (idempotente, solo para CI/testing) ──────────────────────
+    const e2eEmail = process.env.E2E_ADMIN_EMAIL || 'e2e-admin@mercatus.com';
+    const e2ePassword = process.env.E2E_ADMIN_PASSWORD || 'TestPass123!';
+    const rolRow = await client.query(
+      `SELECT id FROM public.roles WHERE nombre = 'propietario' LIMIT 1`
+    );
+    if (rolRow.rows.length) {
+      const hashedE2E = await bcrypt.hash(e2ePassword, 10);
+      await client.query(
+        `INSERT INTO public.usuarios
+           (username, password, rol_id, nombre, apellido, correo, debe_cambiar_password)
+         VALUES ($1, $2, $3, 'E2E', 'Admin', $4, false)
+         ON CONFLICT (correo) DO UPDATE SET password = EXCLUDED.password`,
+        ['e2e-admin', hashedE2E, rolRow.rows[0].id, e2eEmail]
+      );
     }
 
     await client.query('COMMIT');

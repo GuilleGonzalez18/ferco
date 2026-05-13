@@ -872,7 +872,10 @@ const statements = [
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_valor numeric(12,2) NOT NULL DEFAULT 0;`,
   `ALTER TABLE public.venta_detalle ADD COLUMN IF NOT EXISTS descuento_packs_aplicado numeric(12,2) NOT NULL DEFAULT 0;`,
   // === CFE AMBIENTE (v16) ===
-  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS cfe_ambiente varchar(20) NOT NULL DEFAULT 'PRUEBAS';`,
+  `ALTER TABLE public.config_empresa ADD COLUMN IF NOT EXISTS cfe_ambiente varchar(20) NOT NULL DEFAULT 'LOCAL';`,
+  // === CFE AMBIENTE DEFAULT FIX (v17) ===
+  // Cambia el default a LOCAL y normaliza cualquier valor NULL que pueda existir
+  `ALTER TABLE public.config_empresa ALTER COLUMN cfe_ambiente SET DEFAULT 'LOCAL';`,
 ];
 
 export async function runMigration() {

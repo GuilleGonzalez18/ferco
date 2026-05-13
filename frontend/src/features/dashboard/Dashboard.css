@@ -63,7 +63,7 @@ body.dashboard-scroll-lock {
   height: auto;
   display: block;
   margin: 0 auto;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.18));
+  /* filter: drop-shadow(0 2px 8px rgba(0,0,0,0.18)); */
 }
 
 .dashboard-mobile-toggle {
@@ -491,7 +491,7 @@ body.dashboard-scroll-lock {
   display: inline-flex;
   padding: 0.34rem 0.72rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary-soft) 68%, #fff);
+/*  background: color-mix(in srgb, var(--color-primary-soft) 68%, #fff);*/
   color: var(--color-primary);
   font-size: 0.74rem;
   font-weight: 800;
@@ -793,14 +793,13 @@ body.dashboard-scroll-lock {
   outline: 2px solid var(--color-primary, #2563eb);
 }
 
-/* Range tag in edit mode */
 .widget-range-tag {
   display: inline-block;
   margin-top: 0.2rem;
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--color-primary, #2563eb);
-  background: var(--color-primary-soft);
+ /* background: var(--color-primary-soft);*/
   border-radius: 4px;
   padding: 0.1em 0.4em;
   white-space: nowrap;
