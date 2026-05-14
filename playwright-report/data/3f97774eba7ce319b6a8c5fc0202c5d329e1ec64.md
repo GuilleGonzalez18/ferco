@@ -1,0 +1,2645 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: productos.spec.js >> Productos >> guardar producto sin nombre muestra error de validación
+- Location: e2e\tests\productos.spec.js:31:3
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+```
+Error: locator.waitFor: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Agregar producto' }) to be visible
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - complementary [ref=e5]:
+    - button "Ir al dashboard" [ref=e7] [cursor=pointer]:
+      - img "Lo de Jorge" [ref=e8]
+    - generic [ref=e9]:
+      - paragraph [ref=e10]: Bienvenido/a, E2E!
+      - generic [ref=e11]: Propietario
+    - navigation [ref=e12]:
+      - button "Nueva venta" [ref=e13] [cursor=pointer]:
+        - img [ref=e14]
+        - text: Nueva venta
+      - button "Ventas" [ref=e15] [cursor=pointer]:
+        - img [ref=e16]
+        - text: Ventas
+      - button "Productos" [active] [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+        - text: Productos
+      - button "Clientes" [ref=e19] [cursor=pointer]:
+        - img [ref=e20]
+        - text: Clientes
+      - button "Usuarios" [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - text: Usuarios
+      - button "Auditoría" [ref=e23] [cursor=pointer]:
+        - img [ref=e24]
+        - text: Auditoría
+      - button "Control de stock" [ref=e25] [cursor=pointer]:
+        - img [ref=e26]
+        - text: Control de stock
+      - button "Estadísticas" [ref=e29] [cursor=pointer]:
+        - img [ref=e30]
+        - text: Estadísticas
+      - button "Configuración" [ref=e31] [cursor=pointer]:
+        - img [ref=e32]
+        - text: Configuración
+    - button "Cerrar sesión" [ref=e34] [cursor=pointer]:
+      - img [ref=e35]
+      - text: Cerrar sesión
+    - generic [ref=e36]: v. 1.0.26
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - img [ref=e39]
+        - text: Mercatus
+      - generic [ref=e40]: © 2025 RPG Software. Todos los derechos reservados.
+  - main [ref=e41]:
+    - generic [ref=e44]:
+      - generic [ref=e45]: Lo de Jorge
+      - generic [ref=e46]: Lista de productos
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - textbox "Buscar por nombre, codigo, categoria..." [ref=e52]
+          - generic [ref=e53]:
+            - button "PRODUCTO" [ref=e54] [cursor=pointer]:
+              - img [ref=e55]
+              - generic [ref=e56]: PRODUCTO
+            - button "ARCHIVADOS" [ref=e57] [cursor=pointer]:
+              - generic [ref=e58]: ARCHIVADOS
+            - button "EMPAQUES" [ref=e59] [cursor=pointer]:
+              - generic [ref=e60]: EMPAQUES
+            - button "IVA" [ref=e61] [cursor=pointer]:
+              - generic [ref=e62]: IVA
+            - button "Exportar" [ref=e63] [cursor=pointer]:
+              - img [ref=e64]
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: Total Costo
+            - strong [ref=e68]: $4.349.992
+          - generic [ref=e69]:
+            - generic [ref=e70]: Total Venta
+            - strong [ref=e71]: $162.767.114
+          - generic [ref=e72]:
+            - generic [ref=e73]: Total Ganancia
+            - strong [ref=e74]: $158.417.122
+        - table [ref=e76]:
+          - rowgroup [ref=e77]:
+            - row "Imagen Nombre ▲ Stock Costo Venta Empaque IVA Ganancia x U Total Costo Total Venta Total Ganancia" [ref=e78]:
+              - columnheader "Imagen" [ref=e79]
+              - columnheader "Nombre ▲" [ref=e80]:
+                - button "Nombre ▲" [ref=e81] [cursor=pointer]
+              - columnheader "Stock" [ref=e82]:
+                - button "Stock" [ref=e83] [cursor=pointer]
+              - columnheader "Costo" [ref=e84]:
+                - button "Costo" [ref=e85] [cursor=pointer]
+              - columnheader "Venta" [ref=e86]:
+                - button "Venta" [ref=e87] [cursor=pointer]
+              - columnheader "Empaque" [ref=e88]:
+                - button "Empaque" [ref=e89] [cursor=pointer]
+              - columnheader "IVA" [ref=e90]
+              - columnheader "Ganancia x U" [ref=e91]:
+                - button "Ganancia x U" [ref=e92] [cursor=pointer]
+              - columnheader "Total Costo" [ref=e93]:
+                - button "Total Costo" [ref=e94] [cursor=pointer]
+              - columnheader "Total Venta" [ref=e95]:
+                - button "Total Venta" [ref=e96] [cursor=pointer]
+              - columnheader "Total Ganancia" [ref=e97]:
+                - button "Total Ganancia" [ref=e98] [cursor=pointer]
+          - rowgroup [ref=e99]:
+            - 'row "Aceite Andes 903g (Test 335459-60) Aceite Andes 903g (Test 335459-60) Código: 779335459000060 10 $269 $328 Caja x 16 Tasa Básica 22.00% $59 $2.690 $3.280 $590" [ref=e100] [cursor=pointer]':
+              - cell "Aceite Andes 903g (Test 335459-60)" [ref=e101]:
+                - img "Aceite Andes 903g (Test 335459-60)" [ref=e102]
+              - 'cell "Aceite Andes 903g (Test 335459-60) Código: 779335459000060" [ref=e103]':
+                - generic [ref=e104]:
+                  - strong [ref=e105]: Aceite Andes 903g (Test 335459-60)
+                  - generic [ref=e106]: "Código: 779335459000060"
+              - cell "10" [ref=e107]
+              - cell "$269" [ref=e108]
+              - cell "$328" [ref=e109]
+              - cell "Caja x 16" [ref=e110]
+              - cell "Tasa Básica 22.00%" [ref=e111]
+              - cell "$59" [ref=e112]
+              - cell "$2.690" [ref=e113]
+              - cell "$3.280" [ref=e114]
+              - cell "$590" [ref=e115]
+            - 'row "Aceite Andes 985g (Test 335459-57) Aceite Andes 985g (Test 335459-57) Código: 779335459000057 175 $251 $422 Caja x 24 Tasa Básica 22.00% $171 $43.925 $73.850 $29.925" [ref=e116] [cursor=pointer]':
+              - cell "Aceite Andes 985g (Test 335459-57)" [ref=e117]:
+                - img "Aceite Andes 985g (Test 335459-57)" [ref=e118]
+              - 'cell "Aceite Andes 985g (Test 335459-57) Código: 779335459000057" [ref=e119]':
+                - generic [ref=e120]:
+                  - strong [ref=e121]: Aceite Andes 985g (Test 335459-57)
+                  - generic [ref=e122]: "Código: 779335459000057"
+              - cell "175" [ref=e123]
+              - cell "$251" [ref=e124]
+              - cell "$422" [ref=e125]
+              - cell "Caja x 24" [ref=e126]
+              - cell "Tasa Básica 22.00%" [ref=e127]
+              - cell "$171" [ref=e128]
+              - cell "$43.925" [ref=e129]
+              - cell "$73.850" [ref=e130]
+              - cell "$29.925" [ref=e131]
+            - 'row "Aceite Campo 589g (Test 335459-53) Aceite Campo 589g (Test 335459-53) Código: 779335459000053 243 $176 $211 Caja x 14 Tasa Básica 22.00% $35 $42.768 $51.273 $8.505" [ref=e132] [cursor=pointer]':
+              - cell "Aceite Campo 589g (Test 335459-53)" [ref=e133]:
+                - img "Aceite Campo 589g (Test 335459-53)" [ref=e134]
+              - 'cell "Aceite Campo 589g (Test 335459-53) Código: 779335459000053" [ref=e135]':
+                - generic [ref=e136]:
+                  - strong [ref=e137]: Aceite Campo 589g (Test 335459-53)
+                  - generic [ref=e138]: "Código: 779335459000053"
+              - cell "243" [ref=e139]
+              - cell "$176" [ref=e140]
+              - cell "$211" [ref=e141]
+              - cell "Caja x 14" [ref=e142]
+              - cell "Tasa Básica 22.00%" [ref=e143]
+              - cell "$35" [ref=e144]
+              - cell "$42.768" [ref=e145]
+              - cell "$51.273" [ref=e146]
+              - cell "$8.505" [ref=e147]
+            - 'row "Aceite Del Sur 1296g (Test 335459-74) Aceite Del Sur 1296g (Test 335459-74) Código: 779335459000074 69 $250 $343 Caja x 21 Tasa Básica 22.00% $93 $17.250 $23.667 $6.417" [ref=e148] [cursor=pointer]':
+              - cell "Aceite Del Sur 1296g (Test 335459-74)" [ref=e149]:
+                - img "Aceite Del Sur 1296g (Test 335459-74)" [ref=e150]
+              - 'cell "Aceite Del Sur 1296g (Test 335459-74) Código: 779335459000074" [ref=e151]':
+                - generic [ref=e152]:
+                  - strong [ref=e153]: Aceite Del Sur 1296g (Test 335459-74)
+                  - generic [ref=e154]: "Código: 779335459000074"
+              - cell "69" [ref=e155]
+              - cell "$250" [ref=e156]
+              - cell "$343" [ref=e157]
+              - cell "Caja x 21" [ref=e158]
+              - cell "Tasa Básica 22.00%" [ref=e159]
+              - cell "$93" [ref=e160]
+              - cell "$17.250" [ref=e161]
+              - cell "$23.667" [ref=e162]
+              - cell "$6.417" [ref=e163]
+            - 'row "Aceite Doña Ana 1498g (Test 335459-50) Aceite Doña Ana 1498g (Test 335459-50) Código: 779335459000050 52 $182 $277 Caja x 10 Tasa Básica 22.00% $95 $9.464 $14.404 $4.940" [ref=e164] [cursor=pointer]':
+              - cell "Aceite Doña Ana 1498g (Test 335459-50)" [ref=e165]:
+                - img "Aceite Doña Ana 1498g (Test 335459-50)" [ref=e166]
+              - 'cell "Aceite Doña Ana 1498g (Test 335459-50) Código: 779335459000050" [ref=e167]':
+                - generic [ref=e168]:
+                  - strong [ref=e169]: Aceite Doña Ana 1498g (Test 335459-50)
+                  - generic [ref=e170]: "Código: 779335459000050"
+              - cell "52" [ref=e171]
+              - cell "$182" [ref=e172]
+              - cell "$277" [ref=e173]
+              - cell "Caja x 10" [ref=e174]
+              - cell "Tasa Básica 22.00%" [ref=e175]
+              - cell "$95" [ref=e176]
+              - cell "$9.464" [ref=e177]
+              - cell "$14.404" [ref=e178]
+              - cell "$4.940" [ref=e179]
+            - 'row "Aceite Doña Ana 463g (Test 335459-25) Aceite Doña Ana 463g (Test 335459-25) Código: 779335459000025 226 $264 $465 Caja x 8 Tasa Básica 22.00% $201 $59.664 $105.090 $45.426" [ref=e180] [cursor=pointer]':
+              - cell "Aceite Doña Ana 463g (Test 335459-25)" [ref=e181]:
+                - img "Aceite Doña Ana 463g (Test 335459-25)" [ref=e182]
+              - 'cell "Aceite Doña Ana 463g (Test 335459-25) Código: 779335459000025" [ref=e183]':
+                - generic [ref=e184]:
+                  - strong [ref=e185]: Aceite Doña Ana 463g (Test 335459-25)
+                  - generic [ref=e186]: "Código: 779335459000025"
+              - cell "226" [ref=e187]
+              - cell "$264" [ref=e188]
+              - cell "$465" [ref=e189]
+              - cell "Caja x 8" [ref=e190]
+              - cell "Tasa Básica 22.00%" [ref=e191]
+              - cell "$201" [ref=e192]
+              - cell "$59.664" [ref=e193]
+              - cell "$105.090" [ref=e194]
+              - cell "$45.426" [ref=e195]
+            - 'row "Aceite Ferco 315g (Test 335459-15) Aceite Ferco 315g (Test 335459-15) Código: 779335459000015 168 $351 $523 Caja x 16 Tasa Básica 22.00% $172 $58.968 $87.864 $28.896" [ref=e196] [cursor=pointer]':
+              - cell "Aceite Ferco 315g (Test 335459-15)" [ref=e197]:
+                - img "Aceite Ferco 315g (Test 335459-15)" [ref=e198]
+              - 'cell "Aceite Ferco 315g (Test 335459-15) Código: 779335459000015" [ref=e199]':
+                - generic [ref=e200]:
+                  - strong [ref=e201]: Aceite Ferco 315g (Test 335459-15)
+                  - generic [ref=e202]: "Código: 779335459000015"
+              - cell "168" [ref=e203]
+              - cell "$351" [ref=e204]
+              - cell "$523" [ref=e205]
+              - cell "Caja x 16" [ref=e206]
+              - cell "Tasa Básica 22.00%" [ref=e207]
+              - cell "$172" [ref=e208]
+              - cell "$58.968" [ref=e209]
+              - cell "$87.864" [ref=e210]
+              - cell "$28.896" [ref=e211]
+            - 'row "Aceite Girasol Aceite Girasol Código: 12324 294 $1 $3.200 Caja x 6 Tasa Básica 22.00% $3.199 $294 $940.800 $940.506" [ref=e212] [cursor=pointer]':
+              - cell "Aceite Girasol" [ref=e213]:
+                - img "Aceite Girasol" [ref=e214]
+              - 'cell "Aceite Girasol Código: 12324" [ref=e215]':
+                - generic [ref=e216]:
+                  - strong [ref=e217]: Aceite Girasol
+                  - generic [ref=e218]: "Código: 12324"
+              - cell "294" [ref=e219]
+              - cell "$1" [ref=e220]
+              - cell "$3.200" [ref=e221]
+              - cell "Caja x 6" [ref=e222]
+              - cell "Tasa Básica 22.00%" [ref=e223]
+              - cell "$3.199" [ref=e224]
+              - cell "$294" [ref=e225]
+              - cell "$940.800" [ref=e226]
+              - cell "$940.506" [ref=e227]
+            - 'row "Aceite Girasol Aceite Girasol Código: 7809 10 $1 $3.200 Caja x 6 Tasa Básica 22.00% $3.199 $10 $32.000 $31.990" [ref=e228] [cursor=pointer]':
+              - cell "Aceite Girasol" [ref=e229]:
+                - img "Aceite Girasol" [ref=e230]
+              - 'cell "Aceite Girasol Código: 7809" [ref=e231]':
+                - generic [ref=e232]:
+                  - strong [ref=e233]: Aceite Girasol
+                  - generic [ref=e234]: "Código: 7809"
+              - cell "10" [ref=e235]
+              - cell "$1" [ref=e236]
+              - cell "$3.200" [ref=e237]
+              - cell "Caja x 6" [ref=e238]
+              - cell "Tasa Básica 22.00%" [ref=e239]
+              - cell "$3.199" [ref=e240]
+              - cell "$10" [ref=e241]
+              - cell "$32.000" [ref=e242]
+              - cell "$31.990" [ref=e243]
+            - 'row "Aceite Girasol Aceite Girasol Código: 4576457 20 $1 $3.200 Caja x 6 Tasa Básica 22.00% $3.199 $20 $64.000 $63.980" [ref=e244] [cursor=pointer]':
+              - cell "Aceite Girasol" [ref=e245]:
+                - img "Aceite Girasol" [ref=e246]
+              - 'cell "Aceite Girasol Código: 4576457" [ref=e247]':
+                - generic [ref=e248]:
+                  - strong [ref=e249]: Aceite Girasol
+                  - generic [ref=e250]: "Código: 4576457"
+              - cell "20" [ref=e251]
+              - cell "$1" [ref=e252]
+              - cell "$3.200" [ref=e253]
+              - cell "Caja x 6" [ref=e254]
+              - cell "Tasa Básica 22.00%" [ref=e255]
+              - cell "$3.199" [ref=e256]
+              - cell "$20" [ref=e257]
+              - cell "$64.000" [ref=e258]
+              - cell "$63.980" [ref=e259]
+            - 'row "Aceite Nativa 447g (Test 335459-6) Aceite Nativa 447g (Test 335459-6) Código: 779335459000006 205 $252 $320 Caja x 18 Tasa Básica 22.00% $68 $51.660 $65.600 $13.940" [ref=e260] [cursor=pointer]':
+              - cell "Aceite Nativa 447g (Test 335459-6)" [ref=e261]:
+                - img "Aceite Nativa 447g (Test 335459-6)" [ref=e262]
+              - 'cell "Aceite Nativa 447g (Test 335459-6) Código: 779335459000006" [ref=e263]':
+                - generic [ref=e264]:
+                  - strong [ref=e265]: Aceite Nativa 447g (Test 335459-6)
+                  - generic [ref=e266]: "Código: 779335459000006"
+              - cell "205" [ref=e267]
+              - cell "$252" [ref=e268]
+              - cell "$320" [ref=e269]
+              - cell "Caja x 18" [ref=e270]
+              - cell "Tasa Básica 22.00%" [ref=e271]
+              - cell "$68" [ref=e272]
+              - cell "$51.660" [ref=e273]
+              - cell "$65.600" [ref=e274]
+              - cell "$13.940" [ref=e275]
+            - 'row "Aceite Nativa 632g (Test 599272-44) Aceite Nativa 632g (Test 599272-44) Código: 779599272000044 69 $39 $59 bandeja x 14 - $20 $2.691 $4.071 $1.380" [ref=e276] [cursor=pointer]':
+              - cell "Aceite Nativa 632g (Test 599272-44)" [ref=e277]:
+                - img "Aceite Nativa 632g (Test 599272-44)" [ref=e278]
+              - 'cell "Aceite Nativa 632g (Test 599272-44) Código: 779599272000044" [ref=e279]':
+                - generic [ref=e280]:
+                  - strong [ref=e281]: Aceite Nativa 632g (Test 599272-44)
+                  - generic [ref=e282]: "Código: 779599272000044"
+              - cell "69" [ref=e283]
+              - cell "$39" [ref=e284]
+              - cell "$59" [ref=e285]
+              - cell "bandeja x 14" [ref=e286]
+              - cell "-" [ref=e287]
+              - cell "$20" [ref=e288]
+              - cell "$2.691" [ref=e289]
+              - cell "$4.071" [ref=e290]
+              - cell "$1.380" [ref=e291]
+            - 'row "Aceite Premium 252g (Test 335459-73) Aceite Premium 252g (Test 335459-73) Código: 779335459000073 122 $33 $51 Caja x 5 Tasa Básica 22.00% $18 $4.026 $6.222 $2.196" [ref=e292] [cursor=pointer]':
+              - cell "Aceite Premium 252g (Test 335459-73)" [ref=e293]:
+                - img "Aceite Premium 252g (Test 335459-73)" [ref=e294]
+              - 'cell "Aceite Premium 252g (Test 335459-73) Código: 779335459000073" [ref=e295]':
+                - generic [ref=e296]:
+                  - strong [ref=e297]: Aceite Premium 252g (Test 335459-73)
+                  - generic [ref=e298]: "Código: 779335459000073"
+              - cell "122" [ref=e299]
+              - cell "$33" [ref=e300]
+              - cell "$51" [ref=e301]
+              - cell "Caja x 5" [ref=e302]
+              - cell "Tasa Básica 22.00%" [ref=e303]
+              - cell "$18" [ref=e304]
+              - cell "$4.026" [ref=e305]
+              - cell "$6.222" [ref=e306]
+              - cell "$2.196" [ref=e307]
+            - 'row "Aceite Premium 804g (Test 599272-31) Aceite Premium 804g (Test 599272-31) Código: 779599272000031 240 $269 $482 pack x 15 - $213 $64.560 $115.680 $51.120" [ref=e308] [cursor=pointer]':
+              - cell "Aceite Premium 804g (Test 599272-31)" [ref=e309]:
+                - img "Aceite Premium 804g (Test 599272-31)" [ref=e310]
+              - 'cell "Aceite Premium 804g (Test 599272-31) Código: 779599272000031" [ref=e311]':
+                - generic [ref=e312]:
+                  - strong [ref=e313]: Aceite Premium 804g (Test 599272-31)
+                  - generic [ref=e314]: "Código: 779599272000031"
+              - cell "240" [ref=e315]
+              - cell "$269" [ref=e316]
+              - cell "$482" [ref=e317]
+              - cell "pack x 15" [ref=e318]
+              - cell "-" [ref=e319]
+              - cell "$213" [ref=e320]
+              - cell "$64.560" [ref=e321]
+              - cell "$115.680" [ref=e322]
+              - cell "$51.120" [ref=e323]
+            - 'row "Aceite Río 1342g (Test 335459-48) Aceite Río 1342g (Test 335459-48) Código: 779335459000048 126 $251 $382 Caja x 13 Tasa Básica 22.00% $131 $31.626 $48.132 $16.506" [ref=e324] [cursor=pointer]':
+              - cell "Aceite Río 1342g (Test 335459-48)" [ref=e325]:
+                - img "Aceite Río 1342g (Test 335459-48)" [ref=e326]
+              - 'cell "Aceite Río 1342g (Test 335459-48) Código: 779335459000048" [ref=e327]':
+                - generic [ref=e328]:
+                  - strong [ref=e329]: Aceite Río 1342g (Test 335459-48)
+                  - generic [ref=e330]: "Código: 779335459000048"
+              - cell "126" [ref=e331]
+              - cell "$251" [ref=e332]
+              - cell "$382" [ref=e333]
+              - cell "Caja x 13" [ref=e334]
+              - cell "Tasa Básica 22.00%" [ref=e335]
+              - cell "$131" [ref=e336]
+              - cell "$31.626" [ref=e337]
+              - cell "$48.132" [ref=e338]
+              - cell "$16.506" [ref=e339]
+            - 'row "Aceite Río 537g (Test 599272-41) Aceite Río 537g (Test 599272-41) Código: 779599272000041 140 $342 $434 pack x 24 - $92 $47.880 $60.760 $12.880" [ref=e340] [cursor=pointer]':
+              - cell "Aceite Río 537g (Test 599272-41)" [ref=e341]:
+                - img "Aceite Río 537g (Test 599272-41)" [ref=e342]
+              - 'cell "Aceite Río 537g (Test 599272-41) Código: 779599272000041" [ref=e343]':
+                - generic [ref=e344]:
+                  - strong [ref=e345]: Aceite Río 537g (Test 599272-41)
+                  - generic [ref=e346]: "Código: 779599272000041"
+              - cell "140" [ref=e347]
+              - cell "$342" [ref=e348]
+              - cell "$434" [ref=e349]
+              - cell "pack x 24" [ref=e350]
+              - cell "-" [ref=e351]
+              - cell "$92" [ref=e352]
+              - cell "$47.880" [ref=e353]
+              - cell "$60.760" [ref=e354]
+              - cell "$12.880" [ref=e355]
+            - 'row "Aceite Sol 357g (Test 599272-11) Aceite Sol 357g (Test 599272-11) Código: 779599272000011 146 $276 $453 bolsa x 17 - $177 $40.296 $66.138 $25.842" [ref=e356] [cursor=pointer]':
+              - cell "Aceite Sol 357g (Test 599272-11)" [ref=e357]:
+                - img "Aceite Sol 357g (Test 599272-11)" [ref=e358]
+              - 'cell "Aceite Sol 357g (Test 599272-11) Código: 779599272000011" [ref=e359]':
+                - generic [ref=e360]:
+                  - strong [ref=e361]: Aceite Sol 357g (Test 599272-11)
+                  - generic [ref=e362]: "Código: 779599272000011"
+              - cell "146" [ref=e363]
+              - cell "$276" [ref=e364]
+              - cell "$453" [ref=e365]
+              - cell "bolsa x 17" [ref=e366]
+              - cell "-" [ref=e367]
+              - cell "$177" [ref=e368]
+              - cell "$40.296" [ref=e369]
+              - cell "$66.138" [ref=e370]
+              - cell "$25.842" [ref=e371]
+            - 'row "Arroz Andes 465g (Test 599272-23) Arroz Andes 465g (Test 599272-23) Código: 779599272000023 214 $249 $393 bolsa x 9 - $144 $53.286 $84.102 $30.816" [ref=e372] [cursor=pointer]':
+              - cell "Arroz Andes 465g (Test 599272-23)" [ref=e373]:
+                - img "Arroz Andes 465g (Test 599272-23)" [ref=e374]
+              - 'cell "Arroz Andes 465g (Test 599272-23) Código: 779599272000023" [ref=e375]':
+                - generic [ref=e376]:
+                  - strong [ref=e377]: Arroz Andes 465g (Test 599272-23)
+                  - generic [ref=e378]: "Código: 779599272000023"
+              - cell "214" [ref=e379]
+              - cell "$249" [ref=e380]
+              - cell "$393" [ref=e381]
+              - cell "bolsa x 9" [ref=e382]
+              - cell "-" [ref=e383]
+              - cell "$144" [ref=e384]
+              - cell "$53.286" [ref=e385]
+              - cell "$84.102" [ref=e386]
+              - cell "$30.816" [ref=e387]
+            - 'row "Arroz Campo 475g (Test 335459-10) Arroz Campo 475g (Test 335459-10) Código: 779335459000010 233 $28 $47 Caja x 22 Tasa Básica 22.00% $19 $6.524 $10.951 $4.427" [ref=e388] [cursor=pointer]':
+              - cell "Arroz Campo 475g (Test 335459-10)" [ref=e389]:
+                - img "Arroz Campo 475g (Test 335459-10)" [ref=e390]
+              - 'cell "Arroz Campo 475g (Test 335459-10) Código: 779335459000010" [ref=e391]':
+                - generic [ref=e392]:
+                  - strong [ref=e393]: Arroz Campo 475g (Test 335459-10)
+                  - generic [ref=e394]: "Código: 779335459000010"
+              - cell "233" [ref=e395]
+              - cell "$28" [ref=e396]
+              - cell "$47" [ref=e397]
+              - cell "Caja x 22" [ref=e398]
+              - cell "Tasa Básica 22.00%" [ref=e399]
+              - cell "$19" [ref=e400]
+              - cell "$6.524" [ref=e401]
+              - cell "$10.951" [ref=e402]
+              - cell "$4.427" [ref=e403]
+            - 'row "Arroz Doña Ana 1252g (Test 335459-16) Arroz Doña Ana 1252g (Test 335459-16) Código: 779335459000016 120 $231 $333 Caja x 6 Tasa Básica 22.00% $102 $27.720 $39.960 $12.240" [ref=e404] [cursor=pointer]':
+              - cell "Arroz Doña Ana 1252g (Test 335459-16)" [ref=e405]:
+                - img "Arroz Doña Ana 1252g (Test 335459-16)" [ref=e406]
+              - 'cell "Arroz Doña Ana 1252g (Test 335459-16) Código: 779335459000016" [ref=e407]':
+                - generic [ref=e408]:
+                  - strong [ref=e409]: Arroz Doña Ana 1252g (Test 335459-16)
+                  - generic [ref=e410]: "Código: 779335459000016"
+              - cell "120" [ref=e411]
+              - cell "$231" [ref=e412]
+              - cell "$333" [ref=e413]
+              - cell "Caja x 6" [ref=e414]
+              - cell "Tasa Básica 22.00%" [ref=e415]
+              - cell "$102" [ref=e416]
+              - cell "$27.720" [ref=e417]
+              - cell "$39.960" [ref=e418]
+              - cell "$12.240" [ref=e419]
+            - 'row "Arroz Doña Ana 504g (Test 335459-64) Arroz Doña Ana 504g (Test 335459-64) Código: 779335459000064 227 $114 $146 Caja x 4 Tasa Básica 22.00% $32 $25.878 $33.142 $7.264" [ref=e420] [cursor=pointer]':
+              - cell "Arroz Doña Ana 504g (Test 335459-64)" [ref=e421]:
+                - img "Arroz Doña Ana 504g (Test 335459-64)" [ref=e422]
+              - 'cell "Arroz Doña Ana 504g (Test 335459-64) Código: 779335459000064" [ref=e423]':
+                - generic [ref=e424]:
+                  - strong [ref=e425]: Arroz Doña Ana 504g (Test 335459-64)
+                  - generic [ref=e426]: "Código: 779335459000064"
+              - cell "227" [ref=e427]
+              - cell "$114" [ref=e428]
+              - cell "$146" [ref=e429]
+              - cell "Caja x 4" [ref=e430]
+              - cell "Tasa Básica 22.00%" [ref=e431]
+              - cell "$32" [ref=e432]
+              - cell "$25.878" [ref=e433]
+              - cell "$33.142" [ref=e434]
+              - cell "$7.264" [ref=e435]
+            - 'row "Arroz Ferco 511g (Test 335459-20) Arroz Ferco 511g (Test 335459-20) Código: 779335459000020 219 $208 $333 Caja x 8 Tasa Básica 22.00% $125 $45.552 $72.927 $27.375" [ref=e436] [cursor=pointer]':
+              - cell "Arroz Ferco 511g (Test 335459-20)" [ref=e437]:
+                - img "Arroz Ferco 511g (Test 335459-20)" [ref=e438]
+              - 'cell "Arroz Ferco 511g (Test 335459-20) Código: 779335459000020" [ref=e439]':
+                - generic [ref=e440]:
+                  - strong [ref=e441]: Arroz Ferco 511g (Test 335459-20)
+                  - generic [ref=e442]: "Código: 779335459000020"
+              - cell "219" [ref=e443]
+              - cell "$208" [ref=e444]
+              - cell "$333" [ref=e445]
+              - cell "Caja x 8" [ref=e446]
+              - cell "Tasa Básica 22.00%" [ref=e447]
+              - cell "$125" [ref=e448]
+              - cell "$45.552" [ref=e449]
+              - cell "$72.927" [ref=e450]
+              - cell "$27.375" [ref=e451]
+            - 'row "Arroz Ferco 531g (Test 335459-37) Arroz Ferco 531g (Test 335459-37) Código: 779335459000037 232 $133 $235 Caja x 13 Tasa Básica 22.00% $102 $30.856 $54.520 $23.664" [ref=e452] [cursor=pointer]':
+              - cell "Arroz Ferco 531g (Test 335459-37)" [ref=e453]:
+                - img "Arroz Ferco 531g (Test 335459-37)" [ref=e454]
+              - 'cell "Arroz Ferco 531g (Test 335459-37) Código: 779335459000037" [ref=e455]':
+                - generic [ref=e456]:
+                  - strong [ref=e457]: Arroz Ferco 531g (Test 335459-37)
+                  - generic [ref=e458]: "Código: 779335459000037"
+              - cell "232" [ref=e459]
+              - cell "$133" [ref=e460]
+              - cell "$235" [ref=e461]
+              - cell "Caja x 13" [ref=e462]
+              - cell "Tasa Básica 22.00%" [ref=e463]
+              - cell "$102" [ref=e464]
+              - cell "$30.856" [ref=e465]
+              - cell "$54.520" [ref=e466]
+              - cell "$23.664" [ref=e467]
+            - 'row "Arroz Ferco 728g (Test 335459-31) Arroz Ferco 728g (Test 335459-31) Código: 779335459000031 61 $260 $374 Caja x 6 Tasa Básica 22.00% $114 $15.860 $22.814 $6.954" [ref=e468] [cursor=pointer]':
+              - cell "Arroz Ferco 728g (Test 335459-31)" [ref=e469]:
+                - img "Arroz Ferco 728g (Test 335459-31)" [ref=e470]
+              - 'cell "Arroz Ferco 728g (Test 335459-31) Código: 779335459000031" [ref=e471]':
+                - generic [ref=e472]:
+                  - strong [ref=e473]: Arroz Ferco 728g (Test 335459-31)
+                  - generic [ref=e474]: "Código: 779335459000031"
+              - cell "61" [ref=e475]
+              - cell "$260" [ref=e476]
+              - cell "$374" [ref=e477]
+              - cell "Caja x 6" [ref=e478]
+              - cell "Tasa Básica 22.00%" [ref=e479]
+              - cell "$114" [ref=e480]
+              - cell "$15.860" [ref=e481]
+              - cell "$22.814" [ref=e482]
+              - cell "$6.954" [ref=e483]
+            - 'row "Arroz Ferco 839g (Test 335459-58) Arroz Ferco 839g (Test 335459-58) Código: 779335459000058 202 $166 $219 Caja x 10 Tasa Básica 22.00% $53 $33.532 $44.238 $10.706" [ref=e484] [cursor=pointer]':
+              - cell "Arroz Ferco 839g (Test 335459-58)" [ref=e485]:
+                - img "Arroz Ferco 839g (Test 335459-58)" [ref=e486]
+              - 'cell "Arroz Ferco 839g (Test 335459-58) Código: 779335459000058" [ref=e487]':
+                - generic [ref=e488]:
+                  - strong [ref=e489]: Arroz Ferco 839g (Test 335459-58)
+                  - generic [ref=e490]: "Código: 779335459000058"
+              - cell "202" [ref=e491]
+              - cell "$166" [ref=e492]
+              - cell "$219" [ref=e493]
+              - cell "Caja x 10" [ref=e494]
+              - cell "Tasa Básica 22.00%" [ref=e495]
+              - cell "$53" [ref=e496]
+              - cell "$33.532" [ref=e497]
+              - cell "$44.238" [ref=e498]
+              - cell "$10.706" [ref=e499]
+            - 'row "Arroz Monte 1464g (Test 599272-36) Arroz Monte 1464g (Test 599272-36) Código: 779599272000036 191 $70 $113 pack x 4 - $43 $13.370 $21.583 $8.213" [ref=e500] [cursor=pointer]':
+              - cell "Arroz Monte 1464g (Test 599272-36)" [ref=e501]:
+                - img "Arroz Monte 1464g (Test 599272-36)" [ref=e502]
+              - 'cell "Arroz Monte 1464g (Test 599272-36) Código: 779599272000036" [ref=e503]':
+                - generic [ref=e504]:
+                  - strong [ref=e505]: Arroz Monte 1464g (Test 599272-36)
+                  - generic [ref=e506]: "Código: 779599272000036"
+              - cell "191" [ref=e507]
+              - cell "$70" [ref=e508]
+              - cell "$113" [ref=e509]
+              - cell "pack x 4" [ref=e510]
+              - cell "-" [ref=e511]
+              - cell "$43" [ref=e512]
+              - cell "$13.370" [ref=e513]
+              - cell "$21.583" [ref=e514]
+              - cell "$8.213" [ref=e515]
+            - 'row "Arroz Monte 442g (Test 599272-28) Arroz Monte 442g (Test 599272-28) Código: 779599272000028 232 $296 $397 x 23 - $101 $68.672 $92.104 $23.432" [ref=e516] [cursor=pointer]':
+              - cell "Arroz Monte 442g (Test 599272-28)" [ref=e517]:
+                - img "Arroz Monte 442g (Test 599272-28)" [ref=e518]
+              - 'cell "Arroz Monte 442g (Test 599272-28) Código: 779599272000028" [ref=e519]':
+                - generic [ref=e520]:
+                  - strong [ref=e521]: Arroz Monte 442g (Test 599272-28)
+                  - generic [ref=e522]: "Código: 779599272000028"
+              - cell "232" [ref=e523]
+              - cell "$296" [ref=e524]
+              - cell "$397" [ref=e525]
+              - cell "x 23" [ref=e526]
+              - cell "-" [ref=e527]
+              - cell "$101" [ref=e528]
+              - cell "$68.672" [ref=e529]
+              - cell "$92.104" [ref=e530]
+              - cell "$23.432" [ref=e531]
+            - 'row "Arroz Nativa 1303g (Test 599272-6) Arroz Nativa 1303g (Test 599272-6) Código: 779599272000006 234 $116 $183 x 21 - $67 $27.144 $42.822 $15.678" [ref=e532] [cursor=pointer]':
+              - cell "Arroz Nativa 1303g (Test 599272-6)" [ref=e533]:
+                - img "Arroz Nativa 1303g (Test 599272-6)" [ref=e534]
+              - 'cell "Arroz Nativa 1303g (Test 599272-6) Código: 779599272000006" [ref=e535]':
+                - generic [ref=e536]:
+                  - strong [ref=e537]: Arroz Nativa 1303g (Test 599272-6)
+                  - generic [ref=e538]: "Código: 779599272000006"
+              - cell "234" [ref=e539]
+              - cell "$116" [ref=e540]
+              - cell "$183" [ref=e541]
+              - cell "x 21" [ref=e542]
+              - cell "-" [ref=e543]
+              - cell "$67" [ref=e544]
+              - cell "$27.144" [ref=e545]
+              - cell "$42.822" [ref=e546]
+              - cell "$15.678" [ref=e547]
+            - 'row "Arroz Nativa 591g (Test 599272-35) Arroz Nativa 591g (Test 599272-35) Código: 779599272000035 217 $313 $485 bolsa x 22 - $172 $67.921 $105.245 $37.324" [ref=e548] [cursor=pointer]':
+              - cell "Arroz Nativa 591g (Test 599272-35)" [ref=e549]:
+                - img "Arroz Nativa 591g (Test 599272-35)" [ref=e550]
+              - 'cell "Arroz Nativa 591g (Test 599272-35) Código: 779599272000035" [ref=e551]':
+                - generic [ref=e552]:
+                  - strong [ref=e553]: Arroz Nativa 591g (Test 599272-35)
+                  - generic [ref=e554]: "Código: 779599272000035"
+              - cell "217" [ref=e555]
+              - cell "$313" [ref=e556]
+              - cell "$485" [ref=e557]
+              - cell "bolsa x 22" [ref=e558]
+              - cell "-" [ref=e559]
+              - cell "$172" [ref=e560]
+              - cell "$67.921" [ref=e561]
+              - cell "$105.245" [ref=e562]
+              - cell "$37.324" [ref=e563]
+            - 'row "Arroz Nativa 593g (Test 335459-49) Arroz Nativa 593g (Test 335459-49) Código: 779335459000049 113 $228 $399 Caja x 4 Tasa Básica 22.00% $171 $25.764 $45.087 $19.323" [ref=e564] [cursor=pointer]':
+              - cell "Arroz Nativa 593g (Test 335459-49)" [ref=e565]:
+                - img "Arroz Nativa 593g (Test 335459-49)" [ref=e566]
+              - 'cell "Arroz Nativa 593g (Test 335459-49) Código: 779335459000049" [ref=e567]':
+                - generic [ref=e568]:
+                  - strong [ref=e569]: Arroz Nativa 593g (Test 335459-49)
+                  - generic [ref=e570]: "Código: 779335459000049"
+              - cell "113" [ref=e571]
+              - cell "$228" [ref=e572]
+              - cell "$399" [ref=e573]
+              - cell "Caja x 4" [ref=e574]
+              - cell "Tasa Básica 22.00%" [ref=e575]
+              - cell "$171" [ref=e576]
+              - cell "$25.764" [ref=e577]
+              - cell "$45.087" [ref=e578]
+              - cell "$19.323" [ref=e579]
+            - 'row "Arroz Nativa 622g (Test 335459-21) Arroz Nativa 622g (Test 335459-21) Código: 779335459000021 188 $240 $370 Caja x 20 Tasa Básica 22.00% $130 $45.120 $69.560 $24.440" [ref=e580] [cursor=pointer]':
+              - cell "Arroz Nativa 622g (Test 335459-21)" [ref=e581]:
+                - img "Arroz Nativa 622g (Test 335459-21)" [ref=e582]
+              - 'cell "Arroz Nativa 622g (Test 335459-21) Código: 779335459000021" [ref=e583]':
+                - generic [ref=e584]:
+                  - strong [ref=e585]: Arroz Nativa 622g (Test 335459-21)
+                  - generic [ref=e586]: "Código: 779335459000021"
+              - cell "188" [ref=e587]
+              - cell "$240" [ref=e588]
+              - cell "$370" [ref=e589]
+              - cell "Caja x 20" [ref=e590]
+              - cell "Tasa Básica 22.00%" [ref=e591]
+              - cell "$130" [ref=e592]
+              - cell "$45.120" [ref=e593]
+              - cell "$69.560" [ref=e594]
+              - cell "$24.440" [ref=e595]
+            - 'row "Arroz Premium 1072g (Test 335459-71) Arroz Premium 1072g (Test 335459-71) Código: 779335459000071 240 $271 $488 Caja x 9 Tasa Básica 22.00% $217 $65.040 $117.120 $52.080" [ref=e596] [cursor=pointer]':
+              - cell "Arroz Premium 1072g (Test 335459-71)" [ref=e597]:
+                - img "Arroz Premium 1072g (Test 335459-71)" [ref=e598]
+              - 'cell "Arroz Premium 1072g (Test 335459-71) Código: 779335459000071" [ref=e599]':
+                - generic [ref=e600]:
+                  - strong [ref=e601]: Arroz Premium 1072g (Test 335459-71)
+                  - generic [ref=e602]: "Código: 779335459000071"
+              - cell "240" [ref=e603]
+              - cell "$271" [ref=e604]
+              - cell "$488" [ref=e605]
+              - cell "Caja x 9" [ref=e606]
+              - cell "Tasa Básica 22.00%" [ref=e607]
+              - cell "$217" [ref=e608]
+              - cell "$65.040" [ref=e609]
+              - cell "$117.120" [ref=e610]
+              - cell "$52.080" [ref=e611]
+            - 'row "Arroz Premium 780g (Test 599272-43) Arroz Premium 780g (Test 599272-43) Código: 779599272000043 179 $118 $166 bandeja x 21 - $48 $21.122 $29.714 $8.592" [ref=e612] [cursor=pointer]':
+              - cell "Arroz Premium 780g (Test 599272-43)" [ref=e613]:
+                - img "Arroz Premium 780g (Test 599272-43)" [ref=e614]
+              - 'cell "Arroz Premium 780g (Test 599272-43) Código: 779599272000043" [ref=e615]':
+                - generic [ref=e616]:
+                  - strong [ref=e617]: Arroz Premium 780g (Test 599272-43)
+                  - generic [ref=e618]: "Código: 779599272000043"
+              - cell "179" [ref=e619]
+              - cell "$118" [ref=e620]
+              - cell "$166" [ref=e621]
+              - cell "bandeja x 21" [ref=e622]
+              - cell "-" [ref=e623]
+              - cell "$48" [ref=e624]
+              - cell "$21.122" [ref=e625]
+              - cell "$29.714" [ref=e626]
+              - cell "$8.592" [ref=e627]
+            - 'row "Arroz Río 1275g (Test 335459-19) Arroz Río 1275g (Test 335459-19) Código: 779335459000019 169 $314 $518 Caja x 7 Tasa Básica 22.00% $204 $53.066 $87.542 $34.476" [ref=e628] [cursor=pointer]':
+              - cell "Arroz Río 1275g (Test 335459-19)" [ref=e629]:
+                - img "Arroz Río 1275g (Test 335459-19)" [ref=e630]
+              - 'cell "Arroz Río 1275g (Test 335459-19) Código: 779335459000019" [ref=e631]':
+                - generic [ref=e632]:
+                  - strong [ref=e633]: Arroz Río 1275g (Test 335459-19)
+                  - generic [ref=e634]: "Código: 779335459000019"
+              - cell "169" [ref=e635]
+              - cell "$314" [ref=e636]
+              - cell "$518" [ref=e637]
+              - cell "Caja x 7" [ref=e638]
+              - cell "Tasa Básica 22.00%" [ref=e639]
+              - cell "$204" [ref=e640]
+              - cell "$53.066" [ref=e641]
+              - cell "$87.542" [ref=e642]
+              - cell "$34.476" [ref=e643]
+            - 'row "Arroz Río 1314g (Test 599272-7) Arroz Río 1314g (Test 599272-7) Código: 779599272000007 185 $209 $314 bandeja x 6 - $105 $38.665 $58.090 $19.425" [ref=e644] [cursor=pointer]':
+              - cell "Arroz Río 1314g (Test 599272-7)" [ref=e645]:
+                - img "Arroz Río 1314g (Test 599272-7)" [ref=e646]
+              - 'cell "Arroz Río 1314g (Test 599272-7) Código: 779599272000007" [ref=e647]':
+                - generic [ref=e648]:
+                  - strong [ref=e649]: Arroz Río 1314g (Test 599272-7)
+                  - generic [ref=e650]: "Código: 779599272000007"
+              - cell "185" [ref=e651]
+              - cell "$209" [ref=e652]
+              - cell "$314" [ref=e653]
+              - cell "bandeja x 6" [ref=e654]
+              - cell "-" [ref=e655]
+              - cell "$105" [ref=e656]
+              - cell "$38.665" [ref=e657]
+              - cell "$58.090" [ref=e658]
+              - cell "$19.425" [ref=e659]
+            - 'row "Sin imagen asdfasdqwerf Código: 12341234123 -5 $1 $12 Funda x 1 Tasa Básica 22.00% $11 $-5 $-60 $-55" [ref=e660] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e661]
+              - 'cell "asdfasdqwerf Código: 12341234123" [ref=e662]':
+                - generic [ref=e663]:
+                  - strong [ref=e664]: asdfasdqwerf
+                  - generic [ref=e665]: "Código: 12341234123"
+              - cell "-5" [ref=e666]
+              - cell "$1" [ref=e667]
+              - cell "$12" [ref=e668]
+              - cell "Funda x 1" [ref=e669]
+              - cell "Tasa Básica 22.00%" [ref=e670]
+              - cell "$11" [ref=e671]
+              - cell "$-5" [ref=e672]
+              - cell "$-60" [ref=e673]
+              - cell "$-55" [ref=e674]
+            - 'row "Atún Andes 1029g (Test 335459-62) Atún Andes 1029g (Test 335459-62) Código: 779335459000062 211 $118 $182 Caja x 21 Tasa Básica 22.00% $64 $24.898 $38.402 $13.504" [ref=e675] [cursor=pointer]':
+              - cell "Atún Andes 1029g (Test 335459-62)" [ref=e676]:
+                - img "Atún Andes 1029g (Test 335459-62)" [ref=e677]
+              - 'cell "Atún Andes 1029g (Test 335459-62) Código: 779335459000062" [ref=e678]':
+                - generic [ref=e679]:
+                  - strong [ref=e680]: Atún Andes 1029g (Test 335459-62)
+                  - generic [ref=e681]: "Código: 779335459000062"
+              - cell "211" [ref=e682]
+              - cell "$118" [ref=e683]
+              - cell "$182" [ref=e684]
+              - cell "Caja x 21" [ref=e685]
+              - cell "Tasa Básica 22.00%" [ref=e686]
+              - cell "$64" [ref=e687]
+              - cell "$24.898" [ref=e688]
+              - cell "$38.402" [ref=e689]
+              - cell "$13.504" [ref=e690]
+            - 'row "Atún Andes 1352g (Test 335459-54) Atún Andes 1352g (Test 335459-54) Código: 779335459000054 117 $159 $211 Caja x 5 Tasa Básica 22.00% $52 $18.603 $24.687 $6.084" [ref=e691] [cursor=pointer]':
+              - cell "Atún Andes 1352g (Test 335459-54)" [ref=e692]:
+                - img "Atún Andes 1352g (Test 335459-54)" [ref=e693]
+              - 'cell "Atún Andes 1352g (Test 335459-54) Código: 779335459000054" [ref=e694]':
+                - generic [ref=e695]:
+                  - strong [ref=e696]: Atún Andes 1352g (Test 335459-54)
+                  - generic [ref=e697]: "Código: 779335459000054"
+              - cell "117" [ref=e698]
+              - cell "$159" [ref=e699]
+              - cell "$211" [ref=e700]
+              - cell "Caja x 5" [ref=e701]
+              - cell "Tasa Básica 22.00%" [ref=e702]
+              - cell "$52" [ref=e703]
+              - cell "$18.603" [ref=e704]
+              - cell "$24.687" [ref=e705]
+              - cell "$6.084" [ref=e706]
+            - 'row "Atún Andes 1419g (Test 599272-13) Atún Andes 1419g (Test 599272-13) Código: 779599272000013 104 $86 $108 x 12 - $22 $8.944 $11.232 $2.288" [ref=e707] [cursor=pointer]':
+              - cell "Atún Andes 1419g (Test 599272-13)" [ref=e708]:
+                - img "Atún Andes 1419g (Test 599272-13)" [ref=e709]
+              - 'cell "Atún Andes 1419g (Test 599272-13) Código: 779599272000013" [ref=e710]':
+                - generic [ref=e711]:
+                  - strong [ref=e712]: Atún Andes 1419g (Test 599272-13)
+                  - generic [ref=e713]: "Código: 779599272000013"
+              - cell "104" [ref=e714]
+              - cell "$86" [ref=e715]
+              - cell "$108" [ref=e716]
+              - cell "x 12" [ref=e717]
+              - cell "-" [ref=e718]
+              - cell "$22" [ref=e719]
+              - cell "$8.944" [ref=e720]
+              - cell "$11.232" [ref=e721]
+              - cell "$2.288" [ref=e722]
+            - 'row "Atún Andes 296g (Test 335459-65) Atún Andes 296g (Test 335459-65) Código: 779335459000065 240 $234 $342 Caja x 5 Tasa Básica 22.00% $108 $56.160 $82.080 $25.920" [ref=e723] [cursor=pointer]':
+              - cell "Atún Andes 296g (Test 335459-65)" [ref=e724]:
+                - img "Atún Andes 296g (Test 335459-65)" [ref=e725]
+              - 'cell "Atún Andes 296g (Test 335459-65) Código: 779335459000065" [ref=e726]':
+                - generic [ref=e727]:
+                  - strong [ref=e728]: Atún Andes 296g (Test 335459-65)
+                  - generic [ref=e729]: "Código: 779335459000065"
+              - cell "240" [ref=e730]
+              - cell "$234" [ref=e731]
+              - cell "$342" [ref=e732]
+              - cell "Caja x 5" [ref=e733]
+              - cell "Tasa Básica 22.00%" [ref=e734]
+              - cell "$108" [ref=e735]
+              - cell "$56.160" [ref=e736]
+              - cell "$82.080" [ref=e737]
+              - cell "$25.920" [ref=e738]
+            - 'row "Atún Campo 1151g (Test 335459-7) Atún Campo 1151g (Test 335459-7) Código: 779335459000007 54 $191 $283 Caja x 12 Tasa Básica 22.00% $92 $10.314 $15.282 $4.968" [ref=e739] [cursor=pointer]':
+              - cell "Atún Campo 1151g (Test 335459-7)" [ref=e740]:
+                - img "Atún Campo 1151g (Test 335459-7)" [ref=e741]
+              - 'cell "Atún Campo 1151g (Test 335459-7) Código: 779335459000007" [ref=e742]':
+                - generic [ref=e743]:
+                  - strong [ref=e744]: Atún Campo 1151g (Test 335459-7)
+                  - generic [ref=e745]: "Código: 779335459000007"
+              - cell "54" [ref=e746]
+              - cell "$191" [ref=e747]
+              - cell "$283" [ref=e748]
+              - cell "Caja x 12" [ref=e749]
+              - cell "Tasa Básica 22.00%" [ref=e750]
+              - cell "$92" [ref=e751]
+              - cell "$10.314" [ref=e752]
+              - cell "$15.282" [ref=e753]
+              - cell "$4.968" [ref=e754]
+            - 'row "Atún Del Sur 1458g (Test 599272-16) Atún Del Sur 1458g (Test 599272-16) Código: 779599272000016 117 $46 $56 caja x 17 - $10 $5.382 $6.552 $1.170" [ref=e755] [cursor=pointer]':
+              - cell "Atún Del Sur 1458g (Test 599272-16)" [ref=e756]:
+                - img "Atún Del Sur 1458g (Test 599272-16)" [ref=e757]
+              - 'cell "Atún Del Sur 1458g (Test 599272-16) Código: 779599272000016" [ref=e758]':
+                - generic [ref=e759]:
+                  - strong [ref=e760]: Atún Del Sur 1458g (Test 599272-16)
+                  - generic [ref=e761]: "Código: 779599272000016"
+              - cell "117" [ref=e762]
+              - cell "$46" [ref=e763]
+              - cell "$56" [ref=e764]
+              - cell "caja x 17" [ref=e765]
+              - cell "-" [ref=e766]
+              - cell "$10" [ref=e767]
+              - cell "$5.382" [ref=e768]
+              - cell "$6.552" [ref=e769]
+              - cell "$1.170" [ref=e770]
+            - 'row "Atún Doña Ana 281g (Test 335459-42) Atún Doña Ana 281g (Test 335459-42) Código: 779335459000042 45 $378 $662 Caja x 5 Tasa Básica 22.00% $284 $17.010 $29.790 $12.780" [ref=e771] [cursor=pointer]':
+              - cell "Atún Doña Ana 281g (Test 335459-42)" [ref=e772]:
+                - img "Atún Doña Ana 281g (Test 335459-42)" [ref=e773]
+              - 'cell "Atún Doña Ana 281g (Test 335459-42) Código: 779335459000042" [ref=e774]':
+                - generic [ref=e775]:
+                  - strong [ref=e776]: Atún Doña Ana 281g (Test 335459-42)
+                  - generic [ref=e777]: "Código: 779335459000042"
+              - cell "45" [ref=e778]
+              - cell "$378" [ref=e779]
+              - cell "$662" [ref=e780]
+              - cell "Caja x 5" [ref=e781]
+              - cell "Tasa Básica 22.00%" [ref=e782]
+              - cell "$284" [ref=e783]
+              - cell "$17.010" [ref=e784]
+              - cell "$29.790" [ref=e785]
+              - cell "$12.780" [ref=e786]
+            - 'row "Atún Doña Ana 603g (Test 335459-69) Atún Doña Ana 603g (Test 335459-69) Código: 779335459000069 90 $225 $335 Caja x 19 Tasa Básica 22.00% $110 $20.250 $30.150 $9.900" [ref=e787] [cursor=pointer]':
+              - cell "Atún Doña Ana 603g (Test 335459-69)" [ref=e788]:
+                - img "Atún Doña Ana 603g (Test 335459-69)" [ref=e789]
+              - 'cell "Atún Doña Ana 603g (Test 335459-69) Código: 779335459000069" [ref=e790]':
+                - generic [ref=e791]:
+                  - strong [ref=e792]: Atún Doña Ana 603g (Test 335459-69)
+                  - generic [ref=e793]: "Código: 779335459000069"
+              - cell "90" [ref=e794]
+              - cell "$225" [ref=e795]
+              - cell "$335" [ref=e796]
+              - cell "Caja x 19" [ref=e797]
+              - cell "Tasa Básica 22.00%" [ref=e798]
+              - cell "$110" [ref=e799]
+              - cell "$20.250" [ref=e800]
+              - cell "$30.150" [ref=e801]
+              - cell "$9.900" [ref=e802]
+            - 'row "Atún Monte 377g (Test 335459-44) Atún Monte 377g (Test 335459-44) Código: 779335459000044 159 $331 $596 Caja x 7 Tasa Básica 22.00% $265 $52.629 $94.764 $42.135" [ref=e803] [cursor=pointer]':
+              - cell "Atún Monte 377g (Test 335459-44)" [ref=e804]:
+                - img "Atún Monte 377g (Test 335459-44)" [ref=e805]
+              - 'cell "Atún Monte 377g (Test 335459-44) Código: 779335459000044" [ref=e806]':
+                - generic [ref=e807]:
+                  - strong [ref=e808]: Atún Monte 377g (Test 335459-44)
+                  - generic [ref=e809]: "Código: 779335459000044"
+              - cell "159" [ref=e810]
+              - cell "$331" [ref=e811]
+              - cell "$596" [ref=e812]
+              - cell "Caja x 7" [ref=e813]
+              - cell "Tasa Básica 22.00%" [ref=e814]
+              - cell "$265" [ref=e815]
+              - cell "$52.629" [ref=e816]
+              - cell "$94.764" [ref=e817]
+              - cell "$42.135" [ref=e818]
+            - 'row "Atún Monte 503g (Test 599272-42) Atún Monte 503g (Test 599272-42) Código: 779599272000042 221 $331 $563 x 17 - $232 $73.151 $124.423 $51.272" [ref=e819] [cursor=pointer]':
+              - cell "Atún Monte 503g (Test 599272-42)" [ref=e820]:
+                - img "Atún Monte 503g (Test 599272-42)" [ref=e821]
+              - 'cell "Atún Monte 503g (Test 599272-42) Código: 779599272000042" [ref=e822]':
+                - generic [ref=e823]:
+                  - strong [ref=e824]: Atún Monte 503g (Test 599272-42)
+                  - generic [ref=e825]: "Código: 779599272000042"
+              - cell "221" [ref=e826]
+              - cell "$331" [ref=e827]
+              - cell "$563" [ref=e828]
+              - cell "x 17" [ref=e829]
+              - cell "-" [ref=e830]
+              - cell "$232" [ref=e831]
+              - cell "$73.151" [ref=e832]
+              - cell "$124.423" [ref=e833]
+              - cell "$51.272" [ref=e834]
+            - 'row "Atún Nativa 552g (Test 335459-46) Atún Nativa 552g (Test 335459-46) Código: 779335459000046 223 $159 $215 Caja x 18 Tasa Básica 22.00% $56 $35.457 $47.945 $12.488" [ref=e835] [cursor=pointer]':
+              - cell "Atún Nativa 552g (Test 335459-46)" [ref=e836]:
+                - img "Atún Nativa 552g (Test 335459-46)" [ref=e837]
+              - 'cell "Atún Nativa 552g (Test 335459-46) Código: 779335459000046" [ref=e838]':
+                - generic [ref=e839]:
+                  - strong [ref=e840]: Atún Nativa 552g (Test 335459-46)
+                  - generic [ref=e841]: "Código: 779335459000046"
+              - cell "223" [ref=e842]
+              - cell "$159" [ref=e843]
+              - cell "$215" [ref=e844]
+              - cell "Caja x 18" [ref=e845]
+              - cell "Tasa Básica 22.00%" [ref=e846]
+              - cell "$56" [ref=e847]
+              - cell "$35.457" [ref=e848]
+              - cell "$47.945" [ref=e849]
+              - cell "$12.488" [ref=e850]
+            - 'row "Atún Premium 655g (Test 599272-37) Atún Premium 655g (Test 599272-37) Código: 779599272000037 191 $242 $312 pack x 13 - $70 $46.222 $59.592 $13.370" [ref=e851] [cursor=pointer]':
+              - cell "Atún Premium 655g (Test 599272-37)" [ref=e852]:
+                - img "Atún Premium 655g (Test 599272-37)" [ref=e853]
+              - 'cell "Atún Premium 655g (Test 599272-37) Código: 779599272000037" [ref=e854]':
+                - generic [ref=e855]:
+                  - strong [ref=e856]: Atún Premium 655g (Test 599272-37)
+                  - generic [ref=e857]: "Código: 779599272000037"
+              - cell "191" [ref=e858]
+              - cell "$242" [ref=e859]
+              - cell "$312" [ref=e860]
+              - cell "pack x 13" [ref=e861]
+              - cell "-" [ref=e862]
+              - cell "$70" [ref=e863]
+              - cell "$46.222" [ref=e864]
+              - cell "$59.592" [ref=e865]
+              - cell "$13.370" [ref=e866]
+            - 'row "Atún Premium 898g (Test 335459-9) Atún Premium 898g (Test 335459-9) Código: 779335459000009 214 $220 $370 Caja x 16 Tasa Básica 22.00% $150 $47.080 $79.180 $32.100" [ref=e867] [cursor=pointer]':
+              - cell "Atún Premium 898g (Test 335459-9)" [ref=e868]:
+                - img "Atún Premium 898g (Test 335459-9)" [ref=e869]
+              - 'cell "Atún Premium 898g (Test 335459-9) Código: 779335459000009" [ref=e870]':
+                - generic [ref=e871]:
+                  - strong [ref=e872]: Atún Premium 898g (Test 335459-9)
+                  - generic [ref=e873]: "Código: 779335459000009"
+              - cell "214" [ref=e874]
+              - cell "$220" [ref=e875]
+              - cell "$370" [ref=e876]
+              - cell "Caja x 16" [ref=e877]
+              - cell "Tasa Básica 22.00%" [ref=e878]
+              - cell "$150" [ref=e879]
+              - cell "$47.080" [ref=e880]
+              - cell "$79.180" [ref=e881]
+              - cell "$32.100" [ref=e882]
+            - 'row "Atún Premium 985g (Test 335459-66) Atún Premium 985g (Test 335459-66) Código: 779335459000066 217 $39 $55 Caja x 9 Tasa Básica 22.00% $16 $8.463 $11.935 $3.472" [ref=e883] [cursor=pointer]':
+              - cell "Atún Premium 985g (Test 335459-66)" [ref=e884]:
+                - img "Atún Premium 985g (Test 335459-66)" [ref=e885]
+              - 'cell "Atún Premium 985g (Test 335459-66) Código: 779335459000066" [ref=e886]':
+                - generic [ref=e887]:
+                  - strong [ref=e888]: Atún Premium 985g (Test 335459-66)
+                  - generic [ref=e889]: "Código: 779335459000066"
+              - cell "217" [ref=e890]
+              - cell "$39" [ref=e891]
+              - cell "$55" [ref=e892]
+              - cell "Caja x 9" [ref=e893]
+              - cell "Tasa Básica 22.00%" [ref=e894]
+              - cell "$16" [ref=e895]
+              - cell "$8.463" [ref=e896]
+              - cell "$11.935" [ref=e897]
+              - cell "$3.472" [ref=e898]
+            - 'row "Atún Sol 1212g (Test 335459-39) Atún Sol 1212g (Test 335459-39) Código: 779335459000039 203 $44 $59 Caja x 17 Tasa Básica 22.00% $15 $8.932 $11.977 $3.045" [ref=e899] [cursor=pointer]':
+              - cell "Atún Sol 1212g (Test 335459-39)" [ref=e900]:
+                - img "Atún Sol 1212g (Test 335459-39)" [ref=e901]
+              - 'cell "Atún Sol 1212g (Test 335459-39) Código: 779335459000039" [ref=e902]':
+                - generic [ref=e903]:
+                  - strong [ref=e904]: Atún Sol 1212g (Test 335459-39)
+                  - generic [ref=e905]: "Código: 779335459000039"
+              - cell "203" [ref=e906]
+              - cell "$44" [ref=e907]
+              - cell "$59" [ref=e908]
+              - cell "Caja x 17" [ref=e909]
+              - cell "Tasa Básica 22.00%" [ref=e910]
+              - cell "$15" [ref=e911]
+              - cell "$8.932" [ref=e912]
+              - cell "$11.977" [ref=e913]
+              - cell "$3.045" [ref=e914]
+            - 'row "Azúcar Azúcar Código: 12341234 60 $1 $900 Caja x 6 Tasa Básica 22.00% $899 $60 $54.000 $53.940" [ref=e915] [cursor=pointer]':
+              - cell "Azúcar" [ref=e916]:
+                - img "Azúcar" [ref=e917]
+              - 'cell "Azúcar Código: 12341234" [ref=e918]':
+                - generic [ref=e919]:
+                  - strong [ref=e920]: Azúcar
+                  - generic [ref=e921]: "Código: 12341234"
+              - cell "60" [ref=e922]
+              - cell "$1" [ref=e923]
+              - cell "$900" [ref=e924]
+              - cell "Caja x 6" [ref=e925]
+              - cell "Tasa Básica 22.00%" [ref=e926]
+              - cell "$899" [ref=e927]
+              - cell "$60" [ref=e928]
+              - cell "$54.000" [ref=e929]
+              - cell "$53.940" [ref=e930]
+            - 'row "Azúcar Azúcar Código: 23123123 60 $1 $900 Caja x 6 Tasa Básica 22.00% $899 $60 $54.000 $53.940" [ref=e931] [cursor=pointer]':
+              - cell "Azúcar" [ref=e932]:
+                - img "Azúcar" [ref=e933]
+              - 'cell "Azúcar Código: 23123123" [ref=e934]':
+                - generic [ref=e935]:
+                  - strong [ref=e936]: Azúcar
+                  - generic [ref=e937]: "Código: 23123123"
+              - cell "60" [ref=e938]
+              - cell "$1" [ref=e939]
+              - cell "$900" [ref=e940]
+              - cell "Caja x 6" [ref=e941]
+              - cell "Tasa Básica 22.00%" [ref=e942]
+              - cell "$899" [ref=e943]
+              - cell "$60" [ref=e944]
+              - cell "$54.000" [ref=e945]
+              - cell "$53.940" [ref=e946]
+            - 'row "Azúcar Azúcar Código: 789 20 $1 $900 Caja x 6 Tasa Básica 22.00% $899 $20 $18.000 $17.980" [ref=e947] [cursor=pointer]':
+              - cell "Azúcar" [ref=e948]:
+                - img "Azúcar" [ref=e949]
+              - 'cell "Azúcar Código: 789" [ref=e950]':
+                - generic [ref=e951]:
+                  - strong [ref=e952]: Azúcar
+                  - generic [ref=e953]: "Código: 789"
+              - cell "20" [ref=e954]
+              - cell "$1" [ref=e955]
+              - cell "$900" [ref=e956]
+              - cell "Caja x 6" [ref=e957]
+              - cell "Tasa Básica 22.00%" [ref=e958]
+              - cell "$899" [ref=e959]
+              - cell "$20" [ref=e960]
+              - cell "$18.000" [ref=e961]
+              - cell "$17.980" [ref=e962]
+            - 'row "Azúcar Andes 555g (Test 335459-72) Azúcar Andes 555g (Test 335459-72) Código: 779335459000072 245 $175 $261 Caja x 4 Tasa Básica 22.00% $86 $42.875 $63.945 $21.070" [ref=e963] [cursor=pointer]':
+              - cell "Azúcar Andes 555g (Test 335459-72)" [ref=e964]:
+                - img "Azúcar Andes 555g (Test 335459-72)" [ref=e965]
+              - 'cell "Azúcar Andes 555g (Test 335459-72) Código: 779335459000072" [ref=e966]':
+                - generic [ref=e967]:
+                  - strong [ref=e968]: Azúcar Andes 555g (Test 335459-72)
+                  - generic [ref=e969]: "Código: 779335459000072"
+              - cell "245" [ref=e970]
+              - cell "$175" [ref=e971]
+              - cell "$261" [ref=e972]
+              - cell "Caja x 4" [ref=e973]
+              - cell "Tasa Básica 22.00%" [ref=e974]
+              - cell "$86" [ref=e975]
+              - cell "$42.875" [ref=e976]
+              - cell "$63.945" [ref=e977]
+              - cell "$21.070" [ref=e978]
+            - 'row "Azúcar Campo 673g (Test 599272-24) Azúcar Campo 673g (Test 599272-24) Código: 779599272000024 121 $160 $238 pack x 24 - $78 $19.360 $28.798 $9.438" [ref=e979] [cursor=pointer]':
+              - cell "Azúcar Campo 673g (Test 599272-24)" [ref=e980]:
+                - img "Azúcar Campo 673g (Test 599272-24)" [ref=e981]
+              - 'cell "Azúcar Campo 673g (Test 599272-24) Código: 779599272000024" [ref=e982]':
+                - generic [ref=e983]:
+                  - strong [ref=e984]: Azúcar Campo 673g (Test 599272-24)
+                  - generic [ref=e985]: "Código: 779599272000024"
+              - cell "121" [ref=e986]
+              - cell "$160" [ref=e987]
+              - cell "$238" [ref=e988]
+              - cell "pack x 24" [ref=e989]
+              - cell "-" [ref=e990]
+              - cell "$78" [ref=e991]
+              - cell "$19.360" [ref=e992]
+              - cell "$28.798" [ref=e993]
+              - cell "$9.438" [ref=e994]
+            - 'row "Azúcar Del Sur 382g (Test 335459-27) Azúcar Del Sur 382g (Test 335459-27) Código: 779335459000027 156 $68 $91 Caja x 17 Tasa Básica 22.00% $23 $10.608 $14.196 $3.588" [ref=e995] [cursor=pointer]':
+              - cell "Azúcar Del Sur 382g (Test 335459-27)" [ref=e996]:
+                - img "Azúcar Del Sur 382g (Test 335459-27)" [ref=e997]
+              - 'cell "Azúcar Del Sur 382g (Test 335459-27) Código: 779335459000027" [ref=e998]':
+                - generic [ref=e999]:
+                  - strong [ref=e1000]: Azúcar Del Sur 382g (Test 335459-27)
+                  - generic [ref=e1001]: "Código: 779335459000027"
+              - cell "156" [ref=e1002]
+              - cell "$68" [ref=e1003]
+              - cell "$91" [ref=e1004]
+              - cell "Caja x 17" [ref=e1005]
+              - cell "Tasa Básica 22.00%" [ref=e1006]
+              - cell "$23" [ref=e1007]
+              - cell "$10.608" [ref=e1008]
+              - cell "$14.196" [ref=e1009]
+              - cell "$3.588" [ref=e1010]
+            - 'row "Azúcar Doña Ana 1100g (Test 335459-78) Azúcar Doña Ana 1100g (Test 335459-78) Código: 779335459000078 113 $249 $349 Caja x 17 Tasa Básica 22.00% $100 $28.137 $39.437 $11.300" [ref=e1011] [cursor=pointer]':
+              - cell "Azúcar Doña Ana 1100g (Test 335459-78)" [ref=e1012]:
+                - img "Azúcar Doña Ana 1100g (Test 335459-78)" [ref=e1013]
+              - 'cell "Azúcar Doña Ana 1100g (Test 335459-78) Código: 779335459000078" [ref=e1014]':
+                - generic [ref=e1015]:
+                  - strong [ref=e1016]: Azúcar Doña Ana 1100g (Test 335459-78)
+                  - generic [ref=e1017]: "Código: 779335459000078"
+              - cell "113" [ref=e1018]
+              - cell "$249" [ref=e1019]
+              - cell "$349" [ref=e1020]
+              - cell "Caja x 17" [ref=e1021]
+              - cell "Tasa Básica 22.00%" [ref=e1022]
+              - cell "$100" [ref=e1023]
+              - cell "$28.137" [ref=e1024]
+              - cell "$39.437" [ref=e1025]
+              - cell "$11.300" [ref=e1026]
+            - 'row "Azúcar Ferco 717g (Test 335459-79) Azúcar Ferco 717g (Test 335459-79) Código: 779335459000079 819 $254 $373 Caja x 24 Tasa Básica 22.00% $119 $208.026 $305.487 $97.461" [ref=e1027] [cursor=pointer]':
+              - cell "Azúcar Ferco 717g (Test 335459-79)" [ref=e1028]:
+                - img "Azúcar Ferco 717g (Test 335459-79)" [ref=e1029]
+              - 'cell "Azúcar Ferco 717g (Test 335459-79) Código: 779335459000079" [ref=e1030]':
+                - generic [ref=e1031]:
+                  - strong [ref=e1032]: Azúcar Ferco 717g (Test 335459-79)
+                  - generic [ref=e1033]: "Código: 779335459000079"
+              - cell "819" [ref=e1034]
+              - cell "$254" [ref=e1035]
+              - cell "$373" [ref=e1036]
+              - cell "Caja x 24" [ref=e1037]
+              - cell "Tasa Básica 22.00%" [ref=e1038]
+              - cell "$119" [ref=e1039]
+              - cell "$208.026" [ref=e1040]
+              - cell "$305.487" [ref=e1041]
+              - cell "$97.461" [ref=e1042]
+            - 'row "Azúcar Monte 1140g (Test 335459-2) Azúcar Monte 1140g (Test 335459-2) Código: 779335459000002 101 $203 $302 Caja x 13 Tasa Básica 22.00% $99 $20.503 $30.502 $9.999" [ref=e1043] [cursor=pointer]':
+              - cell "Azúcar Monte 1140g (Test 335459-2)" [ref=e1044]:
+                - img "Azúcar Monte 1140g (Test 335459-2)" [ref=e1045]
+              - 'cell "Azúcar Monte 1140g (Test 335459-2) Código: 779335459000002" [ref=e1046]':
+                - generic [ref=e1047]:
+                  - strong [ref=e1048]: Azúcar Monte 1140g (Test 335459-2)
+                  - generic [ref=e1049]: "Código: 779335459000002"
+              - cell "101" [ref=e1050]
+              - cell "$203" [ref=e1051]
+              - cell "$302" [ref=e1052]
+              - cell "Caja x 13" [ref=e1053]
+              - cell "Tasa Básica 22.00%" [ref=e1054]
+              - cell "$99" [ref=e1055]
+              - cell "$20.503" [ref=e1056]
+              - cell "$30.502" [ref=e1057]
+              - cell "$9.999" [ref=e1058]
+            - 'row "Azúcar Monte 643g (Test 599272-33) Azúcar Monte 643g (Test 599272-33) Código: 779599272000033 175 $354 $506 caja x 4 - $152 $61.950 $88.550 $26.600" [ref=e1059] [cursor=pointer]':
+              - cell "Azúcar Monte 643g (Test 599272-33)" [ref=e1060]:
+                - img "Azúcar Monte 643g (Test 599272-33)" [ref=e1061]
+              - 'cell "Azúcar Monte 643g (Test 599272-33) Código: 779599272000033" [ref=e1062]':
+                - generic [ref=e1063]:
+                  - strong [ref=e1064]: Azúcar Monte 643g (Test 599272-33)
+                  - generic [ref=e1065]: "Código: 779599272000033"
+              - cell "175" [ref=e1066]
+              - cell "$354" [ref=e1067]
+              - cell "$506" [ref=e1068]
+              - cell "caja x 4" [ref=e1069]
+              - cell "-" [ref=e1070]
+              - cell "$152" [ref=e1071]
+              - cell "$61.950" [ref=e1072]
+              - cell "$88.550" [ref=e1073]
+              - cell "$26.600" [ref=e1074]
+            - 'row "Azúcar Nativa 659g (Test 599272-3) Azúcar Nativa 659g (Test 599272-3) Código: 779599272000003 115 $334 $488 bandeja x 14 - $154 $38.410 $56.120 $17.710" [ref=e1075] [cursor=pointer]':
+              - cell "Azúcar Nativa 659g (Test 599272-3)" [ref=e1076]:
+                - img "Azúcar Nativa 659g (Test 599272-3)" [ref=e1077]
+              - 'cell "Azúcar Nativa 659g (Test 599272-3) Código: 779599272000003" [ref=e1078]':
+                - generic [ref=e1079]:
+                  - strong [ref=e1080]: Azúcar Nativa 659g (Test 599272-3)
+                  - generic [ref=e1081]: "Código: 779599272000003"
+              - cell "115" [ref=e1082]
+              - cell "$334" [ref=e1083]
+              - cell "$488" [ref=e1084]
+              - cell "bandeja x 14" [ref=e1085]
+              - cell "-" [ref=e1086]
+              - cell "$154" [ref=e1087]
+              - cell "$38.410" [ref=e1088]
+              - cell "$56.120" [ref=e1089]
+              - cell "$17.710" [ref=e1090]
+            - 'row "Azúcar Premium 1106g (Test 335459-61) Azúcar Premium 1106g (Test 335459-61) Código: 779335459000061 146 $347 $527 Caja x 19 Tasa Básica 22.00% $180 $50.662 $76.942 $26.280" [ref=e1091] [cursor=pointer]':
+              - cell "Azúcar Premium 1106g (Test 335459-61)" [ref=e1092]:
+                - img "Azúcar Premium 1106g (Test 335459-61)" [ref=e1093]
+              - 'cell "Azúcar Premium 1106g (Test 335459-61) Código: 779335459000061" [ref=e1094]':
+                - generic [ref=e1095]:
+                  - strong [ref=e1096]: Azúcar Premium 1106g (Test 335459-61)
+                  - generic [ref=e1097]: "Código: 779335459000061"
+              - cell "146" [ref=e1098]
+              - cell "$347" [ref=e1099]
+              - cell "$527" [ref=e1100]
+              - cell "Caja x 19" [ref=e1101]
+              - cell "Tasa Básica 22.00%" [ref=e1102]
+              - cell "$180" [ref=e1103]
+              - cell "$50.662" [ref=e1104]
+              - cell "$76.942" [ref=e1105]
+              - cell "$26.280" [ref=e1106]
+            - 'row "Azúcar Río 1258g (Test 599272-20) Azúcar Río 1258g (Test 599272-20) Código: 779599272000020 212 $130 $222 x 20 - $92 $27.560 $47.064 $19.504" [ref=e1107] [cursor=pointer]':
+              - cell "Azúcar Río 1258g (Test 599272-20)" [ref=e1108]:
+                - img "Azúcar Río 1258g (Test 599272-20)" [ref=e1109]
+              - 'cell "Azúcar Río 1258g (Test 599272-20) Código: 779599272000020" [ref=e1110]':
+                - generic [ref=e1111]:
+                  - strong [ref=e1112]: Azúcar Río 1258g (Test 599272-20)
+                  - generic [ref=e1113]: "Código: 779599272000020"
+              - cell "212" [ref=e1114]
+              - cell "$130" [ref=e1115]
+              - cell "$222" [ref=e1116]
+              - cell "x 20" [ref=e1117]
+              - cell "-" [ref=e1118]
+              - cell "$92" [ref=e1119]
+              - cell "$27.560" [ref=e1120]
+              - cell "$47.064" [ref=e1121]
+              - cell "$19.504" [ref=e1122]
+            - 'row "Azúcar Río 1462g (Test 599272-34) Azúcar Río 1462g (Test 599272-34) Código: 779599272000034 119 $352 $514 caja x 17 - $162 $41.888 $61.166 $19.278" [ref=e1123] [cursor=pointer]':
+              - cell "Azúcar Río 1462g (Test 599272-34)" [ref=e1124]:
+                - img "Azúcar Río 1462g (Test 599272-34)" [ref=e1125]
+              - 'cell "Azúcar Río 1462g (Test 599272-34) Código: 779599272000034" [ref=e1126]':
+                - generic [ref=e1127]:
+                  - strong [ref=e1128]: Azúcar Río 1462g (Test 599272-34)
+                  - generic [ref=e1129]: "Código: 779599272000034"
+              - cell "119" [ref=e1130]
+              - cell "$352" [ref=e1131]
+              - cell "$514" [ref=e1132]
+              - cell "caja x 17" [ref=e1133]
+              - cell "-" [ref=e1134]
+              - cell "$162" [ref=e1135]
+              - cell "$41.888" [ref=e1136]
+              - cell "$61.166" [ref=e1137]
+              - cell "$19.278" [ref=e1138]
+            - 'row "Azúcar Sol 359g (Test 599272-8) Azúcar Sol 359g (Test 599272-8) Código: 779599272000008 64 $76 $120 caja x 7 - $44 $4.864 $7.680 $2.816" [ref=e1139] [cursor=pointer]':
+              - cell "Azúcar Sol 359g (Test 599272-8)" [ref=e1140]:
+                - img "Azúcar Sol 359g (Test 599272-8)" [ref=e1141]
+              - 'cell "Azúcar Sol 359g (Test 599272-8) Código: 779599272000008" [ref=e1142]':
+                - generic [ref=e1143]:
+                  - strong [ref=e1144]: Azúcar Sol 359g (Test 599272-8)
+                  - generic [ref=e1145]: "Código: 779599272000008"
+              - cell "64" [ref=e1146]
+              - cell "$76" [ref=e1147]
+              - cell "$120" [ref=e1148]
+              - cell "caja x 7" [ref=e1149]
+              - cell "-" [ref=e1150]
+              - cell "$44" [ref=e1151]
+              - cell "$4.864" [ref=e1152]
+              - cell "$7.680" [ref=e1153]
+              - cell "$2.816" [ref=e1154]
+            - 'row "Sin imagen Danny Código: 123 160 $123 $1.234 Funda x 2 Tasa Básica 22.00% $1.111 $19.680 $197.440 $177.760" [ref=e1155] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e1156]
+              - 'cell "Danny Código: 123" [ref=e1157]':
+                - generic [ref=e1158]:
+                  - strong [ref=e1159]: Danny
+                  - generic [ref=e1160]: "Código: 123"
+              - cell "160" [ref=e1161]
+              - cell "$123" [ref=e1162]
+              - cell "$1.234" [ref=e1163]
+              - cell "Funda x 2" [ref=e1164]
+              - cell "Tasa Básica 22.00%" [ref=e1165]
+              - cell "$1.111" [ref=e1166]
+              - cell "$19.680" [ref=e1167]
+              - cell "$197.440" [ref=e1168]
+              - cell "$177.760" [ref=e1169]
+            - 'row "Sin imagen DECIMALES Código: 123413241324123132 -7 $3 $8 Caja x 12 No Grava 0.00% $5 $-21 $-56 $-35" [ref=e1170] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e1171]
+              - 'cell "DECIMALES Código: 123413241324123132" [ref=e1172]':
+                - generic [ref=e1173]:
+                  - strong [ref=e1174]: DECIMALES
+                  - generic [ref=e1175]: "Código: 123413241324123132"
+              - cell "-7" [ref=e1176]
+              - cell "$3" [ref=e1177]
+              - cell "$8" [ref=e1178]
+              - cell "Caja x 12" [ref=e1179]
+              - cell "No Grava 0.00%" [ref=e1180]
+              - cell "$5" [ref=e1181]
+              - cell "$-21" [ref=e1182]
+              - cell "$-56" [ref=e1183]
+              - cell "$-35" [ref=e1184]
+            - 'row "Detergente Campo 690g (Test 599272-45) Detergente Campo 690g (Test 599272-45) Código: 779599272000045 49 $210 $323 x 21 - $113 $10.290 $15.827 $5.537" [ref=e1185] [cursor=pointer]':
+              - cell "Detergente Campo 690g (Test 599272-45)" [ref=e1186]:
+                - img "Detergente Campo 690g (Test 599272-45)" [ref=e1187]
+              - 'cell "Detergente Campo 690g (Test 599272-45) Código: 779599272000045" [ref=e1188]':
+                - generic [ref=e1189]:
+                  - strong [ref=e1190]: Detergente Campo 690g (Test 599272-45)
+                  - generic [ref=e1191]: "Código: 779599272000045"
+              - cell "49" [ref=e1192]
+              - cell "$210" [ref=e1193]
+              - cell "$323" [ref=e1194]
+              - cell "x 21" [ref=e1195]
+              - cell "-" [ref=e1196]
+              - cell "$113" [ref=e1197]
+              - cell "$10.290" [ref=e1198]
+              - cell "$15.827" [ref=e1199]
+              - cell "$5.537" [ref=e1200]
+            - 'row "Detergente Del Sur 1286g (Test 335459-38) Detergente Del Sur 1286g (Test 335459-38) Código: 779335459000038 254 $348 $571 Caja x 21 Tasa Básica 22.00% $223 $88.392 $145.034 $56.642" [ref=e1201] [cursor=pointer]':
+              - cell "Detergente Del Sur 1286g (Test 335459-38)" [ref=e1202]:
+                - img "Detergente Del Sur 1286g (Test 335459-38)" [ref=e1203]
+              - 'cell "Detergente Del Sur 1286g (Test 335459-38) Código: 779335459000038" [ref=e1204]':
+                - generic [ref=e1205]:
+                  - strong [ref=e1206]: Detergente Del Sur 1286g (Test 335459-38)
+                  - generic [ref=e1207]: "Código: 779335459000038"
+              - cell "254" [ref=e1208]
+              - cell "$348" [ref=e1209]
+              - cell "$571" [ref=e1210]
+              - cell "Caja x 21" [ref=e1211]
+              - cell "Tasa Básica 22.00%" [ref=e1212]
+              - cell "$223" [ref=e1213]
+              - cell "$88.392" [ref=e1214]
+              - cell "$145.034" [ref=e1215]
+              - cell "$56.642" [ref=e1216]
+            - 'row "Detergente Del Sur 1421g (Test 335459-17) Detergente Del Sur 1421g (Test 335459-17) Código: 779335459000017 80 $181 $306 Caja x 21 Tasa Básica 22.00% $125 $14.480 $24.480 $10.000" [ref=e1217] [cursor=pointer]':
+              - cell "Detergente Del Sur 1421g (Test 335459-17)" [ref=e1218]:
+                - img "Detergente Del Sur 1421g (Test 335459-17)" [ref=e1219]
+              - 'cell "Detergente Del Sur 1421g (Test 335459-17) Código: 779335459000017" [ref=e1220]':
+                - generic [ref=e1221]:
+                  - strong [ref=e1222]: Detergente Del Sur 1421g (Test 335459-17)
+                  - generic [ref=e1223]: "Código: 779335459000017"
+              - cell "80" [ref=e1224]
+              - cell "$181" [ref=e1225]
+              - cell "$306" [ref=e1226]
+              - cell "Caja x 21" [ref=e1227]
+              - cell "Tasa Básica 22.00%" [ref=e1228]
+              - cell "$125" [ref=e1229]
+              - cell "$14.480" [ref=e1230]
+              - cell "$24.480" [ref=e1231]
+              - cell "$10.000" [ref=e1232]
+            - 'row "Detergente Del Sur 485g (Test 335459-40) Detergente Del Sur 485g (Test 335459-40) Código: 779335459000040 215 $66 $94 Caja x 4 Tasa Básica 22.00% $28 $14.190 $20.210 $6.020" [ref=e1233] [cursor=pointer]':
+              - cell "Detergente Del Sur 485g (Test 335459-40)" [ref=e1234]:
+                - img "Detergente Del Sur 485g (Test 335459-40)" [ref=e1235]
+              - 'cell "Detergente Del Sur 485g (Test 335459-40) Código: 779335459000040" [ref=e1236]':
+                - generic [ref=e1237]:
+                  - strong [ref=e1238]: Detergente Del Sur 485g (Test 335459-40)
+                  - generic [ref=e1239]: "Código: 779335459000040"
+              - cell "215" [ref=e1240]
+              - cell "$66" [ref=e1241]
+              - cell "$94" [ref=e1242]
+              - cell "Caja x 4" [ref=e1243]
+              - cell "Tasa Básica 22.00%" [ref=e1244]
+              - cell "$28" [ref=e1245]
+              - cell "$14.190" [ref=e1246]
+              - cell "$20.210" [ref=e1247]
+              - cell "$6.020" [ref=e1248]
+            - 'row "Detergente Doña Ana 1239g (Test 599272-40) Detergente Doña Ana 1239g (Test 599272-40) Código: 779599272000040 218 $369 $535 caja x 20 - $166 $80.442 $116.630 $36.188" [ref=e1249] [cursor=pointer]':
+              - cell "Detergente Doña Ana 1239g (Test 599272-40)" [ref=e1250]:
+                - img "Detergente Doña Ana 1239g (Test 599272-40)" [ref=e1251]
+              - 'cell "Detergente Doña Ana 1239g (Test 599272-40) Código: 779599272000040" [ref=e1252]':
+                - generic [ref=e1253]:
+                  - strong [ref=e1254]: Detergente Doña Ana 1239g (Test 599272-40)
+                  - generic [ref=e1255]: "Código: 779599272000040"
+              - cell "218" [ref=e1256]
+              - cell "$369" [ref=e1257]
+              - cell "$535" [ref=e1258]
+              - cell "caja x 20" [ref=e1259]
+              - cell "-" [ref=e1260]
+              - cell "$166" [ref=e1261]
+              - cell "$80.442" [ref=e1262]
+              - cell "$116.630" [ref=e1263]
+              - cell "$36.188" [ref=e1264]
+            - 'row "Detergente Ferco 574g (Test 599272-38) Detergente Ferco 574g (Test 599272-38) Código: 779599272000038 156 $160 $269 bandeja x 16 - $109 $24.960 $41.964 $17.004" [ref=e1265] [cursor=pointer]':
+              - cell "Detergente Ferco 574g (Test 599272-38)" [ref=e1266]:
+                - img "Detergente Ferco 574g (Test 599272-38)" [ref=e1267]
+              - 'cell "Detergente Ferco 574g (Test 599272-38) Código: 779599272000038" [ref=e1268]':
+                - generic [ref=e1269]:
+                  - strong [ref=e1270]: Detergente Ferco 574g (Test 599272-38)
+                  - generic [ref=e1271]: "Código: 779599272000038"
+              - cell "156" [ref=e1272]
+              - cell "$160" [ref=e1273]
+              - cell "$269" [ref=e1274]
+              - cell "bandeja x 16" [ref=e1275]
+              - cell "-" [ref=e1276]
+              - cell "$109" [ref=e1277]
+              - cell "$24.960" [ref=e1278]
+              - cell "$41.964" [ref=e1279]
+              - cell "$17.004" [ref=e1280]
+            - 'row "Detergente Monte 442g (Test 599272-39) Detergente Monte 442g (Test 599272-39) Código: 779599272000039 41 $158 $229 caja x 14 - $71 $6.478 $9.389 $2.911" [ref=e1281] [cursor=pointer]':
+              - cell "Detergente Monte 442g (Test 599272-39)" [ref=e1282]:
+                - img "Detergente Monte 442g (Test 599272-39)" [ref=e1283]
+              - 'cell "Detergente Monte 442g (Test 599272-39) Código: 779599272000039" [ref=e1284]':
+                - generic [ref=e1285]:
+                  - strong [ref=e1286]: Detergente Monte 442g (Test 599272-39)
+                  - generic [ref=e1287]: "Código: 779599272000039"
+              - cell "41" [ref=e1288]
+              - cell "$158" [ref=e1289]
+              - cell "$229" [ref=e1290]
+              - cell "caja x 14" [ref=e1291]
+              - cell "-" [ref=e1292]
+              - cell "$71" [ref=e1293]
+              - cell "$6.478" [ref=e1294]
+              - cell "$9.389" [ref=e1295]
+              - cell "$2.911" [ref=e1296]
+            - 'row "Detergente Premium 1487g (Test 335459-14) Detergente Premium 1487g (Test 335459-14) Código: 779335459000014 60 $226 $298 Caja x 17 Tasa Básica 22.00% $72 $13.560 $17.880 $4.320" [ref=e1297] [cursor=pointer]':
+              - cell "Detergente Premium 1487g (Test 335459-14)" [ref=e1298]:
+                - img "Detergente Premium 1487g (Test 335459-14)" [ref=e1299]
+              - 'cell "Detergente Premium 1487g (Test 335459-14) Código: 779335459000014" [ref=e1300]':
+                - generic [ref=e1301]:
+                  - strong [ref=e1302]: Detergente Premium 1487g (Test 335459-14)
+                  - generic [ref=e1303]: "Código: 779335459000014"
+              - cell "60" [ref=e1304]
+              - cell "$226" [ref=e1305]
+              - cell "$298" [ref=e1306]
+              - cell "Caja x 17" [ref=e1307]
+              - cell "Tasa Básica 22.00%" [ref=e1308]
+              - cell "$72" [ref=e1309]
+              - cell "$13.560" [ref=e1310]
+              - cell "$17.880" [ref=e1311]
+              - cell "$4.320" [ref=e1312]
+            - 'row "Detergente Premium 736g (Test 335459-1) Detergente Premium 736g (Test 335459-1) Código: 779335459000001 236 $37 $62 Caja x 16 Tasa Básica 22.00% $25 $8.732 $14.632 $5.900" [ref=e1313] [cursor=pointer]':
+              - cell "Detergente Premium 736g (Test 335459-1)" [ref=e1314]:
+                - img "Detergente Premium 736g (Test 335459-1)" [ref=e1315]
+              - 'cell "Detergente Premium 736g (Test 335459-1) Código: 779335459000001" [ref=e1316]':
+                - generic [ref=e1317]:
+                  - strong [ref=e1318]: Detergente Premium 736g (Test 335459-1)
+                  - generic [ref=e1319]: "Código: 779335459000001"
+              - cell "236" [ref=e1320]
+              - cell "$37" [ref=e1321]
+              - cell "$62" [ref=e1322]
+              - cell "Caja x 16" [ref=e1323]
+              - cell "Tasa Básica 22.00%" [ref=e1324]
+              - cell "$25" [ref=e1325]
+              - cell "$8.732" [ref=e1326]
+              - cell "$14.632" [ref=e1327]
+              - cell "$5.900" [ref=e1328]
+            - 'row "Detergente Sol 1373g (Test 335459-59) Detergente Sol 1373g (Test 335459-59) Código: 779335459000059 132 $377 $460 Caja x 14 Tasa Básica 22.00% $83 $49.764 $60.720 $10.956" [ref=e1329] [cursor=pointer]':
+              - cell "Detergente Sol 1373g (Test 335459-59)" [ref=e1330]:
+                - img "Detergente Sol 1373g (Test 335459-59)" [ref=e1331]
+              - 'cell "Detergente Sol 1373g (Test 335459-59) Código: 779335459000059" [ref=e1332]':
+                - generic [ref=e1333]:
+                  - strong [ref=e1334]: Detergente Sol 1373g (Test 335459-59)
+                  - generic [ref=e1335]: "Código: 779335459000059"
+              - cell "132" [ref=e1336]
+              - cell "$377" [ref=e1337]
+              - cell "$460" [ref=e1338]
+              - cell "Caja x 14" [ref=e1339]
+              - cell "Tasa Básica 22.00%" [ref=e1340]
+              - cell "$83" [ref=e1341]
+              - cell "$49.764" [ref=e1342]
+              - cell "$60.720" [ref=e1343]
+              - cell "$10.956" [ref=e1344]
+            - 'row "Detergente Sol 920g (Test 335459-52) Detergente Sol 920g (Test 335459-52) Código: 779335459000052 244 $245 $304 Caja x 19 Tasa Básica 22.00% $59 $59.780 $74.176 $14.396" [ref=e1345] [cursor=pointer]':
+              - cell "Detergente Sol 920g (Test 335459-52)" [ref=e1346]:
+                - img "Detergente Sol 920g (Test 335459-52)" [ref=e1347]
+              - 'cell "Detergente Sol 920g (Test 335459-52) Código: 779335459000052" [ref=e1348]':
+                - generic [ref=e1349]:
+                  - strong [ref=e1350]: Detergente Sol 920g (Test 335459-52)
+                  - generic [ref=e1351]: "Código: 779335459000052"
+              - cell "244" [ref=e1352]
+              - cell "$245" [ref=e1353]
+              - cell "$304" [ref=e1354]
+              - cell "Caja x 19" [ref=e1355]
+              - cell "Tasa Básica 22.00%" [ref=e1356]
+              - cell "$59" [ref=e1357]
+              - cell "$59.780" [ref=e1358]
+              - cell "$74.176" [ref=e1359]
+              - cell "$14.396" [ref=e1360]
+            - 'row "Duracell Duracell Código: 7465 199 $1 $200 Caja x 6 Tasa Básica 22.00% $199 $199 $39.800 $39.601" [ref=e1361] [cursor=pointer]':
+              - cell "Duracell" [ref=e1362]:
+                - img "Duracell" [ref=e1363]
+              - 'cell "Duracell Código: 7465" [ref=e1364]':
+                - generic [ref=e1365]:
+                  - strong [ref=e1366]: Duracell
+                  - generic [ref=e1367]: "Código: 7465"
+              - cell "199" [ref=e1368]
+              - cell "$1" [ref=e1369]
+              - cell "$200" [ref=e1370]
+              - cell "Caja x 6" [ref=e1371]
+              - cell "Tasa Básica 22.00%" [ref=e1372]
+              - cell "$199" [ref=e1373]
+              - cell "$199" [ref=e1374]
+              - cell "$39.800" [ref=e1375]
+              - cell "$39.601" [ref=e1376]
+            - 'row "Fideos Andes 465g (Test 599272-14) Fideos Andes 465g (Test 599272-14) Código: 779599272000014 242 $297 $413 pack x 5 - $116 $71.874 $99.946 $28.072" [ref=e1377] [cursor=pointer]':
+              - cell "Fideos Andes 465g (Test 599272-14)" [ref=e1378]:
+                - img "Fideos Andes 465g (Test 599272-14)" [ref=e1379]
+              - 'cell "Fideos Andes 465g (Test 599272-14) Código: 779599272000014" [ref=e1380]':
+                - generic [ref=e1381]:
+                  - strong [ref=e1382]: Fideos Andes 465g (Test 599272-14)
+                  - generic [ref=e1383]: "Código: 779599272000014"
+              - cell "242" [ref=e1384]
+              - cell "$297" [ref=e1385]
+              - cell "$413" [ref=e1386]
+              - cell "pack x 5" [ref=e1387]
+              - cell "-" [ref=e1388]
+              - cell "$116" [ref=e1389]
+              - cell "$71.874" [ref=e1390]
+              - cell "$99.946" [ref=e1391]
+              - cell "$28.072" [ref=e1392]
+            - 'row "Fideos Campo 869g (Test 335459-36) Fideos Campo 869g (Test 335459-36) Código: 779335459000036 43 $337 $506 Caja x 4 Tasa Básica 22.00% $169 $14.491 $21.758 $7.267" [ref=e1393] [cursor=pointer]':
+              - cell "Fideos Campo 869g (Test 335459-36)" [ref=e1394]:
+                - img "Fideos Campo 869g (Test 335459-36)" [ref=e1395]
+              - 'cell "Fideos Campo 869g (Test 335459-36) Código: 779335459000036" [ref=e1396]':
+                - generic [ref=e1397]:
+                  - strong [ref=e1398]: Fideos Campo 869g (Test 335459-36)
+                  - generic [ref=e1399]: "Código: 779335459000036"
+              - cell "43" [ref=e1400]
+              - cell "$337" [ref=e1401]
+              - cell "$506" [ref=e1402]
+              - cell "Caja x 4" [ref=e1403]
+              - cell "Tasa Básica 22.00%" [ref=e1404]
+              - cell "$169" [ref=e1405]
+              - cell "$14.491" [ref=e1406]
+              - cell "$21.758" [ref=e1407]
+              - cell "$7.267" [ref=e1408]
+            - 'row "Fideos Del Sur 620g (Test 335459-5) Fideos Del Sur 620g (Test 335459-5) Código: 779335459000005 236 $335 $449 Caja x 13 Tasa Básica 22.00% $114 $79.060 $105.964 $26.904" [ref=e1409] [cursor=pointer]':
+              - cell "Fideos Del Sur 620g (Test 335459-5)" [ref=e1410]:
+                - img "Fideos Del Sur 620g (Test 335459-5)" [ref=e1411]
+              - 'cell "Fideos Del Sur 620g (Test 335459-5) Código: 779335459000005" [ref=e1412]':
+                - generic [ref=e1413]:
+                  - strong [ref=e1414]: Fideos Del Sur 620g (Test 335459-5)
+                  - generic [ref=e1415]: "Código: 779335459000005"
+              - cell "236" [ref=e1416]
+              - cell "$335" [ref=e1417]
+              - cell "$449" [ref=e1418]
+              - cell "Caja x 13" [ref=e1419]
+              - cell "Tasa Básica 22.00%" [ref=e1420]
+              - cell "$114" [ref=e1421]
+              - cell "$79.060" [ref=e1422]
+              - cell "$105.964" [ref=e1423]
+              - cell "$26.904" [ref=e1424]
+            - 'row "Fideos Ferco 1453g (Test 599272-27) Fideos Ferco 1453g (Test 599272-27) Código: 779599272000027 129 $234 $328 bolsa x 9 - $94 $30.186 $42.312 $12.126" [ref=e1425] [cursor=pointer]':
+              - cell "Fideos Ferco 1453g (Test 599272-27)" [ref=e1426]:
+                - img "Fideos Ferco 1453g (Test 599272-27)" [ref=e1427]
+              - 'cell "Fideos Ferco 1453g (Test 599272-27) Código: 779599272000027" [ref=e1428]':
+                - generic [ref=e1429]:
+                  - strong [ref=e1430]: Fideos Ferco 1453g (Test 599272-27)
+                  - generic [ref=e1431]: "Código: 779599272000027"
+              - cell "129" [ref=e1432]
+              - cell "$234" [ref=e1433]
+              - cell "$328" [ref=e1434]
+              - cell "bolsa x 9" [ref=e1435]
+              - cell "-" [ref=e1436]
+              - cell "$94" [ref=e1437]
+              - cell "$30.186" [ref=e1438]
+              - cell "$42.312" [ref=e1439]
+              - cell "$12.126" [ref=e1440]
+            - 'row "Fideos Río 1259g (Test 599272-30) Fideos Río 1259g (Test 599272-30) Código: 779599272000030 164 $231 $379 bolsa x 23 - $148 $37.884 $62.156 $24.272" [ref=e1441] [cursor=pointer]':
+              - cell "Fideos Río 1259g (Test 599272-30)" [ref=e1442]:
+                - img "Fideos Río 1259g (Test 599272-30)" [ref=e1443]
+              - 'cell "Fideos Río 1259g (Test 599272-30) Código: 779599272000030" [ref=e1444]':
+                - generic [ref=e1445]:
+                  - strong [ref=e1446]: Fideos Río 1259g (Test 599272-30)
+                  - generic [ref=e1447]: "Código: 779599272000030"
+              - cell "164" [ref=e1448]
+              - cell "$231" [ref=e1449]
+              - cell "$379" [ref=e1450]
+              - cell "bolsa x 23" [ref=e1451]
+              - cell "-" [ref=e1452]
+              - cell "$148" [ref=e1453]
+              - cell "$37.884" [ref=e1454]
+              - cell "$62.156" [ref=e1455]
+              - cell "$24.272" [ref=e1456]
+            - 'row "Galletas Andes 1448g (Test 335459-29) Galletas Andes 1448g (Test 335459-29) Código: 779335459000029 190 $366 $582 Caja x 10 Tasa Básica 22.00% $216 $69.540 $110.580 $41.040" [ref=e1457] [cursor=pointer]':
+              - cell "Galletas Andes 1448g (Test 335459-29)" [ref=e1458]:
+                - img "Galletas Andes 1448g (Test 335459-29)" [ref=e1459]
+              - 'cell "Galletas Andes 1448g (Test 335459-29) Código: 779335459000029" [ref=e1460]':
+                - generic [ref=e1461]:
+                  - strong [ref=e1462]: Galletas Andes 1448g (Test 335459-29)
+                  - generic [ref=e1463]: "Código: 779335459000029"
+              - cell "190" [ref=e1464]
+              - cell "$366" [ref=e1465]
+              - cell "$582" [ref=e1466]
+              - cell "Caja x 10" [ref=e1467]
+              - cell "Tasa Básica 22.00%" [ref=e1468]
+              - cell "$216" [ref=e1469]
+              - cell "$69.540" [ref=e1470]
+              - cell "$110.580" [ref=e1471]
+              - cell "$41.040" [ref=e1472]
+            - 'row "Galletas Andes 621g (Test 335459-43) Galletas Andes 621g (Test 335459-43) Código: 779335459000043 125 $99 $150 Caja x 24 Tasa Básica 22.00% $51 $12.375 $18.750 $6.375" [ref=e1473] [cursor=pointer]':
+              - cell "Galletas Andes 621g (Test 335459-43)" [ref=e1474]:
+                - img "Galletas Andes 621g (Test 335459-43)" [ref=e1475]
+              - 'cell "Galletas Andes 621g (Test 335459-43) Código: 779335459000043" [ref=e1476]':
+                - generic [ref=e1477]:
+                  - strong [ref=e1478]: Galletas Andes 621g (Test 335459-43)
+                  - generic [ref=e1479]: "Código: 779335459000043"
+              - cell "125" [ref=e1480]
+              - cell "$99" [ref=e1481]
+              - cell "$150" [ref=e1482]
+              - cell "Caja x 24" [ref=e1483]
+              - cell "Tasa Básica 22.00%" [ref=e1484]
+              - cell "$51" [ref=e1485]
+              - cell "$12.375" [ref=e1486]
+              - cell "$18.750" [ref=e1487]
+              - cell "$6.375" [ref=e1488]
+            - 'row "Galletas Campo 316g (Test 599272-25) Galletas Campo 316g (Test 599272-25) Código: 779599272000025 103 $32 $46 pack x 4 - $14 $3.296 $4.738 $1.442" [ref=e1489] [cursor=pointer]':
+              - cell "Galletas Campo 316g (Test 599272-25)" [ref=e1490]:
+                - img "Galletas Campo 316g (Test 599272-25)" [ref=e1491]
+              - 'cell "Galletas Campo 316g (Test 599272-25) Código: 779599272000025" [ref=e1492]':
+                - generic [ref=e1493]:
+                  - strong [ref=e1494]: Galletas Campo 316g (Test 599272-25)
+                  - generic [ref=e1495]: "Código: 779599272000025"
+              - cell "103" [ref=e1496]
+              - cell "$32" [ref=e1497]
+              - cell "$46" [ref=e1498]
+              - cell "pack x 4" [ref=e1499]
+              - cell "-" [ref=e1500]
+              - cell "$14" [ref=e1501]
+              - cell "$3.296" [ref=e1502]
+              - cell "$4.738" [ref=e1503]
+              - cell "$1.442" [ref=e1504]
+            - 'row "Galletas Campo 881g (Test 335459-13) Galletas Campo 881g (Test 335459-13) Código: 779335459000013 136 $262 $364 Caja x 15 Tasa Básica 22.00% $102 $35.632 $49.504 $13.872" [ref=e1505] [cursor=pointer]':
+              - cell "Galletas Campo 881g (Test 335459-13)" [ref=e1506]:
+                - img "Galletas Campo 881g (Test 335459-13)" [ref=e1507]
+              - 'cell "Galletas Campo 881g (Test 335459-13) Código: 779335459000013" [ref=e1508]':
+                - generic [ref=e1509]:
+                  - strong [ref=e1510]: Galletas Campo 881g (Test 335459-13)
+                  - generic [ref=e1511]: "Código: 779335459000013"
+              - cell "136" [ref=e1512]
+              - cell "$262" [ref=e1513]
+              - cell "$364" [ref=e1514]
+              - cell "Caja x 15" [ref=e1515]
+              - cell "Tasa Básica 22.00%" [ref=e1516]
+              - cell "$102" [ref=e1517]
+              - cell "$35.632" [ref=e1518]
+              - cell "$49.504" [ref=e1519]
+              - cell "$13.872" [ref=e1520]
+            - 'row "Galletas Del Sur 337g (Test 335459-34) Galletas Del Sur 337g (Test 335459-34) Código: 779335459000034 228 $224 $374 Caja x 21 Tasa Básica 22.00% $150 $51.072 $85.272 $34.200" [ref=e1521] [cursor=pointer]':
+              - cell "Galletas Del Sur 337g (Test 335459-34)" [ref=e1522]:
+                - img "Galletas Del Sur 337g (Test 335459-34)" [ref=e1523]
+              - 'cell "Galletas Del Sur 337g (Test 335459-34) Código: 779335459000034" [ref=e1524]':
+                - generic [ref=e1525]:
+                  - strong [ref=e1526]: Galletas Del Sur 337g (Test 335459-34)
+                  - generic [ref=e1527]: "Código: 779335459000034"
+              - cell "228" [ref=e1528]
+              - cell "$224" [ref=e1529]
+              - cell "$374" [ref=e1530]
+              - cell "Caja x 21" [ref=e1531]
+              - cell "Tasa Básica 22.00%" [ref=e1532]
+              - cell "$150" [ref=e1533]
+              - cell "$51.072" [ref=e1534]
+              - cell "$85.272" [ref=e1535]
+              - cell "$34.200" [ref=e1536]
+            - 'row "Galletas Del Sur 482g (Test 599272-10) Galletas Del Sur 482g (Test 599272-10) Código: 779599272000010 67 $95 $116 pack x 10 - $21 $6.365 $7.772 $1.407" [ref=e1537] [cursor=pointer]':
+              - cell "Galletas Del Sur 482g (Test 599272-10)" [ref=e1538]:
+                - img "Galletas Del Sur 482g (Test 599272-10)" [ref=e1539]
+              - 'cell "Galletas Del Sur 482g (Test 599272-10) Código: 779599272000010" [ref=e1540]':
+                - generic [ref=e1541]:
+                  - strong [ref=e1542]: Galletas Del Sur 482g (Test 599272-10)
+                  - generic [ref=e1543]: "Código: 779599272000010"
+              - cell "67" [ref=e1544]
+              - cell "$95" [ref=e1545]
+              - cell "$116" [ref=e1546]
+              - cell "pack x 10" [ref=e1547]
+              - cell "-" [ref=e1548]
+              - cell "$21" [ref=e1549]
+              - cell "$6.365" [ref=e1550]
+              - cell "$7.772" [ref=e1551]
+              - cell "$1.407" [ref=e1552]
+            - 'row "Galletas Del Sur 854g (Test 335459-28) Galletas Del Sur 854g (Test 335459-28) Código: 779335459000028 133 $170 $252 Caja x 16 Tasa Básica 22.00% $82 $22.610 $33.516 $10.906" [ref=e1553] [cursor=pointer]':
+              - cell "Galletas Del Sur 854g (Test 335459-28)" [ref=e1554]:
+                - img "Galletas Del Sur 854g (Test 335459-28)" [ref=e1555]
+              - 'cell "Galletas Del Sur 854g (Test 335459-28) Código: 779335459000028" [ref=e1556]':
+                - generic [ref=e1557]:
+                  - strong [ref=e1558]: Galletas Del Sur 854g (Test 335459-28)
+                  - generic [ref=e1559]: "Código: 779335459000028"
+              - cell "133" [ref=e1560]
+              - cell "$170" [ref=e1561]
+              - cell "$252" [ref=e1562]
+              - cell "Caja x 16" [ref=e1563]
+              - cell "Tasa Básica 22.00%" [ref=e1564]
+              - cell "$82" [ref=e1565]
+              - cell "$22.610" [ref=e1566]
+              - cell "$33.516" [ref=e1567]
+              - cell "$10.906" [ref=e1568]
+            - 'row "Galletas Ferco 252g (Test 335459-51) Galletas Ferco 252g (Test 335459-51) Código: 779335459000051 206 $41 $59 Caja x 4 Tasa Básica 22.00% $18 $8.446 $12.154 $3.708" [ref=e1569] [cursor=pointer]':
+              - cell "Galletas Ferco 252g (Test 335459-51)" [ref=e1570]:
+                - img "Galletas Ferco 252g (Test 335459-51)" [ref=e1571]
+              - 'cell "Galletas Ferco 252g (Test 335459-51) Código: 779335459000051" [ref=e1572]':
+                - generic [ref=e1573]:
+                  - strong [ref=e1574]: Galletas Ferco 252g (Test 335459-51)
+                  - generic [ref=e1575]: "Código: 779335459000051"
+              - cell "206" [ref=e1576]
+              - cell "$41" [ref=e1577]
+              - cell "$59" [ref=e1578]
+              - cell "Caja x 4" [ref=e1579]
+              - cell "Tasa Básica 22.00%" [ref=e1580]
+              - cell "$18" [ref=e1581]
+              - cell "$8.446" [ref=e1582]
+              - cell "$12.154" [ref=e1583]
+              - cell "$3.708" [ref=e1584]
+            - 'row "Galletas Monte 490g (Test 335459-63) Galletas Monte 490g (Test 335459-63) Código: 779335459000063 39 $357 $618 Caja x 13 Tasa Básica 22.00% $261 $13.923 $24.102 $10.179" [ref=e1585] [cursor=pointer]':
+              - cell "Galletas Monte 490g (Test 335459-63)" [ref=e1586]:
+                - img "Galletas Monte 490g (Test 335459-63)" [ref=e1587]
+              - 'cell "Galletas Monte 490g (Test 335459-63) Código: 779335459000063" [ref=e1588]':
+                - generic [ref=e1589]:
+                  - strong [ref=e1590]: Galletas Monte 490g (Test 335459-63)
+                  - generic [ref=e1591]: "Código: 779335459000063"
+              - cell "39" [ref=e1592]
+              - cell "$357" [ref=e1593]
+              - cell "$618" [ref=e1594]
+              - cell "Caja x 13" [ref=e1595]
+              - cell "Tasa Básica 22.00%" [ref=e1596]
+              - cell "$261" [ref=e1597]
+              - cell "$13.923" [ref=e1598]
+              - cell "$24.102" [ref=e1599]
+              - cell "$10.179" [ref=e1600]
+            - 'row "Galletas Premium 920g (Test 599272-4) Galletas Premium 920g (Test 599272-4) Código: 779599272000004 122 $64 $93 bolsa x 16 - $29 $7.808 $11.346 $3.538" [ref=e1601] [cursor=pointer]':
+              - cell "Galletas Premium 920g (Test 599272-4)" [ref=e1602]:
+                - img "Galletas Premium 920g (Test 599272-4)" [ref=e1603]
+              - 'cell "Galletas Premium 920g (Test 599272-4) Código: 779599272000004" [ref=e1604]':
+                - generic [ref=e1605]:
+                  - strong [ref=e1606]: Galletas Premium 920g (Test 599272-4)
+                  - generic [ref=e1607]: "Código: 779599272000004"
+              - cell "122" [ref=e1608]
+              - cell "$64" [ref=e1609]
+              - cell "$93" [ref=e1610]
+              - cell "bolsa x 16" [ref=e1611]
+              - cell "-" [ref=e1612]
+              - cell "$29" [ref=e1613]
+              - cell "$7.808" [ref=e1614]
+              - cell "$11.346" [ref=e1615]
+              - cell "$3.538" [ref=e1616]
+            - 'row "Galletas Río 834g (Test 335459-70) Galletas Río 834g (Test 335459-70) Código: 779335459000070 239 $376 $598 Caja x 15 Tasa Básica 22.00% $222 $89.864 $142.922 $53.058" [ref=e1617] [cursor=pointer]':
+              - cell "Galletas Río 834g (Test 335459-70)" [ref=e1618]:
+                - img "Galletas Río 834g (Test 335459-70)" [ref=e1619]
+              - 'cell "Galletas Río 834g (Test 335459-70) Código: 779335459000070" [ref=e1620]':
+                - generic [ref=e1621]:
+                  - strong [ref=e1622]: Galletas Río 834g (Test 335459-70)
+                  - generic [ref=e1623]: "Código: 779335459000070"
+              - cell "239" [ref=e1624]
+              - cell "$376" [ref=e1625]
+              - cell "$598" [ref=e1626]
+              - cell "Caja x 15" [ref=e1627]
+              - cell "Tasa Básica 22.00%" [ref=e1628]
+              - cell "$222" [ref=e1629]
+              - cell "$89.864" [ref=e1630]
+              - cell "$142.922" [ref=e1631]
+              - cell "$53.058" [ref=e1632]
+            - 'row "Harina 000 Harina 000 Código: 1231321 100 $1 $1.500 Caja x 6 Tasa Básica 22.00% $1.499 $100 $150.000 $149.900" [ref=e1633] [cursor=pointer]':
+              - cell "Harina 000" [ref=e1634]:
+                - img "Harina 000" [ref=e1635]
+              - 'cell "Harina 000 Código: 1231321" [ref=e1636]':
+                - generic [ref=e1637]:
+                  - strong [ref=e1638]: Harina 000
+                  - generic [ref=e1639]: "Código: 1231321"
+              - cell "100" [ref=e1640]
+              - cell "$1" [ref=e1641]
+              - cell "$1.500" [ref=e1642]
+              - cell "Caja x 6" [ref=e1643]
+              - cell "Tasa Básica 22.00%" [ref=e1644]
+              - cell "$1.499" [ref=e1645]
+              - cell "$100" [ref=e1646]
+              - cell "$150.000" [ref=e1647]
+              - cell "$149.900" [ref=e1648]
+            - 'row "Harina 000 Harina 000 Código: 1231 100 $1 $1.500 Caja x 6 Tasa Básica 22.00% $1.499 $100 $150.000 $149.900" [ref=e1649] [cursor=pointer]':
+              - cell "Harina 000" [ref=e1650]:
+                - img "Harina 000" [ref=e1651]
+              - 'cell "Harina 000 Código: 1231" [ref=e1652]':
+                - generic [ref=e1653]:
+                  - strong [ref=e1654]: Harina 000
+                  - generic [ref=e1655]: "Código: 1231"
+              - cell "100" [ref=e1656]
+              - cell "$1" [ref=e1657]
+              - cell "$1.500" [ref=e1658]
+              - cell "Caja x 6" [ref=e1659]
+              - cell "Tasa Básica 22.00%" [ref=e1660]
+              - cell "$1.499" [ref=e1661]
+              - cell "$100" [ref=e1662]
+              - cell "$150.000" [ref=e1663]
+              - cell "$149.900" [ref=e1664]
+            - 'row "Harina 000 Harina 000 Código: 34543 100000 $1 $1.500 Caja x 6 Tasa Básica 22.00% $1.499 $100.000 $150.000.000 $149.900.000" [ref=e1665] [cursor=pointer]':
+              - cell "Harina 000" [ref=e1666]:
+                - img "Harina 000" [ref=e1667]
+              - 'cell "Harina 000 Código: 34543" [ref=e1668]':
+                - generic [ref=e1669]:
+                  - strong [ref=e1670]: Harina 000
+                  - generic [ref=e1671]: "Código: 34543"
+              - cell "100000" [ref=e1672]
+              - cell "$1" [ref=e1673]
+              - cell "$1.500" [ref=e1674]
+              - cell "Caja x 6" [ref=e1675]
+              - cell "Tasa Básica 22.00%" [ref=e1676]
+              - cell "$1.499" [ref=e1677]
+              - cell "$100.000" [ref=e1678]
+              - cell "$150.000.000" [ref=e1679]
+              - cell "$149.900.000" [ref=e1680]
+            - 'row "Harina Del Sur 1469g (Test 599272-26) Harina Del Sur 1469g (Test 599272-26) Código: 779599272000026 244 $60 $76 bolsa x 4 - $16 $14.640 $18.544 $3.904" [ref=e1681] [cursor=pointer]':
+              - cell "Harina Del Sur 1469g (Test 599272-26)" [ref=e1682]:
+                - img "Harina Del Sur 1469g (Test 599272-26)" [ref=e1683]
+              - 'cell "Harina Del Sur 1469g (Test 599272-26) Código: 779599272000026" [ref=e1684]':
+                - generic [ref=e1685]:
+                  - strong [ref=e1686]: Harina Del Sur 1469g (Test 599272-26)
+                  - generic [ref=e1687]: "Código: 779599272000026"
+              - cell "244" [ref=e1688]
+              - cell "$60" [ref=e1689]
+              - cell "$76" [ref=e1690]
+              - cell "bolsa x 4" [ref=e1691]
+              - cell "-" [ref=e1692]
+              - cell "$16" [ref=e1693]
+              - cell "$14.640" [ref=e1694]
+              - cell "$18.544" [ref=e1695]
+              - cell "$3.904" [ref=e1696]
+            - 'row "Harina Del Sur 836g (Test 335459-22) Harina Del Sur 836g (Test 335459-22) Código: 779335459000022 226 $173 $213 Caja x 11 Tasa Básica 22.00% $40 $39.098 $48.138 $9.040" [ref=e1697] [cursor=pointer]':
+              - cell "Harina Del Sur 836g (Test 335459-22)" [ref=e1698]:
+                - img "Harina Del Sur 836g (Test 335459-22)" [ref=e1699]
+              - 'cell "Harina Del Sur 836g (Test 335459-22) Código: 779335459000022" [ref=e1700]':
+                - generic [ref=e1701]:
+                  - strong [ref=e1702]: Harina Del Sur 836g (Test 335459-22)
+                  - generic [ref=e1703]: "Código: 779335459000022"
+              - cell "226" [ref=e1704]
+              - cell "$173" [ref=e1705]
+              - cell "$213" [ref=e1706]
+              - cell "Caja x 11" [ref=e1707]
+              - cell "Tasa Básica 22.00%" [ref=e1708]
+              - cell "$40" [ref=e1709]
+              - cell "$39.098" [ref=e1710]
+              - cell "$48.138" [ref=e1711]
+              - cell "$9.040" [ref=e1712]
+            - 'row "Harina Del Sur 978g (Test 599272-12) Harina Del Sur 978g (Test 599272-12) Código: 779599272000012 121 $27 $46 bolsa x 8 - $19 $3.267 $5.566 $2.299" [ref=e1713] [cursor=pointer]':
+              - cell "Harina Del Sur 978g (Test 599272-12)" [ref=e1714]:
+                - img "Harina Del Sur 978g (Test 599272-12)" [ref=e1715]
+              - 'cell "Harina Del Sur 978g (Test 599272-12) Código: 779599272000012" [ref=e1716]':
+                - generic [ref=e1717]:
+                  - strong [ref=e1718]: Harina Del Sur 978g (Test 599272-12)
+                  - generic [ref=e1719]: "Código: 779599272000012"
+              - cell "121" [ref=e1720]
+              - cell "$27" [ref=e1721]
+              - cell "$46" [ref=e1722]
+              - cell "bolsa x 8" [ref=e1723]
+              - cell "-" [ref=e1724]
+              - cell "$19" [ref=e1725]
+              - cell "$3.267" [ref=e1726]
+              - cell "$5.566" [ref=e1727]
+              - cell "$2.299" [ref=e1728]
+            - 'row "Harina Doña Ana 1339g (Test 335459-77) Harina Doña Ana 1339g (Test 335459-77) Código: 779335459000077 -38 $157 $221 Caja x 12 Tasa Básica 22.00% $64 $-5.966 $-8.398 $-2.432" [ref=e1729] [cursor=pointer]':
+              - cell "Harina Doña Ana 1339g (Test 335459-77)" [ref=e1730]:
+                - img "Harina Doña Ana 1339g (Test 335459-77)" [ref=e1731]
+              - 'cell "Harina Doña Ana 1339g (Test 335459-77) Código: 779335459000077" [ref=e1732]':
+                - generic [ref=e1733]:
+                  - strong [ref=e1734]: Harina Doña Ana 1339g (Test 335459-77)
+                  - generic [ref=e1735]: "Código: 779335459000077"
+              - cell "-38" [ref=e1736]
+              - cell "$157" [ref=e1737]
+              - cell "$221" [ref=e1738]
+              - cell "Caja x 12" [ref=e1739]
+              - cell "Tasa Básica 22.00%" [ref=e1740]
+              - cell "$64" [ref=e1741]
+              - cell "$-5.966" [ref=e1742]
+              - cell "$-8.398" [ref=e1743]
+              - cell "$-2.432" [ref=e1744]
+            - 'row "Harina Doña Ana 495g (Test 335459-24) Harina Doña Ana 495g (Test 335459-24) Código: 779335459000024 87 $244 $403 Caja x 15 Tasa Básica 22.00% $159 $21.228 $35.061 $13.833" [ref=e1745] [cursor=pointer]':
+              - cell "Harina Doña Ana 495g (Test 335459-24)" [ref=e1746]:
+                - img "Harina Doña Ana 495g (Test 335459-24)" [ref=e1747]
+              - 'cell "Harina Doña Ana 495g (Test 335459-24) Código: 779335459000024" [ref=e1748]':
+                - generic [ref=e1749]:
+                  - strong [ref=e1750]: Harina Doña Ana 495g (Test 335459-24)
+                  - generic [ref=e1751]: "Código: 779335459000024"
+              - cell "87" [ref=e1752]
+              - cell "$244" [ref=e1753]
+              - cell "$403" [ref=e1754]
+              - cell "Caja x 15" [ref=e1755]
+              - cell "Tasa Básica 22.00%" [ref=e1756]
+              - cell "$159" [ref=e1757]
+              - cell "$21.228" [ref=e1758]
+              - cell "$35.061" [ref=e1759]
+              - cell "$13.833" [ref=e1760]
+            - 'row "Harina Ferco 1056g (Test 335459-67) Harina Ferco 1056g (Test 335459-67) Código: 779335459000067 233 $88 $120 Caja x 11 Tasa Básica 22.00% $32 $20.504 $27.960 $7.456" [ref=e1761] [cursor=pointer]':
+              - cell "Harina Ferco 1056g (Test 335459-67)" [ref=e1762]:
+                - img "Harina Ferco 1056g (Test 335459-67)" [ref=e1763]
+              - 'cell "Harina Ferco 1056g (Test 335459-67) Código: 779335459000067" [ref=e1764]':
+                - generic [ref=e1765]:
+                  - strong [ref=e1766]: Harina Ferco 1056g (Test 335459-67)
+                  - generic [ref=e1767]: "Código: 779335459000067"
+              - cell "233" [ref=e1768]
+              - cell "$88" [ref=e1769]
+              - cell "$120" [ref=e1770]
+              - cell "Caja x 11" [ref=e1771]
+              - cell "Tasa Básica 22.00%" [ref=e1772]
+              - cell "$32" [ref=e1773]
+              - cell "$20.504" [ref=e1774]
+              - cell "$27.960" [ref=e1775]
+              - cell "$7.456" [ref=e1776]
+            - 'row "Harina Ferco 1224g (Test 599272-17) Harina Ferco 1224g (Test 599272-17) Código: 779599272000017 221 $363 $588 caja x 8 - $225 $80.223 $129.948 $49.725" [ref=e1777] [cursor=pointer]':
+              - cell "Harina Ferco 1224g (Test 599272-17)" [ref=e1778]:
+                - img "Harina Ferco 1224g (Test 599272-17)" [ref=e1779]
+              - 'cell "Harina Ferco 1224g (Test 599272-17) Código: 779599272000017" [ref=e1780]':
+                - generic [ref=e1781]:
+                  - strong [ref=e1782]: Harina Ferco 1224g (Test 599272-17)
+                  - generic [ref=e1783]: "Código: 779599272000017"
+              - cell "221" [ref=e1784]
+              - cell "$363" [ref=e1785]
+              - cell "$588" [ref=e1786]
+              - cell "caja x 8" [ref=e1787]
+              - cell "-" [ref=e1788]
+              - cell "$225" [ref=e1789]
+              - cell "$80.223" [ref=e1790]
+              - cell "$129.948" [ref=e1791]
+              - cell "$49.725" [ref=e1792]
+            - 'row "Harina Ferco 733g (Test 335459-3) Harina Ferco 733g (Test 335459-3) Código: 779335459000003 92 $158 $250 Caja x 5 Tasa Básica 22.00% $92 $14.536 $23.000 $8.464" [ref=e1793] [cursor=pointer]':
+              - cell "Harina Ferco 733g (Test 335459-3)" [ref=e1794]:
+                - img "Harina Ferco 733g (Test 335459-3)" [ref=e1795]
+              - 'cell "Harina Ferco 733g (Test 335459-3) Código: 779335459000003" [ref=e1796]':
+                - generic [ref=e1797]:
+                  - strong [ref=e1798]: Harina Ferco 733g (Test 335459-3)
+                  - generic [ref=e1799]: "Código: 779335459000003"
+              - cell "92" [ref=e1800]
+              - cell "$158" [ref=e1801]
+              - cell "$250" [ref=e1802]
+              - cell "Caja x 5" [ref=e1803]
+              - cell "Tasa Básica 22.00%" [ref=e1804]
+              - cell "$92" [ref=e1805]
+              - cell "$14.536" [ref=e1806]
+              - cell "$23.000" [ref=e1807]
+              - cell "$8.464" [ref=e1808]
+            - 'row "Harina Monte 1377g (Test 599272-32) Harina Monte 1377g (Test 599272-32) Código: 779599272000032 214 $123 $197 caja x 5 - $74 $26.322 $42.158 $15.836" [ref=e1809] [cursor=pointer]':
+              - cell "Harina Monte 1377g (Test 599272-32)" [ref=e1810]:
+                - img "Harina Monte 1377g (Test 599272-32)" [ref=e1811]
+              - 'cell "Harina Monte 1377g (Test 599272-32) Código: 779599272000032" [ref=e1812]':
+                - generic [ref=e1813]:
+                  - strong [ref=e1814]: Harina Monte 1377g (Test 599272-32)
+                  - generic [ref=e1815]: "Código: 779599272000032"
+              - cell "214" [ref=e1816]
+              - cell "$123" [ref=e1817]
+              - cell "$197" [ref=e1818]
+              - cell "caja x 5" [ref=e1819]
+              - cell "-" [ref=e1820]
+              - cell "$74" [ref=e1821]
+              - cell "$26.322" [ref=e1822]
+              - cell "$42.158" [ref=e1823]
+              - cell "$15.836" [ref=e1824]
+            - 'row "Harina Monte 421g (Test 335459-56) Harina Monte 421g (Test 335459-56) Código: 779335459000056 63 $246 $332 Caja x 12 Tasa Básica 22.00% $86 $15.498 $20.916 $5.418" [ref=e1825] [cursor=pointer]':
+              - cell "Harina Monte 421g (Test 335459-56)" [ref=e1826]:
+                - img "Harina Monte 421g (Test 335459-56)" [ref=e1827]
+              - 'cell "Harina Monte 421g (Test 335459-56) Código: 779335459000056" [ref=e1828]':
+                - generic [ref=e1829]:
+                  - strong [ref=e1830]: Harina Monte 421g (Test 335459-56)
+                  - generic [ref=e1831]: "Código: 779335459000056"
+              - cell "63" [ref=e1832]
+              - cell "$246" [ref=e1833]
+              - cell "$332" [ref=e1834]
+              - cell "Caja x 12" [ref=e1835]
+              - cell "Tasa Básica 22.00%" [ref=e1836]
+              - cell "$86" [ref=e1837]
+              - cell "$15.498" [ref=e1838]
+              - cell "$20.916" [ref=e1839]
+              - cell "$5.418" [ref=e1840]
+            - 'row "Harina Nativa 1322g (Test 335459-47) Harina Nativa 1322g (Test 335459-47) Código: 779335459000047 224 $305 $491 Caja x 5 Tasa Básica 22.00% $186 $68.320 $109.984 $41.664" [ref=e1841] [cursor=pointer]':
+              - cell "Harina Nativa 1322g (Test 335459-47)" [ref=e1842]:
+                - img "Harina Nativa 1322g (Test 335459-47)" [ref=e1843]
+              - 'cell "Harina Nativa 1322g (Test 335459-47) Código: 779335459000047" [ref=e1844]':
+                - generic [ref=e1845]:
+                  - strong [ref=e1846]: Harina Nativa 1322g (Test 335459-47)
+                  - generic [ref=e1847]: "Código: 779335459000047"
+              - cell "224" [ref=e1848]
+              - cell "$305" [ref=e1849]
+              - cell "$491" [ref=e1850]
+              - cell "Caja x 5" [ref=e1851]
+              - cell "Tasa Básica 22.00%" [ref=e1852]
+              - cell "$186" [ref=e1853]
+              - cell "$68.320" [ref=e1854]
+              - cell "$109.984" [ref=e1855]
+              - cell "$41.664" [ref=e1856]
+            - 'row "Harina Premium 445g (Test 599272-19) Harina Premium 445g (Test 599272-19) Código: 779599272000019 160 $133 $173 bolsa x 14 - $40 $21.280 $27.680 $6.400" [ref=e1857] [cursor=pointer]':
+              - cell "Harina Premium 445g (Test 599272-19)" [ref=e1858]:
+                - img "Harina Premium 445g (Test 599272-19)" [ref=e1859]
+              - 'cell "Harina Premium 445g (Test 599272-19) Código: 779599272000019" [ref=e1860]':
+                - generic [ref=e1861]:
+                  - strong [ref=e1862]: Harina Premium 445g (Test 599272-19)
+                  - generic [ref=e1863]: "Código: 779599272000019"
+              - cell "160" [ref=e1864]
+              - cell "$133" [ref=e1865]
+              - cell "$173" [ref=e1866]
+              - cell "bolsa x 14" [ref=e1867]
+              - cell "-" [ref=e1868]
+              - cell "$40" [ref=e1869]
+              - cell "$21.280" [ref=e1870]
+              - cell "$27.680" [ref=e1871]
+              - cell "$6.400" [ref=e1872]
+            - 'row "Harina Premium 689g (Test 335459-4) Harina Premium 689g (Test 335459-4) Código: 779335459000004 168 $249 $336 Caja x 4 Tasa Básica 22.00% $87 $41.832 $56.448 $14.616" [ref=e1873] [cursor=pointer]':
+              - cell "Harina Premium 689g (Test 335459-4)" [ref=e1874]:
+                - img "Harina Premium 689g (Test 335459-4)" [ref=e1875]
+              - 'cell "Harina Premium 689g (Test 335459-4) Código: 779335459000004" [ref=e1876]':
+                - generic [ref=e1877]:
+                  - strong [ref=e1878]: Harina Premium 689g (Test 335459-4)
+                  - generic [ref=e1879]: "Código: 779335459000004"
+              - cell "168" [ref=e1880]
+              - cell "$249" [ref=e1881]
+              - cell "$336" [ref=e1882]
+              - cell "Caja x 4" [ref=e1883]
+              - cell "Tasa Básica 22.00%" [ref=e1884]
+              - cell "$87" [ref=e1885]
+              - cell "$41.832" [ref=e1886]
+              - cell "$56.448" [ref=e1887]
+              - cell "$14.616" [ref=e1888]
+            - 'row "Harina Río 1284g (Test 335459-35) Harina Río 1284g (Test 335459-35) Código: 779335459000035 236 $196 $319 Caja x 10 Tasa Básica 22.00% $123 $46.256 $75.284 $29.028" [ref=e1889] [cursor=pointer]':
+              - cell "Harina Río 1284g (Test 335459-35)" [ref=e1890]:
+                - img "Harina Río 1284g (Test 335459-35)" [ref=e1891]
+              - 'cell "Harina Río 1284g (Test 335459-35) Código: 779335459000035" [ref=e1892]':
+                - generic [ref=e1893]:
+                  - strong [ref=e1894]: Harina Río 1284g (Test 335459-35)
+                  - generic [ref=e1895]: "Código: 779335459000035"
+              - cell "236" [ref=e1896]
+              - cell "$196" [ref=e1897]
+              - cell "$319" [ref=e1898]
+              - cell "Caja x 10" [ref=e1899]
+              - cell "Tasa Básica 22.00%" [ref=e1900]
+              - cell "$123" [ref=e1901]
+              - cell "$46.256" [ref=e1902]
+              - cell "$75.284" [ref=e1903]
+              - cell "$29.028" [ref=e1904]
+            - 'row "Leche Andes 296g (Test 599272-1) Leche Andes 296g (Test 599272-1) Código: 779599272000001 83 $366 $637 caja x 14 - $271 $30.378 $52.871 $22.493" [ref=e1905] [cursor=pointer]':
+              - cell "Leche Andes 296g (Test 599272-1)" [ref=e1906]:
+                - img "Leche Andes 296g (Test 599272-1)" [ref=e1907]
+              - 'cell "Leche Andes 296g (Test 599272-1) Código: 779599272000001" [ref=e1908]':
+                - generic [ref=e1909]:
+                  - strong [ref=e1910]: Leche Andes 296g (Test 599272-1)
+                  - generic [ref=e1911]: "Código: 779599272000001"
+              - cell "83" [ref=e1912]
+              - cell "$366" [ref=e1913]
+              - cell "$637" [ref=e1914]
+              - cell "caja x 14" [ref=e1915]
+              - cell "-" [ref=e1916]
+              - cell "$271" [ref=e1917]
+              - cell "$30.378" [ref=e1918]
+              - cell "$52.871" [ref=e1919]
+              - cell "$22.493" [ref=e1920]
+            - 'row "Leche Andes 983g (Test 335459-23) Leche Andes 983g (Test 335459-23) Código: 779335459000023 175 $232 $292 Caja x 12 Tasa Básica 22.00% $60 $40.600 $51.100 $10.500" [ref=e1921] [cursor=pointer]':
+              - cell "Leche Andes 983g (Test 335459-23)" [ref=e1922]:
+                - img "Leche Andes 983g (Test 335459-23)" [ref=e1923]
+              - 'cell "Leche Andes 983g (Test 335459-23) Código: 779335459000023" [ref=e1924]':
+                - generic [ref=e1925]:
+                  - strong [ref=e1926]: Leche Andes 983g (Test 335459-23)
+                  - generic [ref=e1927]: "Código: 779335459000023"
+              - cell "175" [ref=e1928]
+              - cell "$232" [ref=e1929]
+              - cell "$292" [ref=e1930]
+              - cell "Caja x 12" [ref=e1931]
+              - cell "Tasa Básica 22.00%" [ref=e1932]
+              - cell "$60" [ref=e1933]
+              - cell "$40.600" [ref=e1934]
+              - cell "$51.100" [ref=e1935]
+              - cell "$10.500" [ref=e1936]
+            - 'row "Leche Campo 1179g (Test 335459-75) Leche Campo 1179g (Test 335459-75) Código: 779335459000075 122 $29 $42 Caja x 16 Tasa Básica 22.00% $13 $3.538 $5.124 $1.586" [ref=e1937] [cursor=pointer]':
+              - cell "Leche Campo 1179g (Test 335459-75)" [ref=e1938]:
+                - img "Leche Campo 1179g (Test 335459-75)" [ref=e1939]
+              - 'cell "Leche Campo 1179g (Test 335459-75) Código: 779335459000075" [ref=e1940]':
+                - generic [ref=e1941]:
+                  - strong [ref=e1942]: Leche Campo 1179g (Test 335459-75)
+                  - generic [ref=e1943]: "Código: 779335459000075"
+              - cell "122" [ref=e1944]
+              - cell "$29" [ref=e1945]
+              - cell "$42" [ref=e1946]
+              - cell "Caja x 16" [ref=e1947]
+              - cell "Tasa Básica 22.00%" [ref=e1948]
+              - cell "$13" [ref=e1949]
+              - cell "$3.538" [ref=e1950]
+              - cell "$5.124" [ref=e1951]
+              - cell "$1.586" [ref=e1952]
+            - 'row "Leche Del Sur 1045g (Test 335459-18) Leche Del Sur 1045g (Test 335459-18) Código: 779335459000018 84 $257 $460 Caja x 21 Tasa Básica 22.00% $203 $21.588 $38.640 $17.052" [ref=e1953] [cursor=pointer]':
+              - cell "Leche Del Sur 1045g (Test 335459-18)" [ref=e1954]:
+                - img "Leche Del Sur 1045g (Test 335459-18)" [ref=e1955]
+              - 'cell "Leche Del Sur 1045g (Test 335459-18) Código: 779335459000018" [ref=e1956]':
+                - generic [ref=e1957]:
+                  - strong [ref=e1958]: Leche Del Sur 1045g (Test 335459-18)
+                  - generic [ref=e1959]: "Código: 779335459000018"
+              - cell "84" [ref=e1960]
+              - cell "$257" [ref=e1961]
+              - cell "$460" [ref=e1962]
+              - cell "Caja x 21" [ref=e1963]
+              - cell "Tasa Básica 22.00%" [ref=e1964]
+              - cell "$203" [ref=e1965]
+              - cell "$21.588" [ref=e1966]
+              - cell "$38.640" [ref=e1967]
+              - cell "$17.052" [ref=e1968]
+            - 'row "Leche Del Sur 587g (Test 599272-5) Leche Del Sur 587g (Test 599272-5) Código: 779599272000005 230 $360 $533 bolsa x 12 - $173 $82.800 $122.590 $39.790" [ref=e1969] [cursor=pointer]':
+              - cell "Leche Del Sur 587g (Test 599272-5)" [ref=e1970]:
+                - img "Leche Del Sur 587g (Test 599272-5)" [ref=e1971]
+              - 'cell "Leche Del Sur 587g (Test 599272-5) Código: 779599272000005" [ref=e1972]':
+                - generic [ref=e1973]:
+                  - strong [ref=e1974]: Leche Del Sur 587g (Test 599272-5)
+                  - generic [ref=e1975]: "Código: 779599272000005"
+              - cell "230" [ref=e1976]
+              - cell "$360" [ref=e1977]
+              - cell "$533" [ref=e1978]
+              - cell "bolsa x 12" [ref=e1979]
+              - cell "-" [ref=e1980]
+              - cell "$173" [ref=e1981]
+              - cell "$82.800" [ref=e1982]
+              - cell "$122.590" [ref=e1983]
+              - cell "$39.790" [ref=e1984]
+            - 'row "Leche Entera Leche Entera Código: 34321 80 $1 $1.200 Caja x 6 Tasa Básica 22.00% $1.199 $80 $96.000 $95.920" [ref=e1985] [cursor=pointer]':
+              - cell "Leche Entera" [ref=e1986]:
+                - img "Leche Entera" [ref=e1987]
+              - 'cell "Leche Entera Código: 34321" [ref=e1988]':
+                - generic [ref=e1989]:
+                  - strong [ref=e1990]: Leche Entera
+                  - generic [ref=e1991]: "Código: 34321"
+              - cell "80" [ref=e1992]
+              - cell "$1" [ref=e1993]
+              - cell "$1.200" [ref=e1994]
+              - cell "Caja x 6" [ref=e1995]
+              - cell "Tasa Básica 22.00%" [ref=e1996]
+              - cell "$1.199" [ref=e1997]
+              - cell "$80" [ref=e1998]
+              - cell "$96.000" [ref=e1999]
+              - cell "$95.920" [ref=e2000]
+            - 'row "Leche Entera Leche Entera Código: 412341 80 $1 $1.200 Unidad x 1 Tasa Básica 22.00% $1.199 $80 $96.000 $95.920" [ref=e2001] [cursor=pointer]':
+              - cell "Leche Entera" [ref=e2002]:
+                - img "Leche Entera" [ref=e2003]
+              - 'cell "Leche Entera Código: 412341" [ref=e2004]':
+                - generic [ref=e2005]:
+                  - strong [ref=e2006]: Leche Entera
+                  - generic [ref=e2007]: "Código: 412341"
+              - cell "80" [ref=e2008]
+              - cell "$1" [ref=e2009]
+              - cell "$1.200" [ref=e2010]
+              - cell "Unidad x 1" [ref=e2011]
+              - cell "Tasa Básica 22.00%" [ref=e2012]
+              - cell "$1.199" [ref=e2013]
+              - cell "$80" [ref=e2014]
+              - cell "$96.000" [ref=e2015]
+              - cell "$95.920" [ref=e2016]
+            - 'row "Leche Entera Leche Entera Código: 4567 0 $1 $1.200 Caja x 6 Tasa Básica 22.00% $1.199 $0 $0 $0" [ref=e2017] [cursor=pointer]':
+              - cell "Leche Entera" [ref=e2018]:
+                - img "Leche Entera" [ref=e2019]
+              - 'cell "Leche Entera Código: 4567" [ref=e2020]':
+                - generic [ref=e2021]:
+                  - strong [ref=e2022]: Leche Entera
+                  - generic [ref=e2023]: "Código: 4567"
+              - cell "0" [ref=e2024]
+              - cell "$1" [ref=e2025]
+              - cell "$1.200" [ref=e2026]
+              - cell "Caja x 6" [ref=e2027]
+              - cell "Tasa Básica 22.00%" [ref=e2028]
+              - cell "$1.199" [ref=e2029]
+              - cell "$0" [ref=e2030]
+              - cell "$0" [ref=e2031]
+              - cell "$0" [ref=e2032]
+            - 'row "Leche Ferco 1134g (Test 335459-32) Leche Ferco 1134g (Test 335459-32) Código: 779335459000032 240 $285 $482 Caja x 16 Tasa Básica 22.00% $197 $68.400 $115.680 $47.280" [ref=e2033] [cursor=pointer]':
+              - cell "Leche Ferco 1134g (Test 335459-32)" [ref=e2034]:
+                - img "Leche Ferco 1134g (Test 335459-32)" [ref=e2035]
+              - 'cell "Leche Ferco 1134g (Test 335459-32) Código: 779335459000032" [ref=e2036]':
+                - generic [ref=e2037]:
+                  - strong [ref=e2038]: Leche Ferco 1134g (Test 335459-32)
+                  - generic [ref=e2039]: "Código: 779335459000032"
+              - cell "240" [ref=e2040]
+              - cell "$285" [ref=e2041]
+              - cell "$482" [ref=e2042]
+              - cell "Caja x 16" [ref=e2043]
+              - cell "Tasa Básica 22.00%" [ref=e2044]
+              - cell "$197" [ref=e2045]
+              - cell "$68.400" [ref=e2046]
+              - cell "$115.680" [ref=e2047]
+              - cell "$47.280" [ref=e2048]
+            - 'row "Leche Monte 1083g (Test 599272-18) Leche Monte 1083g (Test 599272-18) Código: 779599272000018 214 $35 $50 caja x 7 - $15 $7.490 $10.700 $3.210" [ref=e2049] [cursor=pointer]':
+              - cell "Leche Monte 1083g (Test 599272-18)" [ref=e2050]:
+                - img "Leche Monte 1083g (Test 599272-18)" [ref=e2051]
+              - 'cell "Leche Monte 1083g (Test 599272-18) Código: 779599272000018" [ref=e2052]':
+                - generic [ref=e2053]:
+                  - strong [ref=e2054]: Leche Monte 1083g (Test 599272-18)
+                  - generic [ref=e2055]: "Código: 779599272000018"
+              - cell "214" [ref=e2056]
+              - cell "$35" [ref=e2057]
+              - cell "$50" [ref=e2058]
+              - cell "caja x 7" [ref=e2059]
+              - cell "-" [ref=e2060]
+              - cell "$15" [ref=e2061]
+              - cell "$7.490" [ref=e2062]
+              - cell "$10.700" [ref=e2063]
+              - cell "$3.210" [ref=e2064]
+            - 'row "Leche Monte 1337g (Test 599272-29) Leche Monte 1337g (Test 599272-29) Código: 779599272000029 250 $276 $342 bandeja x 11 - $66 $69.000 $85.500 $16.500" [ref=e2065] [cursor=pointer]':
+              - cell "Leche Monte 1337g (Test 599272-29)" [ref=e2066]:
+                - img "Leche Monte 1337g (Test 599272-29)" [ref=e2067]
+              - 'cell "Leche Monte 1337g (Test 599272-29) Código: 779599272000029" [ref=e2068]':
+                - generic [ref=e2069]:
+                  - strong [ref=e2070]: Leche Monte 1337g (Test 599272-29)
+                  - generic [ref=e2071]: "Código: 779599272000029"
+              - cell "250" [ref=e2072]
+              - cell "$276" [ref=e2073]
+              - cell "$342" [ref=e2074]
+              - cell "bandeja x 11" [ref=e2075]
+              - cell "-" [ref=e2076]
+              - cell "$66" [ref=e2077]
+              - cell "$69.000" [ref=e2078]
+              - cell "$85.500" [ref=e2079]
+              - cell "$16.500" [ref=e2080]
+            - 'row "Leche Monte 253g (Test 335459-8) Leche Monte 253g (Test 335459-8) Código: 779335459000008 105 $66 $118 Caja x 15 Tasa Básica 22.00% $52 $6.930 $12.390 $5.460" [ref=e2081] [cursor=pointer]':
+              - cell "Leche Monte 253g (Test 335459-8)" [ref=e2082]:
+                - img "Leche Monte 253g (Test 335459-8)" [ref=e2083]
+              - 'cell "Leche Monte 253g (Test 335459-8) Código: 779335459000008" [ref=e2084]':
+                - generic [ref=e2085]:
+                  - strong [ref=e2086]: Leche Monte 253g (Test 335459-8)
+                  - generic [ref=e2087]: "Código: 779335459000008"
+              - cell "105" [ref=e2088]
+              - cell "$66" [ref=e2089]
+              - cell "$118" [ref=e2090]
+              - cell "Caja x 15" [ref=e2091]
+              - cell "Tasa Básica 22.00%" [ref=e2092]
+              - cell "$52" [ref=e2093]
+              - cell "$6.930" [ref=e2094]
+              - cell "$12.390" [ref=e2095]
+              - cell "$5.460" [ref=e2096]
+            - 'row "Leche Monte 979g (Test 335459-45) Leche Monte 979g (Test 335459-45) Código: 779335459000045 79 $141 $176 Caja x 18 Tasa Básica 22.00% $35 $11.139 $13.904 $2.765" [ref=e2097] [cursor=pointer]':
+              - cell "Leche Monte 979g (Test 335459-45)" [ref=e2098]:
+                - img "Leche Monte 979g (Test 335459-45)" [ref=e2099]
+              - 'cell "Leche Monte 979g (Test 335459-45) Código: 779335459000045" [ref=e2100]':
+                - generic [ref=e2101]:
+                  - strong [ref=e2102]: Leche Monte 979g (Test 335459-45)
+                  - generic [ref=e2103]: "Código: 779335459000045"
+              - cell "79" [ref=e2104]
+              - cell "$141" [ref=e2105]
+              - cell "$176" [ref=e2106]
+              - cell "Caja x 18" [ref=e2107]
+              - cell "Tasa Básica 22.00%" [ref=e2108]
+              - cell "$35" [ref=e2109]
+              - cell "$11.139" [ref=e2110]
+              - cell "$13.904" [ref=e2111]
+              - cell "$2.765" [ref=e2112]
+            - 'row "Leche Nativa 627g (Test 335459-11) Leche Nativa 627g (Test 335459-11) Código: 779335459000011 113 $87 $133 Caja x 22 Tasa Básica 22.00% $46 $9.831 $15.029 $5.198" [ref=e2113] [cursor=pointer]':
+              - cell "Leche Nativa 627g (Test 335459-11)" [ref=e2114]:
+                - img "Leche Nativa 627g (Test 335459-11)" [ref=e2115]
+              - 'cell "Leche Nativa 627g (Test 335459-11) Código: 779335459000011" [ref=e2116]':
+                - generic [ref=e2117]:
+                  - strong [ref=e2118]: Leche Nativa 627g (Test 335459-11)
+                  - generic [ref=e2119]: "Código: 779335459000011"
+              - cell "113" [ref=e2120]
+              - cell "$87" [ref=e2121]
+              - cell "$133" [ref=e2122]
+              - cell "Caja x 22" [ref=e2123]
+              - cell "Tasa Básica 22.00%" [ref=e2124]
+              - cell "$46" [ref=e2125]
+              - cell "$9.831" [ref=e2126]
+              - cell "$15.029" [ref=e2127]
+              - cell "$5.198" [ref=e2128]
+            - 'row "Leche Nativa 674g (Test 335459-41) Leche Nativa 674g (Test 335459-41) Código: 779335459000041 186 $55 $94 Caja x 17 Tasa Básica 22.00% $39 $10.230 $17.484 $7.254" [ref=e2129] [cursor=pointer]':
+              - cell "Leche Nativa 674g (Test 335459-41)" [ref=e2130]:
+                - img "Leche Nativa 674g (Test 335459-41)" [ref=e2131]
+              - 'cell "Leche Nativa 674g (Test 335459-41) Código: 779335459000041" [ref=e2132]':
+                - generic [ref=e2133]:
+                  - strong [ref=e2134]: Leche Nativa 674g (Test 335459-41)
+                  - generic [ref=e2135]: "Código: 779335459000041"
+              - cell "186" [ref=e2136]
+              - cell "$55" [ref=e2137]
+              - cell "$94" [ref=e2138]
+              - cell "Caja x 17" [ref=e2139]
+              - cell "Tasa Básica 22.00%" [ref=e2140]
+              - cell "$39" [ref=e2141]
+              - cell "$10.230" [ref=e2142]
+              - cell "$17.484" [ref=e2143]
+              - cell "$7.254" [ref=e2144]
+            - 'row "Leche Premium 312g (Test 335459-68) Leche Premium 312g (Test 335459-68) Código: 779335459000068 250 $275 $429 Caja x 11 Tasa Básica 22.00% $154 $68.750 $107.250 $38.500" [ref=e2145] [cursor=pointer]':
+              - cell "Leche Premium 312g (Test 335459-68)" [ref=e2146]:
+                - img "Leche Premium 312g (Test 335459-68)" [ref=e2147]
+              - 'cell "Leche Premium 312g (Test 335459-68) Código: 779335459000068" [ref=e2148]':
+                - generic [ref=e2149]:
+                  - strong [ref=e2150]: Leche Premium 312g (Test 335459-68)
+                  - generic [ref=e2151]: "Código: 779335459000068"
+              - cell "250" [ref=e2152]
+              - cell "$275" [ref=e2153]
+              - cell "$429" [ref=e2154]
+              - cell "Caja x 11" [ref=e2155]
+              - cell "Tasa Básica 22.00%" [ref=e2156]
+              - cell "$154" [ref=e2157]
+              - cell "$68.750" [ref=e2158]
+              - cell "$107.250" [ref=e2159]
+              - cell "$38.500" [ref=e2160]
+            - 'row "Sin imagen Moncayo Código: 456745 2313 $1 $233 Caja x 6 Tasa Básica 22.00% $232 $2.313 $538.929 $536.616" [ref=e2161] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e2162]
+              - 'cell "Moncayo Código: 456745" [ref=e2163]':
+                - generic [ref=e2164]:
+                  - strong [ref=e2165]: Moncayo
+                  - generic [ref=e2166]: "Código: 456745"
+              - cell "2313" [ref=e2167]
+              - cell "$1" [ref=e2168]
+              - cell "$233" [ref=e2169]
+              - cell "Caja x 6" [ref=e2170]
+              - cell "Tasa Básica 22.00%" [ref=e2171]
+              - cell "$232" [ref=e2172]
+              - cell "$2.313" [ref=e2173]
+              - cell "$538.929" [ref=e2174]
+              - cell "$536.616" [ref=e2175]
+            - 'row "Sin imagen Pepinos Código: 967896789 200 $1 $200 Caja x 6 Tasa Básica 22.00% $199 $200 $40.000 $39.800" [ref=e2176] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e2177]
+              - 'cell "Pepinos Código: 967896789" [ref=e2178]':
+                - generic [ref=e2179]:
+                  - strong [ref=e2180]: Pepinos
+                  - generic [ref=e2181]: "Código: 967896789"
+              - cell "200" [ref=e2182]
+              - cell "$1" [ref=e2183]
+              - cell "$200" [ref=e2184]
+              - cell "Caja x 6" [ref=e2185]
+              - cell "Tasa Básica 22.00%" [ref=e2186]
+              - cell "$199" [ref=e2187]
+              - cell "$200" [ref=e2188]
+              - cell "$40.000" [ref=e2189]
+              - cell "$39.800" [ref=e2190]
+            - 'row "Sin imagen Pepinosss Código: 12315 1781 $1 $2.000 Caja x 6 Tasa Básica 22.00% $1.999 $1.781 $3.562.000 $3.560.219" [ref=e2191] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e2192]
+              - 'cell "Pepinosss Código: 12315" [ref=e2193]':
+                - generic [ref=e2194]:
+                  - strong [ref=e2195]: Pepinosss
+                  - generic [ref=e2196]: "Código: 12315"
+              - cell "1781" [ref=e2197]
+              - cell "$1" [ref=e2198]
+              - cell "$2.000" [ref=e2199]
+              - cell "Caja x 6" [ref=e2200]
+              - cell "Tasa Básica 22.00%" [ref=e2201]
+              - cell "$1.999" [ref=e2202]
+              - cell "$1.781" [ref=e2203]
+              - cell "$3.562.000" [ref=e2204]
+              - cell "$3.560.219" [ref=e2205]
+            - 'row "Sin imagen Prueba Código: 21231223 175 $20 $100 Funda x 2 Tasa Básica 22.00% $80 $3.500 $17.500 $14.000" [ref=e2206] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e2207]
+              - 'cell "Prueba Código: 21231223" [ref=e2208]':
+                - generic [ref=e2209]:
+                  - strong [ref=e2210]: Prueba
+                  - generic [ref=e2211]: "Código: 21231223"
+              - cell "175" [ref=e2212]
+              - cell "$20" [ref=e2213]
+              - cell "$100" [ref=e2214]
+              - cell "Funda x 2" [ref=e2215]
+              - cell "Tasa Básica 22.00%" [ref=e2216]
+              - cell "$80" [ref=e2217]
+              - cell "$3.500" [ref=e2218]
+              - cell "$17.500" [ref=e2219]
+              - cell "$14.000" [ref=e2220]
+            - 'row "Sin imagen qwer Código: 1234124 -17 $1 $2 Caja x Tasa Básica 22.00% $1 $-17 $-34 $-17" [ref=e2221] [cursor=pointer]':
+              - cell "Sin imagen" [ref=e2222]
+              - 'cell "qwer Código: 1234124" [ref=e2223]':
+                - generic [ref=e2224]:
+                  - strong [ref=e2225]: qwer
+                  - generic [ref=e2226]: "Código: 1234124"
+              - cell "-17" [ref=e2227]
+              - cell "$1" [ref=e2228]
+              - cell "$2" [ref=e2229]
+              - cell "Caja x" [ref=e2230]
+              - cell "Tasa Básica 22.00%" [ref=e2231]
+              - cell "$1" [ref=e2232]
+              - cell "$-17" [ref=e2233]
+              - cell "$-34" [ref=e2234]
+              - cell "$-17" [ref=e2235]
+            - 'row "Yerba Andes 812g (Test 599272-15) Yerba Andes 812g (Test 599272-15) Código: 779599272000015 234 $59 $98 x 15 - $39 $13.806 $22.932 $9.126" [ref=e2236] [cursor=pointer]':
+              - cell "Yerba Andes 812g (Test 599272-15)" [ref=e2237]:
+                - img "Yerba Andes 812g (Test 599272-15)" [ref=e2238]
+              - 'cell "Yerba Andes 812g (Test 599272-15) Código: 779599272000015" [ref=e2239]':
+                - generic [ref=e2240]:
+                  - strong [ref=e2241]: Yerba Andes 812g (Test 599272-15)
+                  - generic [ref=e2242]: "Código: 779599272000015"
+              - cell "234" [ref=e2243]
+              - cell "$59" [ref=e2244]
+              - cell "$98" [ref=e2245]
+              - cell "x 15" [ref=e2246]
+              - cell "-" [ref=e2247]
+              - cell "$39" [ref=e2248]
+              - cell "$13.806" [ref=e2249]
+              - cell "$22.932" [ref=e2250]
+              - cell "$9.126" [ref=e2251]
+            - 'row "Yerba Campo 943g (Test 599272-9) Yerba Campo 943g (Test 599272-9) Código: 779599272000009 222 $137 $186 bandeja x 24 - $49 $30.414 $41.292 $10.878" [ref=e2252] [cursor=pointer]':
+              - cell "Yerba Campo 943g (Test 599272-9)" [ref=e2253]:
+                - img "Yerba Campo 943g (Test 599272-9)" [ref=e2254]
+              - 'cell "Yerba Campo 943g (Test 599272-9) Código: 779599272000009" [ref=e2255]':
+                - generic [ref=e2256]:
+                  - strong [ref=e2257]: Yerba Campo 943g (Test 599272-9)
+                  - generic [ref=e2258]: "Código: 779599272000009"
+              - cell "222" [ref=e2259]
+              - cell "$137" [ref=e2260]
+              - cell "$186" [ref=e2261]
+              - cell "bandeja x 24" [ref=e2262]
+              - cell "-" [ref=e2263]
+              - cell "$49" [ref=e2264]
+              - cell "$30.414" [ref=e2265]
+              - cell "$41.292" [ref=e2266]
+              - cell "$10.878" [ref=e2267]
+            - 'row "Yerba Del Sur 276g (Test 335459-76) Yerba Del Sur 276g (Test 335459-76) Código: 779335459000076 120 $246 $399 Caja x 19 Tasa Básica 22.00% $153 $29.520 $47.880 $18.360" [ref=e2268] [cursor=pointer]':
+              - cell "Yerba Del Sur 276g (Test 335459-76)" [ref=e2269]:
+                - img "Yerba Del Sur 276g (Test 335459-76)" [ref=e2270]
+              - 'cell "Yerba Del Sur 276g (Test 335459-76) Código: 779335459000076" [ref=e2271]':
+                - generic [ref=e2272]:
+                  - strong [ref=e2273]: Yerba Del Sur 276g (Test 335459-76)
+                  - generic [ref=e2274]: "Código: 779335459000076"
+              - cell "120" [ref=e2275]
+              - cell "$246" [ref=e2276]
+              - cell "$399" [ref=e2277]
+              - cell "Caja x 19" [ref=e2278]
+              - cell "Tasa Básica 22.00%" [ref=e2279]
+              - cell "$153" [ref=e2280]
+              - cell "$29.520" [ref=e2281]
+              - cell "$47.880" [ref=e2282]
+              - cell "$18.360" [ref=e2283]
+            - 'row "Yerba Del Sur 680g (Test 599272-21) Yerba Del Sur 680g (Test 599272-21) Código: 779599272000021 177 $338 $460 pack x 5 - $122 $59.826 $81.420 $21.594" [ref=e2284] [cursor=pointer]':
+              - cell "Yerba Del Sur 680g (Test 599272-21)" [ref=e2285]:
+                - img "Yerba Del Sur 680g (Test 599272-21)" [ref=e2286]
+              - 'cell "Yerba Del Sur 680g (Test 599272-21) Código: 779599272000021" [ref=e2287]':
+                - generic [ref=e2288]:
+                  - strong [ref=e2289]: Yerba Del Sur 680g (Test 599272-21)
+                  - generic [ref=e2290]: "Código: 779599272000021"
+              - cell "177" [ref=e2291]
+              - cell "$338" [ref=e2292]
+              - cell "$460" [ref=e2293]
+              - cell "pack x 5" [ref=e2294]
+              - cell "-" [ref=e2295]
+              - cell "$122" [ref=e2296]
+              - cell "$59.826" [ref=e2297]
+              - cell "$81.420" [ref=e2298]
+              - cell "$21.594" [ref=e2299]
+            - 'row "Yerba Doña Ana 799g (Test 335459-12) Yerba Doña Ana 799g (Test 335459-12) Código: 779335459000012 196 $211 $365 Caja x 16 Tasa Básica 22.00% $154 $41.356 $71.540 $30.184" [ref=e2300] [cursor=pointer]':
+              - cell "Yerba Doña Ana 799g (Test 335459-12)" [ref=e2301]:
+                - img "Yerba Doña Ana 799g (Test 335459-12)" [ref=e2302]
+              - 'cell "Yerba Doña Ana 799g (Test 335459-12) Código: 779335459000012" [ref=e2303]':
+                - generic [ref=e2304]:
+                  - strong [ref=e2305]: Yerba Doña Ana 799g (Test 335459-12)
+                  - generic [ref=e2306]: "Código: 779335459000012"
+              - cell "196" [ref=e2307]
+              - cell "$211" [ref=e2308]
+              - cell "$365" [ref=e2309]
+              - cell "Caja x 16" [ref=e2310]
+              - cell "Tasa Básica 22.00%" [ref=e2311]
+              - cell "$154" [ref=e2312]
+              - cell "$41.356" [ref=e2313]
+              - cell "$71.540" [ref=e2314]
+              - cell "$30.184" [ref=e2315]
+            - 'row "Yerba Ferco 1433g (Test 335459-26) Yerba Ferco 1433g (Test 335459-26) Código: 779335459000026 248 $171 $260 Caja x 14 Tasa Básica 22.00% $89 $42.408 $64.480 $22.072" [ref=e2316] [cursor=pointer]':
+              - cell "Yerba Ferco 1433g (Test 335459-26)" [ref=e2317]:
+                - img "Yerba Ferco 1433g (Test 335459-26)" [ref=e2318]
+              - 'cell "Yerba Ferco 1433g (Test 335459-26) Código: 779335459000026" [ref=e2319]':
+                - generic [ref=e2320]:
+                  - strong [ref=e2321]: Yerba Ferco 1433g (Test 335459-26)
+                  - generic [ref=e2322]: "Código: 779335459000026"
+              - cell "248" [ref=e2323]
+              - cell "$171" [ref=e2324]
+              - cell "$260" [ref=e2325]
+              - cell "Caja x 14" [ref=e2326]
+              - cell "Tasa Básica 22.00%" [ref=e2327]
+              - cell "$89" [ref=e2328]
+              - cell "$42.408" [ref=e2329]
+              - cell "$64.480" [ref=e2330]
+              - cell "$22.072" [ref=e2331]
+            - 'row "Yerba Ferco 372g (Test 335459-33) Yerba Ferco 372g (Test 335459-33) Código: 779335459000033 196 $188 $303 Caja x 16 Tasa Básica 22.00% $115 $36.848 $59.388 $22.540" [ref=e2332] [cursor=pointer]':
+              - cell "Yerba Ferco 372g (Test 335459-33)" [ref=e2333]:
+                - img "Yerba Ferco 372g (Test 335459-33)" [ref=e2334]
+              - 'cell "Yerba Ferco 372g (Test 335459-33) Código: 779335459000033" [ref=e2335]':
+                - generic [ref=e2336]:
+                  - strong [ref=e2337]: Yerba Ferco 372g (Test 335459-33)
+                  - generic [ref=e2338]: "Código: 779335459000033"
+              - cell "196" [ref=e2339]
+              - cell "$188" [ref=e2340]
+              - cell "$303" [ref=e2341]
+              - cell "Caja x 16" [ref=e2342]
+              - cell "Tasa Básica 22.00%" [ref=e2343]
+              - cell "$115" [ref=e2344]
+              - cell "$36.848" [ref=e2345]
+              - cell "$59.388" [ref=e2346]
+              - cell "$22.540" [ref=e2347]
+            - 'row "Yerba Mate Yerba Mate Código: 54145 50 $1 $2.500 Caja x 6 Tasa Básica 22.00% $2.499 $50 $125.000 $124.950" [ref=e2348] [cursor=pointer]':
+              - cell "Yerba Mate" [ref=e2349]:
+                - img "Yerba Mate" [ref=e2350]
+              - 'cell "Yerba Mate Código: 54145" [ref=e2351]':
+                - generic [ref=e2352]:
+                  - strong [ref=e2353]: Yerba Mate
+                  - generic [ref=e2354]: "Código: 54145"
+              - cell "50" [ref=e2355]
+              - cell "$1" [ref=e2356]
+              - cell "$2.500" [ref=e2357]
+              - cell "Caja x 6" [ref=e2358]
+              - cell "Tasa Básica 22.00%" [ref=e2359]
+              - cell "$2.499" [ref=e2360]
+              - cell "$50" [ref=e2361]
+              - cell "$125.000" [ref=e2362]
+              - cell "$124.950" [ref=e2363]
+            - 'row "Yerba Mate Yerba Mate Código: 41452 50 $1 $2.500 Caja x 6 Tasa Básica 22.00% $2.499 $50 $125.000 $124.950" [ref=e2364] [cursor=pointer]':
+              - cell "Yerba Mate" [ref=e2365]:
+                - img "Yerba Mate" [ref=e2366]
+              - 'cell "Yerba Mate Código: 41452" [ref=e2367]':
+                - generic [ref=e2368]:
+                  - strong [ref=e2369]: Yerba Mate
+                  - generic [ref=e2370]: "Código: 41452"
+              - cell "50" [ref=e2371]
+              - cell "$1" [ref=e2372]
+              - cell "$2.500" [ref=e2373]
+              - cell "Caja x 6" [ref=e2374]
+              - cell "Tasa Básica 22.00%" [ref=e2375]
+              - cell "$2.499" [ref=e2376]
+              - cell "$50" [ref=e2377]
+              - cell "$125.000" [ref=e2378]
+              - cell "$124.950" [ref=e2379]
+            - 'row "Yerba Mate Yerba Mate Código: 51234 0 $1 $2.500 Caja x 6 Tasa Básica 22.00% $2.499 $0 $0 $0" [ref=e2380] [cursor=pointer]':
+              - cell "Yerba Mate" [ref=e2381]:
+                - img "Yerba Mate" [ref=e2382]
+              - 'cell "Yerba Mate Código: 51234" [ref=e2383]':
+                - generic [ref=e2384]:
+                  - strong [ref=e2385]: Yerba Mate
+                  - generic [ref=e2386]: "Código: 51234"
+              - cell "0" [ref=e2387]
+              - cell "$1" [ref=e2388]
+              - cell "$2.500" [ref=e2389]
+              - cell "Caja x 6" [ref=e2390]
+              - cell "Tasa Básica 22.00%" [ref=e2391]
+              - cell "$2.499" [ref=e2392]
+              - cell "$0" [ref=e2393]
+              - cell "$0" [ref=e2394]
+              - cell "$0" [ref=e2395]
+            - 'row "Yerba Moncayo Yerba Moncayo Código: 34563 199 $1 $200 Caja x 6 Tasa Básica 22.00% $199 $199 $39.800 $39.601" [ref=e2396] [cursor=pointer]':
+              - cell "Yerba Moncayo" [ref=e2397]:
+                - img "Yerba Moncayo" [ref=e2398]
+              - 'cell "Yerba Moncayo Código: 34563" [ref=e2399]':
+                - generic [ref=e2400]:
+                  - strong [ref=e2401]: Yerba Moncayo
+                  - generic [ref=e2402]: "Código: 34563"
+              - cell "199" [ref=e2403]
+              - cell "$1" [ref=e2404]
+              - cell "$200" [ref=e2405]
+              - cell "Caja x 6" [ref=e2406]
+              - cell "Tasa Básica 22.00%" [ref=e2407]
+              - cell "$199" [ref=e2408]
+              - cell "$199" [ref=e2409]
+              - cell "$39.800" [ref=e2410]
+              - cell "$39.601" [ref=e2411]
+            - 'row "Yerba Moncayo Yerba Moncayo Código: 1234156 200 $1 $200 Caja x 6 Tasa Básica 22.00% $199 $200 $40.000 $39.800" [ref=e2412] [cursor=pointer]':
+              - cell "Yerba Moncayo" [ref=e2413]:
+                - img "Yerba Moncayo" [ref=e2414]
+              - 'cell "Yerba Moncayo Código: 1234156" [ref=e2415]':
+                - generic [ref=e2416]:
+                  - strong [ref=e2417]: Yerba Moncayo
+                  - generic [ref=e2418]: "Código: 1234156"
+              - cell "200" [ref=e2419]
+              - cell "$1" [ref=e2420]
+              - cell "$200" [ref=e2421]
+              - cell "Caja x 6" [ref=e2422]
+              - cell "Tasa Básica 22.00%" [ref=e2423]
+              - cell "$199" [ref=e2424]
+              - cell "$200" [ref=e2425]
+              - cell "$40.000" [ref=e2426]
+              - cell "$39.800" [ref=e2427]
+            - 'row "Yerba Monte 1201g (Test 335459-55) Yerba Monte 1201g (Test 335459-55) Código: 779335459000055 210 $188 $293 Caja x 10 Tasa Básica 22.00% $105 $39.480 $61.530 $22.050" [ref=e2428] [cursor=pointer]':
+              - cell "Yerba Monte 1201g (Test 335459-55)" [ref=e2429]:
+                - img "Yerba Monte 1201g (Test 335459-55)" [ref=e2430]
+              - 'cell "Yerba Monte 1201g (Test 335459-55) Código: 779335459000055" [ref=e2431]':
+                - generic [ref=e2432]:
+                  - strong [ref=e2433]: Yerba Monte 1201g (Test 335459-55)
+                  - generic [ref=e2434]: "Código: 779335459000055"
+              - cell "210" [ref=e2435]
+              - cell "$188" [ref=e2436]
+              - cell "$293" [ref=e2437]
+              - cell "Caja x 10" [ref=e2438]
+              - cell "Tasa Básica 22.00%" [ref=e2439]
+              - cell "$105" [ref=e2440]
+              - cell "$39.480" [ref=e2441]
+              - cell "$61.530" [ref=e2442]
+              - cell "$22.050" [ref=e2443]
+            - 'row "Yerba Monte 652g (Test 335459-30) Yerba Monte 652g (Test 335459-30) Código: 779335459000030 100 $134 $217 Caja x 5 Tasa Básica 22.00% $83 $13.400 $21.700 $8.300" [ref=e2444] [cursor=pointer]':
+              - cell "Yerba Monte 652g (Test 335459-30)" [ref=e2445]:
+                - img "Yerba Monte 652g (Test 335459-30)" [ref=e2446]
+              - 'cell "Yerba Monte 652g (Test 335459-30) Código: 779335459000030" [ref=e2447]':
+                - generic [ref=e2448]:
+                  - strong [ref=e2449]: Yerba Monte 652g (Test 335459-30)
+                  - generic [ref=e2450]: "Código: 779335459000030"
+              - cell "100" [ref=e2451]
+              - cell "$134" [ref=e2452]
+              - cell "$217" [ref=e2453]
+              - cell "Caja x 5" [ref=e2454]
+              - cell "Tasa Básica 22.00%" [ref=e2455]
+              - cell "$83" [ref=e2456]
+              - cell "$13.400" [ref=e2457]
+              - cell "$21.700" [ref=e2458]
+              - cell "$8.300" [ref=e2459]
+            - 'row "Yerba Monte 664g (Test 599272-2) Yerba Monte 664g (Test 599272-2) Código: 779599272000002 133 $150 $266 x 17 - $116 $19.950 $35.378 $15.428" [ref=e2460] [cursor=pointer]':
+              - cell "Yerba Monte 664g (Test 599272-2)" [ref=e2461]:
+                - img "Yerba Monte 664g (Test 599272-2)" [ref=e2462]
+              - 'cell "Yerba Monte 664g (Test 599272-2) Código: 779599272000002" [ref=e2463]':
+                - generic [ref=e2464]:
+                  - strong [ref=e2465]: Yerba Monte 664g (Test 599272-2)
+                  - generic [ref=e2466]: "Código: 779599272000002"
+              - cell "133" [ref=e2467]
+              - cell "$150" [ref=e2468]
+              - cell "$266" [ref=e2469]
+              - cell "x 17" [ref=e2470]
+              - cell "-" [ref=e2471]
+              - cell "$116" [ref=e2472]
+              - cell "$19.950" [ref=e2473]
+              - cell "$35.378" [ref=e2474]
+              - cell "$15.428" [ref=e2475]
+            - 'row "Yerba Nativa 1118g (Test 599272-22) Yerba Nativa 1118g (Test 599272-22) Código: 779599272000022 71 $25 $36 bandeja x 20 - $11 $1.775 $2.556 $781" [ref=e2476] [cursor=pointer]':
+              - cell "Yerba Nativa 1118g (Test 599272-22)" [ref=e2477]:
+                - img "Yerba Nativa 1118g (Test 599272-22)" [ref=e2478]
+              - 'cell "Yerba Nativa 1118g (Test 599272-22) Código: 779599272000022" [ref=e2479]':
+                - generic [ref=e2480]:
+                  - strong [ref=e2481]: Yerba Nativa 1118g (Test 599272-22)
+                  - generic [ref=e2482]: "Código: 779599272000022"
+              - cell "71" [ref=e2483]
+              - cell "$25" [ref=e2484]
+              - cell "$36" [ref=e2485]
+              - cell "bandeja x 20" [ref=e2486]
+              - cell "-" [ref=e2487]
+              - cell "$11" [ref=e2488]
+              - cell "$1.775" [ref=e2489]
+              - cell "$2.556" [ref=e2490]
+              - cell "$781" [ref=e2491]
+            - 'row "Yerba Premium 1490g (Test 335459-80) Yerba Premium 1490g (Test 335459-80) Código: 779335459000080 -44 $42 $64 Caja x 20 Tasa Básica 22.00% $22 $-1.848 $-2.816 $-968" [ref=e2492] [cursor=pointer]':
+              - cell "Yerba Premium 1490g (Test 335459-80)" [ref=e2493]:
+                - img "Yerba Premium 1490g (Test 335459-80)" [ref=e2494]
+              - 'cell "Yerba Premium 1490g (Test 335459-80) Código: 779335459000080" [ref=e2495]':
+                - generic [ref=e2496]:
+                  - strong [ref=e2497]: Yerba Premium 1490g (Test 335459-80)
+                  - generic [ref=e2498]: "Código: 779335459000080"
+              - cell "-44" [ref=e2499]
+              - cell "$42" [ref=e2500]
+              - cell "$64" [ref=e2501]
+              - cell "Caja x 20" [ref=e2502]
+              - cell "Tasa Básica 22.00%" [ref=e2503]
+              - cell "$22" [ref=e2504]
+              - cell "$-1.848" [ref=e2505]
+              - cell "$-2.816" [ref=e2506]
+              - cell "$-968" [ref=e2507]
+      - generic:
+        - complementary:
+          - generic:
+            - heading [level=3]: Nuevo producto
+            - button: ✕
+          - generic:
+            - generic:
+              - text: Nombre del producto
+              - textbox:
+                - /placeholder: Nombre
+            - generic:
+              - text: Stock
+              - spinbutton
+            - generic:
+              - text: EAN / Código
+              - textbox:
+                - /placeholder: EAN/Código
+            - generic:
+              - text: Tipo de empaque
+              - combobox
+            - generic:
+              - text: IVA
+              - combobox
+            - generic:
+              - text: Cantidad por empaque
+              - spinbutton
+            - generic:
+              - text: Precio de costo
+              - spinbutton
+            - generic:
+              - text: Precio de venta
+              - spinbutton
+            - generic:
+              - text: Precio por empaque
+              - spinbutton
+            - generic:
+              - text: URL de imagen
+              - textbox:
+                - /placeholder: URL de imagen (https://...)
+            - generic:
+              - text: Archivo de imagen
+              - button
+            - generic:
+              - button: Guardar
+              - button: Cancelar
+    - generic:
+      - dialog:
+        - generic:
+          - heading [level=3]: Filtros y acciones
+          - button: ✕
+```
+
+# Test source
+
+```ts
+  1  | export class ProductosPage {
+  2  |   constructor(page) {
+  3  |     this.page = page;
+  4  |     this.navButton = page.locator('#dashboard-nav-productos');
+  5  |     this.addButton = page.getByRole('button', { name: 'Agregar producto' });
+  6  |     this.searchField = page.locator('.table-search-field');
+  7  |     this.nameInput = page.locator('input[name="nombre"]');
+  8  |     this.stockInput = page.locator('input[name="stock"]');
+  9  |     this.ventaInput = page.locator('input[name="venta"]');
+  10 |     this.empaqueSelect = page.locator('select[name="empaqueId"]');
+  11 |     this.ivaSelect = page.locator('select[name="ivaId"]');
+  12 |     this.submitButton = page.locator('button[type="submit"]');
+  13 |     this.inputError = page.locator('.input-error');
+  14 |     this.editButton = page.locator('.edit-btn').first();
+  15 |   }
+  16 | 
+  17 |   async navigate() {
+  18 |     await this.navButton.click();
+> 19 |     await this.addButton.waitFor({ state: 'visible' });
+     |                          ^ Error: locator.waitFor: Test timeout of 30000ms exceeded.
+  20 |   }
+  21 | 
+  22 |   async openAddForm() {
+  23 |     await this.addButton.click();
+  24 |     await this.nameInput.waitFor({ state: 'visible' });
+  25 |   }
+  26 | 
+  27 |   async fillProductForm({ nombre, stock, venta }) {
+  28 |     await this.nameInput.fill(nombre);
+  29 |     await this.stockInput.fill(stock);
+  30 |     await this.ventaInput.fill(venta);
+  31 |     // Select first available options if selects are present
+  32 |     const empaqueOptions = await this.empaqueSelect.locator('option').count();
+  33 |     if (empaqueOptions > 1) {
+  34 |       await this.empaqueSelect.selectOption({ index: 1 });
+  35 |     }
+  36 |     const ivaOptions = await this.ivaSelect.locator('option').count();
+  37 |     if (ivaOptions > 1) {
+  38 |       await this.ivaSelect.selectOption({ index: 1 });
+  39 |     }
+  40 |   }
+  41 | 
+  42 |   async submit() {
+  43 |     await this.submitButton.click();
+  44 |   }
+  45 | 
+  46 |   async searchProduct(name) {
+  47 |     await this.searchField.fill(name);
+  48 |     await this.page.waitForTimeout(300);
+  49 |   }
+  50 | 
+  51 |   async expectProductInTable(name) {
+  52 |     await this.page.getByRole('cell', { name }).waitFor({ state: 'visible' });
+  53 |   }
+  54 | }
+  55 | 
+```

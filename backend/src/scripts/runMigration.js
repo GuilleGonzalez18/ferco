@@ -5,14 +5,19 @@ import { query } from '../db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const barriosRawSql = readFileSync(
-  join(__dirname, '../../../scripts/localidades_uruguay.sql'),
-  'utf8'
-);
-// Extrae solo el INSERT INTO barrios del archivo y lo hace idempotente
-const barriosInsertMatch = barriosRawSql.match(/INSERT INTO barrios[\s\S]+/);
-if (!barriosInsertMatch) throw new Error('No se encontró INSERT INTO barrios en localidades_uruguay.sql');
-const barriosSeedSql = barriosInsertMatch[0].trimEnd().replace(/\s*ON CONFLICT DO NOTHING\s*;?\s*$/i, '') + '\nON CONFLICT DO NOTHING;';
+let barriosSeedSql = null;
+try {
+  const barriosRawSql = readFileSync(
+    join(__dirname, '../../../scripts/localidades_uruguay.sql'),
+    'utf8'
+  );
+  // Extrae solo el INSERT INTO barrios del archivo y lo hace idempotente
+  const barriosInsertMatch = barriosRawSql.match(/INSERT INTO barrios[\s\S]+/);
+  if (!barriosInsertMatch) throw new Error('No se encontró INSERT INTO barrios en localidades_uruguay.sql');
+  barriosSeedSql = barriosInsertMatch[0].trimEnd().replace(/\s*ON CONFLICT DO NOTHING\s*;?\s*$/i, '') + '\nON CONFLICT DO NOTHING;';
+} catch (e) {
+  console.warn('[migración] localidades_uruguay.sql no encontrado – se omite seed de barrios.', e.message);
+}
 
 const statements = [
   `
@@ -930,7 +935,7 @@ const statements = [
 ];
 
 export async function runMigration() {
-  for (const sql of statements) {
+  for (const sql of statements.filter(Boolean)) {
     await query(sql);
   }
 }
