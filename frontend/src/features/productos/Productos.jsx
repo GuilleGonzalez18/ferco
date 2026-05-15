@@ -997,8 +997,7 @@ export default function Productos({ productos = [], setProductos }) {
           <div className="productos-toolbar-actions">
             {puedeAgregar && (
             <AppButton className="agregar-btn toolbar-add" title="Agregar producto" onClick={abrirAlta}>
-              <img src="/add.svg" alt="" aria-hidden="true" />
-              <span>PRODUCTO</span>
+              <span>Añadir Productos</span>
             </AppButton>
             )}
             {verArchivados && (
@@ -1010,17 +1009,17 @@ export default function Productos({ productos = [], setProductos }) {
                 setArchivadosModalOpen(true);
               }}
             >
-              <span>ARCHIVADOS</span>
+              <span>Productos Archivados</span>
             </AppButton>
             )}
             {gestionarEmpaques && (
             <AppButton className="agregar-btn toolbar-add" title="Gestionar empaques" onClick={() => setEmpaquesModalOpen(true)}>
-              <span>EMPAQUES</span>
+              <span>Gestión Empaques</span>
             </AppButton>
             )}
             {gestionarEmpaques && (
             <AppButton className="agregar-btn toolbar-add" title="Gestionar tipos de IVA" onClick={() => setTiposIvaModalOpen(true)}>
-              <span>IVA</span>
+              <span>Gestión IVA</span>
             </AppButton>
             )}
             {puedeExportar && (

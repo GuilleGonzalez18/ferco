@@ -364,6 +364,22 @@
 
 /* ── Modal Ciudades / Departamentos ─────────────────────────────────────────── */
 
+.ub-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ub-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.34);
+}
+
 .ub-modal {
   background: #fff;
   border-radius: 12px;
@@ -475,4 +491,86 @@
   padding: 0.3rem 0.5rem;
   background: #fff0f0;
   border-radius: 6px;
+}
+
+.ub-controls-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ub-search {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.ub-filter-dep {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.ub-form {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.7rem;
+  background: #f0f4fa;
+  border-radius: 8px;
+  border: 1px solid #dce6f5;
+}
+
+.ub-form > * {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.ub-form > button {
+  flex: 0 0 auto;
+}
+
+/* Sub-modal sobre UbicacionesModal */
+
+.ub-sub-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ub-sub-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.28);
+  border-radius: inherit;
+}
+
+.ub-sub-modal {
+  position: relative;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(20, 31, 46, 0.22);
+  padding: 1.4rem 1.6rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 280px;
+  max-width: 400px;
+  width: 90%;
+}
+
+.ub-sub-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text, #1a2535);
+}
+
+.ub-sub-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
