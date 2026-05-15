@@ -22,20 +22,39 @@ import { PRINT_FONT_FAMILY_CSS } from '../../shared/lib/typography';
 
 function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTodosBarrios, onClose }) {
   const [tabU, setTabU] = useState('departamentos');
+  // Búsqueda y filtro
+  const [busquedaDep, setBusquedaDep] = useState('');
+  const [busquedaBar, setBusquedaBar] = useState('');
+  const [filtroDepBar, setFiltroDepBar] = useState('');
+  // Sub-modales de alta
+  const [addDepOpen, setAddDepOpen] = useState(false);
+  const [addBarOpen, setAddBarOpen] = useState(false);
   const [nuevoDepNombre, setNuevoDepNombre] = useState('');
-  const [editDepId, setEditDepId] = useState(null);
-  const [editDepNombre, setEditDepNombre] = useState('');
   const [nuevoBarNombre, setNuevoBarNombre] = useState('');
   const [nuevoBarDepId, setNuevoBarDepId] = useState('');
+  // Edición inline
+  const [editDepId, setEditDepId] = useState(null);
+  const [editDepNombre, setEditDepNombre] = useState('');
   const [editBarId, setEditBarId] = useState(null);
   const [editBarNombre, setEditBarNombre] = useState('');
   const [editBarDepId, setEditBarDepId] = useState('');
   const [errorU, setErrorU] = useState('');
 
-  const showError = (msg) => {
-    setErrorU(msg);
-    setTimeout(() => setErrorU(''), 3500);
-  };
+  const showError = (msg) => { setErrorU(msg); setTimeout(() => setErrorU(''), 3500); };
+
+  const depsFiltrados = useMemo(() =>
+    departamentos.filter((d) => d.nombre.toLowerCase().includes(busquedaDep.toLowerCase().trim())),
+    [departamentos, busquedaDep]
+  );
+
+  const barriosFiltrados = useMemo(() =>
+    todosBarrios.filter((b) => {
+      const matchNombre = b.nombre.toLowerCase().includes(busquedaBar.toLowerCase().trim());
+      const matchDep = !filtroDepBar || String(b.departamento_id) === filtroDepBar;
+      return matchNombre && matchDep;
+    }),
+    [todosBarrios, busquedaBar, filtroDepBar]
+  );
 
   // Departamentos CRUD
   const crearDep = async () => {
@@ -45,6 +64,7 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
       const created = await api.createDepartamento({ nombre });
       setDepartamentos((prev) => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
       setNuevoDepNombre('');
+      setAddDepOpen(false);
     } catch (e) { showError(e.message); }
   };
 
@@ -75,6 +95,8 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
       const created = await api.createBarrio({ nombre, departamento_id: nuevoBarDepId ? Number(nuevoBarDepId) : null });
       setTodosBarrios((prev) => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
       setNuevoBarNombre('');
+      setNuevoBarDepId('');
+      setAddBarOpen(false);
     } catch (e) { showError(e.message); }
   };
 
@@ -98,8 +120,8 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
   };
 
   return (
-    <div className="export-modal-overlay" role="dialog" aria-modal="true">
-      <div className="export-modal-backdrop" onClick={onClose} />
+    <div className="ub-overlay" role="dialog" aria-modal="true">
+      <div className="ub-backdrop" onClick={onClose} />
       <div className="ub-modal">
         <h4 className="ub-modal-title">Ciudades y Departamentos</h4>
         <div className="ub-tabs">
@@ -111,21 +133,23 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
 
         {tabU === 'departamentos' && (
           <div className="ub-section">
-            <div className="ub-add-row">
+            <div className="ub-controls-row">
               <AppInput
-                value={nuevoDepNombre}
-                onChange={(e) => setNuevoDepNombre(e.target.value)}
-                placeholder="Nuevo departamento"
-                onKeyDown={(e) => e.key === 'Enter' && crearDep()}
+                value={busquedaDep}
+                onChange={(e) => setBusquedaDep(e.target.value)}
+                placeholder="Buscar departamento..."
+                className="ub-search"
               />
-              <AppButton type="button" onClick={crearDep}>Agregar</AppButton>
+              <AppButton type="button" onClick={() => { setNuevoDepNombre(''); setAddDepOpen(true); }}>
+                Añadir
+              </AppButton>
             </div>
             <ul className="ub-list">
-              {departamentos.map((d) => (
+              {depsFiltrados.map((d) => (
                 <li key={d.id} className="ub-list-item">
                   {editDepId === d.id ? (
                     <>
-                      <AppInput value={editDepNombre} onChange={(e) => setEditDepNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditDep(d.id)} />
+                      <AppInput value={editDepNombre} onChange={(e) => setEditDepNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditDep(d.id)} autoFocus />
                       <AppButton type="button" onClick={() => guardarEditDep(d.id)}>Guardar</AppButton>
                       <AppButton type="button" onClick={() => setEditDepId(null)}>Cancelar</AppButton>
                     </>
@@ -138,34 +162,36 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
                   )}
                 </li>
               ))}
-              {departamentos.length === 0 && <li className="ub-empty">Sin departamentos</li>}
+              {depsFiltrados.length === 0 && <li className="ub-empty">{busquedaDep ? 'Sin resultados' : 'Sin departamentos'}</li>}
             </ul>
           </div>
         )}
 
         {tabU === 'barrios' && (
           <div className="ub-section">
-            <div className="ub-add-row">
+            <div className="ub-controls-row">
               <AppInput
-                value={nuevoBarNombre}
-                onChange={(e) => setNuevoBarNombre(e.target.value)}
-                placeholder="Nueva ciudad"
-                onKeyDown={(e) => e.key === 'Enter' && crearBar()}
+                value={busquedaBar}
+                onChange={(e) => setBusquedaBar(e.target.value)}
+                placeholder="Buscar ciudad..."
+                className="ub-search"
               />
-              <AppSelect value={nuevoBarDepId} onChange={(e) => setNuevoBarDepId(e.target.value)}>
-                <option value="">Sin departamento</option>
+              <AppSelect value={filtroDepBar} onChange={(e) => setFiltroDepBar(e.target.value)} className="ub-filter-dep">
+                <option value="">Todos los departamentos</option>
                 {departamentos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
               </AppSelect>
-              <AppButton type="button" onClick={crearBar}>Agregar</AppButton>
+              <AppButton type="button" onClick={() => { setNuevoBarNombre(''); setNuevoBarDepId(filtroDepBar); setAddBarOpen(true); }}>
+                Añadir
+              </AppButton>
             </div>
             <ul className="ub-list">
-              {todosBarrios.map((b) => {
+              {barriosFiltrados.map((b) => {
                 const depNombre = departamentos.find((d) => d.id === b.departamento_id)?.nombre;
                 return (
                   <li key={b.id} className="ub-list-item">
                     {editBarId === b.id ? (
                       <>
-                        <AppInput value={editBarNombre} onChange={(e) => setEditBarNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditBar(b.id)} />
+                        <AppInput value={editBarNombre} onChange={(e) => setEditBarNombre(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && guardarEditBar(b.id)} autoFocus />
                         <AppSelect value={editBarDepId} onChange={(e) => setEditBarDepId(e.target.value)}>
                           <option value="">Sin departamento</option>
                           {departamentos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
@@ -183,13 +209,59 @@ function UbicacionesModal({ departamentos, setDepartamentos, todosBarrios, setTo
                   </li>
                 );
               })}
-              {todosBarrios.length === 0 && <li className="ub-empty">Sin ciudades</li>}
+              {barriosFiltrados.length === 0 && <li className="ub-empty">{busquedaBar || filtroDepBar ? 'Sin resultados' : 'Sin ciudades'}</li>}
             </ul>
           </div>
         )}
 
         <AppButton type="button" className="export-modal-close" onClick={onClose}>Cerrar</AppButton>
       </div>
+
+      {/* Sub-modal: Agregar Departamento */}
+      {addDepOpen && (
+        <div className="ub-sub-overlay" role="dialog" aria-modal="true" aria-label="Agregar departamento">
+          <div className="ub-sub-backdrop" onClick={() => setAddDepOpen(false)} />
+          <div className="ub-sub-modal">
+            <h5 className="ub-sub-title">Agregar Departamento</h5>
+            <AppInput
+              value={nuevoDepNombre}
+              onChange={(e) => setNuevoDepNombre(e.target.value)}
+              placeholder="Nombre del departamento"
+              onKeyDown={(e) => e.key === 'Enter' && crearDep()}
+              autoFocus
+            />
+            <div className="ub-sub-actions">
+              <AppButton type="button" onClick={() => setAddDepOpen(false)}>Cancelar</AppButton>
+              <AppButton type="button" onClick={crearDep}>Guardar</AppButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-modal: Agregar Ciudad */}
+      {addBarOpen && (
+        <div className="ub-sub-overlay" role="dialog" aria-modal="true" aria-label="Agregar ciudad">
+          <div className="ub-sub-backdrop" onClick={() => setAddBarOpen(false)} />
+          <div className="ub-sub-modal">
+            <h5 className="ub-sub-title">Agregar Ciudad</h5>
+            <AppInput
+              value={nuevoBarNombre}
+              onChange={(e) => setNuevoBarNombre(e.target.value)}
+              placeholder="Nombre de la ciudad"
+              onKeyDown={(e) => e.key === 'Enter' && crearBar()}
+              autoFocus
+            />
+            <AppSelect value={nuevoBarDepId} onChange={(e) => setNuevoBarDepId(e.target.value)}>
+              <option value="">Sin departamento</option>
+              {departamentos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+            </AppSelect>
+            <div className="ub-sub-actions">
+              <AppButton type="button" onClick={() => setAddBarOpen(false)}>Cancelar</AppButton>
+              <AppButton type="button" onClick={crearBar}>Guardar</AppButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -715,8 +787,7 @@ export default function Clientes() {
                 title="Agregar cliente"
                 onClick={abrirAlta}
               >
-                <img src="/add.svg" alt="" aria-hidden="true" />
-                <span>CLIENTE</span>
+                <span>Añadir Clientes</span>
               </AppButton>
             )}
             <AppButton
@@ -725,7 +796,7 @@ export default function Clientes() {
               title="Gestionar ciudades y departamentos"
               onClick={() => setUbicacionesModalOpen(true)}
             >
-              <span>CIUDADES</span>
+              <span>Gestión Ciudades/Departamentos</span>
             </AppButton>
             {puedeExportar && (
               <AppButton type="button" className="icon-btn" title="Exportar" onClick={() => setExportModalOpen(true)}>

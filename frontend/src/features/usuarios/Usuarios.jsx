@@ -336,8 +336,7 @@ export default function Usuarios({ currentUser, onlySelf = false }) {
                 setMostrarForm(true);
               }}
             >
-              <img src="/add.svg" alt="" aria-hidden="true" />
-              <span>USUARIO</span>
+              <span>Añadir Usuarios</span>
             </AppButton>
           </FilterSlot>
         )}
