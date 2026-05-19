@@ -6,7 +6,7 @@ import { getPrimaryRgb, loadLogoForPdf } from '../../shared/lib/pdfColors';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { appAlert, appConfirm } from '../../shared/lib/appDialog';
-import { formatHorarioCliente } from '../../shared/lib/horarios';
+import { formatHorarioCliente, isValidHorarioRange, normalizeHoraForSave, splitHora } from '../../shared/lib/horarios';
 import { fireConfetti } from '../../shared/lib/confetti';
 import AppInput from '../../shared/components/fields/AppInput';
 import AppSelect from '../../shared/components/fields/AppSelect';
@@ -92,6 +92,17 @@ function ventasButtonId(...parts) {
 function ventasFieldId(...parts) {
   return ['nueva-venta', ...parts.map(normalizeButtonIdPart)].join('-');
 }
+
+const HORAS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTOS = ['00', '15', '30', '45'];
+
+const NUEVO_CLIENTE_EMPTY = {
+  nombre: '', rut: '', direccion: '', telefono: '', correo: '',
+  tipo_documento: '', numero_documento: '',
+  departamento_id: '', barrio_id: '', codigo_postal: '',
+  horario_apertura: '', horario_cierre: '',
+  tiene_reapertura: false, horario_reapertura: '', horario_cierre_reapertura: '',
+};
 
 function formatMedioPago(value) {
   const v = String(value || 'efectivo').toLowerCase();
@@ -324,9 +335,12 @@ export default function Ventas({
   const [vistaProductos, setVistaProductos] = useState('grid');
   const [selectorClienteAbierto, setSelectorClienteAbierto] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState('');
-  const [nuevoClienteOpen, setNuevoClienteOpen] = useState(false);
-  const [nuevoClienteForm, setNuevoClienteForm] = useState({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+  const [nuevoClienteModalOpen, setNuevoClienteModalOpen] = useState(false);
+  const [nuevoClienteForm, setNuevoClienteForm] = useState(NUEVO_CLIENTE_EMPTY);
   const [nuevoClienteSaving, setNuevoClienteSaving] = useState(false);
+  const [departamentosCliente, setDepartamentosCliente] = useState([]);
+  const [barriosCliente, setBarriosCliente] = useState([]);
+  const [ubicacionesCargadas, setUbicacionesCargadas] = useState(false);
   const [productPicker, setProductPicker] = useState({});
 
   const [carrito, setCarrito] = useState([]);
@@ -560,24 +574,85 @@ export default function Ventas({
     return clientes.filter((c) => c.nombre.toLowerCase().includes(q));
   }, [busquedaCliente, clientes]);
 
+  const abrirNuevoClienteModal = async () => {
+    setNuevoClienteForm(NUEVO_CLIENTE_EMPTY);
+    setNuevoClienteModalOpen(true);
+    setBusquedaCliente('');
+    if (!ubicacionesCargadas) {
+      try {
+        const [deps, barrios] = await Promise.all([api.getDepartamentos(), api.getBarrios()]);
+        setDepartamentosCliente(deps);
+        setBarriosCliente(barrios);
+        setUbicacionesCargadas(true);
+      } catch { /* silencioso — los selects quedarán vacíos */ }
+    }
+  };
+
+  const setNuevoClienteHorarioPart = (field, part, value) => {
+    setNuevoClienteForm((prev) => {
+      const current = splitHora(prev[field]);
+      const next = part === 'h' ? { ...current, h: value } : { ...current, m: value };
+      return { ...prev, [field]: `${next.h}:${next.m}` };
+    });
+  };
+
+  const handleNuevoClienteReaperturaChange = (checked) => {
+    setNuevoClienteForm((prev) => ({
+      ...prev,
+      tiene_reapertura: checked,
+      horario_reapertura: checked ? prev.horario_reapertura : '',
+      horario_cierre_reapertura: checked ? prev.horario_cierre_reapertura : '',
+    }));
+  };
+
   const handleCrearCliente = async (e) => {
     e.preventDefault();
     const nombre = nuevoClienteForm.nombre.trim();
     if (!nombre) return;
+
+    const payload = {
+      nombre,
+      rut: nuevoClienteForm.rut.trim() || null,
+      telefono: nuevoClienteForm.telefono.trim() || null,
+      correo: nuevoClienteForm.correo.trim() || null,
+      direccion: nuevoClienteForm.direccion.trim() || null,
+      tipo_documento: nuevoClienteForm.tipo_documento || null,
+      numero_documento: nuevoClienteForm.numero_documento.trim() || null,
+      departamento_id: nuevoClienteForm.departamento_id ? Number(nuevoClienteForm.departamento_id) : null,
+      barrio_id: nuevoClienteForm.barrio_id ? Number(nuevoClienteForm.barrio_id) : null,
+      codigo_postal: nuevoClienteForm.codigo_postal.trim() || null,
+      horario_apertura: normalizeHoraForSave(nuevoClienteForm.horario_apertura),
+      horario_cierre: normalizeHoraForSave(nuevoClienteForm.horario_cierre),
+      tiene_reapertura: Boolean(nuevoClienteForm.tiene_reapertura),
+      horario_reapertura: nuevoClienteForm.tiene_reapertura ? normalizeHoraForSave(nuevoClienteForm.horario_reapertura) : null,
+      horario_cierre_reapertura: nuevoClienteForm.tiene_reapertura ? normalizeHoraForSave(nuevoClienteForm.horario_cierre_reapertura) : null,
+    };
+
+    if (!isValidHorarioRange(payload.horario_apertura, payload.horario_cierre)) {
+      await appAlert('El horario de apertura debe ser menor al horario de cierre.');
+      return;
+    }
+    if (payload.tiene_reapertura && (!payload.horario_apertura || !payload.horario_cierre)) {
+      await appAlert('Si el cliente tiene reapertura, completá también apertura y cierre principal.');
+      return;
+    }
+    if (payload.tiene_reapertura && (!payload.horario_reapertura || !payload.horario_cierre_reapertura)) {
+      await appAlert('Debés completar ambos horarios de reapertura.');
+      return;
+    }
+    if (payload.tiene_reapertura && !isValidHorarioRange(payload.horario_reapertura, payload.horario_cierre_reapertura)) {
+      await appAlert('El horario de reapertura debe ser menor al cierre de reapertura.');
+      return;
+    }
+
     setNuevoClienteSaving(true);
     try {
-      const created = await api.createCliente({
-        nombre,
-        rut: nuevoClienteForm.rut.trim() || null,
-        telefono: nuevoClienteForm.telefono.trim() || null,
-        correo: nuevoClienteForm.correo.trim() || null,
-        direccion: nuevoClienteForm.direccion.trim() || null,
-      });
+      const created = await api.createCliente(payload);
       const cliente = { id: created.id, nombre: created.nombre, telefono: created.telefono || '', direccion: created.direccion || '' };
       setClientes((prev) => [cliente, ...prev]);
       setClienteId(String(created.id));
-      setNuevoClienteOpen(false);
-      setNuevoClienteForm({ nombre: '', rut: '', telefono: '', correo: '', direccion: '' });
+      setNuevoClienteModalOpen(false);
+      setNuevoClienteForm(NUEVO_CLIENTE_EMPTY);
       setSelectorClienteAbierto(false);
       setBusquedaCliente('');
     } catch (err) {
@@ -1919,68 +1994,18 @@ export default function Ventas({
               onChange={(e) => setBusquedaCliente(e.target.value)}
             />
           </div>
-          {nuevoClienteOpen ? (
-            <form className="nuevo-cliente-form" onSubmit={handleCrearCliente}>
-              <p className="nuevo-cliente-form-title">Nuevo cliente</p>
-              <AppInput
-                id={ventasFieldId('cliente', 'nuevo', 'nombre')}
-                type="text"
-                placeholder="Nombre *"
-                value={nuevoClienteForm.nombre}
-                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, nombre: e.target.value }))}
-                required
-              />
-              <AppInput
-                id={ventasFieldId('cliente', 'nuevo', 'rut')}
-                type="text"
-                placeholder="RUT / Cédula"
-                value={nuevoClienteForm.rut}
-                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, rut: e.target.value }))}
-              />
-              <AppInput
-                id={ventasFieldId('cliente', 'nuevo', 'telefono')}
-                type="text"
-                placeholder="Teléfono"
-                value={nuevoClienteForm.telefono}
-                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, telefono: e.target.value }))}
-              />
-              <AppInput
-                id={ventasFieldId('cliente', 'nuevo', 'correo')}
-                type="email"
-                placeholder="Correo"
-                value={nuevoClienteForm.correo}
-                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, correo: e.target.value }))}
-              />
-              <AppInput
-                id={ventasFieldId('cliente', 'nuevo', 'direccion')}
-                type="text"
-                placeholder="Dirección"
-                value={nuevoClienteForm.direccion}
-                onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, direccion: e.target.value }))}
-              />
-              <div className="nuevo-cliente-form-actions">
-                <AppButton id={ventasButtonId('cliente', 'nuevo', 'cancelar')} type="button" tone="ghost" size="sm" onClick={() => setNuevoClienteOpen(false)} disabled={nuevoClienteSaving}>
-                  Cancelar
-                </AppButton>
-                <AppButton id={ventasButtonId('cliente', 'nuevo', 'guardar')} type="submit" size="sm" disabled={nuevoClienteSaving || !nuevoClienteForm.nombre.trim()}>
-                  {nuevoClienteSaving ? 'Guardando...' : 'Guardar cliente'}
-                </AppButton>
-              </div>
-            </form>
-          ) : (
-            <div className="nuevo-cliente-btn-wrap">
-              <AppButton
-                id={ventasButtonId('cliente', 'nuevo', 'abrir')}
-                type="button"
-                tone="ghost"
-                size="sm"
-                className="nuevo-cliente-btn"
-                onClick={() => { setNuevoClienteOpen(true); setBusquedaCliente(''); }}
-              >
-                + Ingresar nuevo cliente
-              </AppButton>
-            </div>
-          )}
+          <div className="nuevo-cliente-btn-wrap">
+            <AppButton
+              id={ventasButtonId('cliente', 'nuevo', 'abrir')}
+              type="button"
+              tone="ghost"
+              size="sm"
+              className="nuevo-cliente-btn"
+              onClick={abrirNuevoClienteModal}
+            >
+              + Ingresar nuevo cliente
+            </AppButton>
+          </div>
           <div className="cliente-dropdown-list full">
             {clientesFiltrados.length === 0 && (
               <p className="cliente-sin-resultados">Sin resultados</p>
@@ -2129,6 +2154,186 @@ export default function Ventas({
           </div>
         </div>
       </div>
+
+      {/* ── Modal Nuevo Cliente completo ───────────────────────────────────────── */}
+      {nuevoClienteModalOpen && (() => {
+        const apParts = splitHora(nuevoClienteForm.horario_apertura);
+        const ciParts = splitHora(nuevoClienteForm.horario_cierre);
+        const raParts = splitHora(nuevoClienteForm.horario_reapertura);
+        const rcParts = splitHora(nuevoClienteForm.horario_cierre_reapertura);
+        const barrosFiltrados = nuevoClienteForm.departamento_id
+          ? barriosCliente.filter((b) => String(b.departamento_id) === String(nuevoClienteForm.departamento_id))
+          : barriosCliente;
+        return (
+          <div className="ncm-overlay" role="dialog" aria-modal="true" aria-label="Nuevo cliente">
+            <div className="ncm-backdrop" onClick={() => setNuevoClienteModalOpen(false)} />
+            <div className="ncm-panel">
+              <div className="ncm-header">
+                <h4>Nuevo cliente</h4>
+                <button type="button" className="ncm-close" onClick={() => setNuevoClienteModalOpen(false)}>✕</button>
+              </div>
+              <form className="ncm-body" onSubmit={handleCrearCliente}>
+                <label className="ncm-label">Nombre *
+                  <AppInput
+                    value={nuevoClienteForm.nombre}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, nombre: e.target.value }))}
+                    placeholder="Nombre"
+                    required
+                    autoFocus
+                  />
+                </label>
+                <label className="ncm-label">RUT / C.I.
+                  <AppInput
+                    value={nuevoClienteForm.rut}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, rut: e.target.value }))}
+                    placeholder="RUT / C.I."
+                  />
+                </label>
+                <label className="ncm-label">Tipo de documento
+                  <AppSelect
+                    value={nuevoClienteForm.tipo_documento}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, tipo_documento: e.target.value }))}
+                  >
+                    <option value="">Sin especificar</option>
+                    <option value="RUT">RUT</option>
+                    <option value="CI">Cédula de identidad</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                    <option value="DNI">DNI</option>
+                    <option value="OTRO">Otro</option>
+                  </AppSelect>
+                </label>
+                <label className="ncm-label">Número de documento
+                  <AppInput
+                    value={nuevoClienteForm.numero_documento}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, numero_documento: e.target.value }))}
+                    placeholder="Número de documento"
+                  />
+                </label>
+                <label className="ncm-label">Departamento
+                  <AppSelect
+                    value={nuevoClienteForm.departamento_id}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, departamento_id: e.target.value, barrio_id: '' }))}
+                  >
+                    <option value="">Sin departamento</option>
+                    {departamentosCliente.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                  </AppSelect>
+                </label>
+                <label className="ncm-label">Ciudad
+                  <AppSelect
+                    value={nuevoClienteForm.barrio_id}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, barrio_id: e.target.value }))}
+                    disabled={!nuevoClienteForm.departamento_id}
+                  >
+                    <option value="">Sin ciudad</option>
+                    {barrosFiltrados.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                  </AppSelect>
+                </label>
+                <label className="ncm-label">Código postal
+                  <AppInput
+                    value={nuevoClienteForm.codigo_postal}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, codigo_postal: e.target.value }))}
+                    placeholder="Código postal"
+                  />
+                </label>
+                <label className="ncm-label">Dirección
+                  <AppInput
+                    value={nuevoClienteForm.direccion}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, direccion: e.target.value }))}
+                    placeholder="Dirección"
+                  />
+                </label>
+                <label className="ncm-label">Teléfono
+                  <AppInput
+                    value={nuevoClienteForm.telefono}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, telefono: e.target.value }))}
+                    placeholder="Teléfono"
+                  />
+                </label>
+                <label className="ncm-label">Mail
+                  <AppInput
+                    type="email"
+                    value={nuevoClienteForm.correo}
+                    onChange={(e) => setNuevoClienteForm((prev) => ({ ...prev, correo: e.target.value }))}
+                    placeholder="Mail"
+                  />
+                </label>
+                <label className="ncm-label">Horario apertura
+                  <div className="ncm-time-row">
+                    <AppSelect value={apParts.h} onChange={(e) => setNuevoClienteHorarioPart('horario_apertura', 'h', e.target.value)}>
+                      <option value="">Hora</option>
+                      {HORAS.map((h) => <option key={`ap-h-${h}`} value={h}>{h}</option>)}
+                    </AppSelect>
+                    <span>:</span>
+                    <AppSelect value={apParts.m} onChange={(e) => setNuevoClienteHorarioPart('horario_apertura', 'm', e.target.value)}>
+                      <option value="">Min</option>
+                      {MINUTOS.map((m) => <option key={`ap-m-${m}`} value={m}>{m}</option>)}
+                    </AppSelect>
+                  </div>
+                </label>
+                <label className="ncm-label">Horario cierre
+                  <div className="ncm-time-row">
+                    <AppSelect value={ciParts.h} onChange={(e) => setNuevoClienteHorarioPart('horario_cierre', 'h', e.target.value)}>
+                      <option value="">Hora</option>
+                      {HORAS.map((h) => <option key={`ci-h-${h}`} value={h}>{h}</option>)}
+                    </AppSelect>
+                    <span>:</span>
+                    <AppSelect value={ciParts.m} onChange={(e) => setNuevoClienteHorarioPart('horario_cierre', 'm', e.target.value)}>
+                      <option value="">Min</option>
+                      {MINUTOS.map((m) => <option key={`ci-m-${m}`} value={m}>{m}</option>)}
+                    </AppSelect>
+                  </div>
+                </label>
+                <label className="ncm-label ncm-checkbox-row">
+                  <AppInput
+                    type="checkbox"
+                    checked={Boolean(nuevoClienteForm.tiene_reapertura)}
+                    onChange={(e) => handleNuevoClienteReaperturaChange(e.target.checked)}
+                  />
+                  <span>Tiene reapertura</span>
+                </label>
+                {nuevoClienteForm.tiene_reapertura && (
+                  <>
+                    <label className="ncm-label">Horario reapertura
+                      <div className="ncm-time-row">
+                        <AppSelect value={raParts.h} onChange={(e) => setNuevoClienteHorarioPart('horario_reapertura', 'h', e.target.value)}>
+                          <option value="">Hora</option>
+                          {HORAS.map((h) => <option key={`ra-h-${h}`} value={h}>{h}</option>)}
+                        </AppSelect>
+                        <span>:</span>
+                        <AppSelect value={raParts.m} onChange={(e) => setNuevoClienteHorarioPart('horario_reapertura', 'm', e.target.value)}>
+                          <option value="">Min</option>
+                          {MINUTOS.map((m) => <option key={`ra-m-${m}`} value={m}>{m}</option>)}
+                        </AppSelect>
+                      </div>
+                    </label>
+                    <label className="ncm-label">Cierre reapertura
+                      <div className="ncm-time-row">
+                        <AppSelect value={rcParts.h} onChange={(e) => setNuevoClienteHorarioPart('horario_cierre_reapertura', 'h', e.target.value)}>
+                          <option value="">Hora</option>
+                          {HORAS.map((h) => <option key={`rc-h-${h}`} value={h}>{h}</option>)}
+                        </AppSelect>
+                        <span>:</span>
+                        <AppSelect value={rcParts.m} onChange={(e) => setNuevoClienteHorarioPart('horario_cierre_reapertura', 'm', e.target.value)}>
+                          <option value="">Min</option>
+                          {MINUTOS.map((m) => <option key={`rc-m-${m}`} value={m}>{m}</option>)}
+                        </AppSelect>
+                      </div>
+                    </label>
+                  </>
+                )}
+                <div className="ncm-footer">
+                  <AppButton type="button" tone="ghost" onClick={() => setNuevoClienteModalOpen(false)} disabled={nuevoClienteSaving}>
+                    Cancelar
+                  </AppButton>
+                  <AppButton type="submit" disabled={nuevoClienteSaving || !nuevoClienteForm.nombre.trim()}>
+                    {nuevoClienteSaving ? 'Guardando...' : 'Guardar cliente'}
+                  </AppButton>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -714,6 +714,109 @@
   margin-top: 0.25rem;
 }
 
+/* ── Modal Nuevo Cliente completo (NCM) ───────────────────────────────────── */
+
+.ncm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ncm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 31, 46, 0.38);
+}
+
+.ncm-panel {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(20, 31, 46, 0.25);
+  width: min(520px, 100%);
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ncm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem 0.8rem;
+  border-bottom: 1px solid #edf2fa;
+  flex-shrink: 0;
+}
+
+.ncm-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text, #1a2535);
+}
+
+.ncm-close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #7d8fa3;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.ncm-close:hover {
+  background: #f0f4fa;
+  color: #1a2535;
+}
+
+.ncm-body {
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex: 1;
+}
+
+.ncm-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text, #1a2535);
+}
+
+.ncm-checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.ncm-time-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ncm-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.9rem 1.2rem;
+  border-top: 1px solid #edf2fa;
+  background: #f8fafd;
+  flex-shrink: 0;
+}
+
 .ventas-panel {
   background: #fff;
   border-radius: 10px;
