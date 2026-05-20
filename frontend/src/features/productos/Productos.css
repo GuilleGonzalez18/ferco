@@ -87,6 +87,19 @@
   display: block;
   border-radius: 6px;
 }
+
+.imagen-file-input {
+  font-size: 0.82rem;
+  color: var(--color-text, #1a2535);
+  padding: 0.2rem 0;
+}
+
+.imagen-uploading-msg {
+  margin: -0.1rem 0 0;
+  font-size: 0.78rem;
+  color: #2563eb;
+}
+
 .form-actions {
   display: flex;
   gap: 0.45rem;

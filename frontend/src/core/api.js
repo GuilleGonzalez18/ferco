@@ -146,6 +146,22 @@ export const api = {
     const suffix = q.toString();
     return request(`/productos${suffix ? `?${suffix}` : ''}`);
   },
+  uploadImagen: (file) => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('imagen', file);
+    return fetch(`${API_BASE}/uploads/imagen`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return res.json();
+    });
+  },
   createProducto: (payload) =>
     request('/productos', { method: 'POST', body: JSON.stringify(payload) }),
   updateProducto: (id, payload) =>

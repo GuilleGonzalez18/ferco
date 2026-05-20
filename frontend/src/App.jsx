@@ -129,6 +129,16 @@ function App() {
     return () => window.removeEventListener('mercatus:user-updated', onUserUpdated);
   }, []);
 
+  // Keepalive: evita que Render duerma el backend por inactividad.
+  // Se ejecuta cada 10 minutos mientras haya una sesión activa.
+  useEffect(() => {
+    if (!user) return;
+    const INTERVAL_MS = 10 * 60 * 1000;
+    const ping = () => fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/health`, { method: 'GET' }).catch(() => {});
+    const id = setInterval(ping, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [user]);
+
   const handleLogout = () => {
     api.clearAuthToken();
     localStorage.removeItem(USER_KEY);

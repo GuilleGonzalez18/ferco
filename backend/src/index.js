@@ -13,6 +13,7 @@ import { tiposIvaRouter } from './routes/tipos-iva.js';
 import { configuracionRouter } from './routes/configuracion.js';
 import { permisosRouter } from './routes/permisos.js';
 import { ubicacionesRouter } from './routes/ubicaciones.js';
+import { uploadsRouter } from './routes/uploads.js';
 import { runMigration } from './scripts/runMigration.js';
 
 const app = express();
@@ -73,6 +74,7 @@ app.use('/api/tipos-iva', tiposIvaRouter);
 app.use('/api/configuracion', configuracionRouter);
 app.use('/api/permisos', permisosRouter);
 app.use('/api/ubicaciones', ubicacionesRouter);
+app.use('/api/uploads', uploadsRouter);
 
 app.use((error, _req, res, _next) => {
   if (error?.type === 'entity.parse.failed') {

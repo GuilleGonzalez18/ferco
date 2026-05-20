@@ -67,6 +67,7 @@ export default function Productos({ productos = [], setProductos }) {
   const [busqueda, setBusqueda] = useState('');
   const [productoExpandidoId, setProductoExpandidoId] = useState(null);
   const [imagenUrlError, setImagenUrlError] = useState('');
+  const [imagenUploading, setImagenUploading] = useState(false);
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -139,16 +140,7 @@ export default function Productos({ productos = [], setProductos }) {
   };
 
   const handleChange = e => {
-    const { name, value, files } = e.target;
-    if (files && files[0]) {
-      setImagenUrlError('');
-      setNuevo(n => ({
-        ...n,
-        imagen: files[0],
-        imagenPreview: URL.createObjectURL(files[0]),
-      }));
-      return;
-    }
+    const { name, value } = e.target;
     if (name === 'imagenUrl') {
       const trimmed = normalizeImageUrl(value);
       if (!trimmed) {
@@ -179,6 +171,25 @@ export default function Productos({ productos = [], setProductos }) {
       return;
     }
     setNuevo(n => ({ ...n, [name]: value }));
+  };
+
+  const handleImagenFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const blobUrl = URL.createObjectURL(file);
+    setNuevo(n => ({ ...n, imagenPreview: blobUrl }));
+    setImagenUrlError('');
+    setImagenUploading(true);
+    try {
+      const { url } = await api.uploadImagen(file);
+      setNuevo(n => ({ ...n, imagenPreview: url }));
+    } catch (err) {
+      setImagenUrlError(`Error al subir imagen: ${err.message}`);
+      setNuevo(n => ({ ...n, imagenPreview: '' }));
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+      setImagenUploading(false);
+    }
   };
 
   const handleSubmit = async e => {
@@ -841,7 +852,8 @@ export default function Productos({ productos = [], setProductos }) {
   };
 
   const imagenPreviewValida = useMemo(
-    () => typeof nuevo.imagenPreview === 'string' && !!nuevo.imagenPreview.trim() && isHttpUrl(nuevo.imagenPreview),
+    () => typeof nuevo.imagenPreview === 'string' && !!nuevo.imagenPreview.trim() &&
+      (isHttpUrl(nuevo.imagenPreview) || nuevo.imagenPreview.startsWith('blob:')),
     [nuevo.imagenPreview]
   );
 
@@ -1277,19 +1289,27 @@ export default function Productos({ productos = [], setProductos }) {
                 onChange={handleChange}
                 placeholder="URL de imagen (https://...)"
                 type="text"
+                disabled={imagenUploading}
               />
             </label>
+            <label className="field-label">O subir archivo
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleImagenFileChange}
+                disabled={imagenUploading}
+                className="imagen-file-input"
+              />
+            </label>
+            {imagenUploading && <p className="imagen-uploading-msg">Subiendo imagen...</p>}
             {imagenUrlError && <p className="input-error">{imagenUrlError}</p>}
             {imagenPreviewValida && (
               <div className="panel-image-preview">
                 <img src={nuevo.imagenPreview} alt="Vista previa" />
               </div>
             )}
-            <label className="field-label">Archivo de imagen
-              <AppInput name="imagen" type="file" accept="image/*" onChange={handleChange} />
-            </label>
             <div className="form-actions">
-              <AppButton type="submit">{editando !== null ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="submit" disabled={imagenUploading}>{editando !== null ? 'Guardar cambios' : 'Guardar'}</AppButton>
               <AppButton type="button" onClick={cerrarPanel}>Cancelar</AppButton>
             </div>
           </form>
