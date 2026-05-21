@@ -2,7 +2,7 @@
   "name": "mercatus-release",
   "private": true,
   "type": "module",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Release automation for Mercatus",
   "scripts": {
     "release": "semantic-release",
