@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import './Productos.css';
 import { FilterSlot } from '../../shared/lib/filterPanel';
 import jsPDF from 'jspdf';
@@ -68,6 +68,7 @@ export default function Productos({ productos = [], setProductos }) {
   const [productoExpandidoId, setProductoExpandidoId] = useState(null);
   const [imagenUrlError, setImagenUrlError] = useState('');
   const [imagenUploading, setImagenUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [sortBy, setSortBy] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -194,12 +195,13 @@ export default function Productos({ productos = [], setProductos }) {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!setProductos) return;
+    if (saving || !setProductos) return;
     if (imagenUrlError) {
       await appAlert('Corrige la URL de imagen antes de guardar.');
       return;
     }
 
+    setSaving(true);
     try {
       if (editando !== null) {
         const updated = await api.updateProducto(editando, toApiProducto(nuevo));
@@ -214,6 +216,8 @@ export default function Productos({ productos = [], setProductos }) {
       setImagenUrlError('');
     } catch (error) {
       await appAlert(`Error guardando producto: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1309,7 +1313,7 @@ export default function Productos({ productos = [], setProductos }) {
               </div>
             )}
             <div className="form-actions">
-              <AppButton type="submit" disabled={imagenUploading}>{editando !== null ? 'Guardar cambios' : 'Guardar'}</AppButton>
+              <AppButton type="submit" disabled={imagenUploading || saving}>{saving ? 'Guardando...' : (editando !== null ? 'Guardar cambios' : 'Guardar')}</AppButton>
               <AppButton type="button" onClick={cerrarPanel}>Cancelar</AppButton>
             </div>
           </form>

@@ -104,9 +104,42 @@ async function requestText(path, options = {}) {
   return response.text();
 }
 
+// ── Cache en memoria ──────────────────────────────────────────────────────────
+// TTL: datos de referencia (clientes, empaques, roles…) — 2 minutos
+const _cache = new Map();    // path → { data, expiresAt }
+const _inFlight = new Map(); // path → Promise (deduplicación de llamadas simultáneas)
+const CACHE_TTL_MS = 2 * 60 * 1000;
+
+function cacheGet(key) {
+  const entry = _cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { _cache.delete(key); return null; }
+  return entry.data;
+}
+function cacheSet(key, data) {
+  _cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+function cacheInvalidate(prefix) {
+  for (const key of _cache.keys()) { if (key.startsWith(prefix)) _cache.delete(key); }
+}
+function cacheClearAll() { _cache.clear(); _inFlight.clear(); }
+
+/** GET con caché + deduplicación de requests simultáneos */
+function cachedRequest(path) {
+  const cached = cacheGet(path);
+  if (cached !== null) return Promise.resolve(cached);
+  if (_inFlight.has(path)) return _inFlight.get(path);
+  const promise = request(path)
+    .then(data => { cacheSet(path, data); return data; })
+    .finally(() => { _inFlight.delete(path); });
+  _inFlight.set(path, promise);
+  return promise;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const api = {
   setAuthToken: (token) => setToken(token),
-  clearAuthToken: () => setToken(''),
+  clearAuthToken: () => { setToken(''); cacheClearAll(); },
   getAuthToken: () => getToken(),
 
   login: (correo, password) =>
@@ -125,13 +158,16 @@ export const api = {
       body: JSON.stringify({ token, newPassword }),
     }),
   me: () => request('/usuarios/me'),
-  getUsuarios: () => request('/usuarios'),
+  getUsuarios: () => cachedRequest('/usuarios'),
   createUsuario: (payload) =>
-    request('/usuarios', { method: 'POST', body: JSON.stringify(payload) }),
+    request('/usuarios', { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/usuarios'); return r; }),
   updateUsuario: (id, payload) =>
-    request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/usuarios'); return r; }),
   deleteUsuario: (id) =>
-    request(`/usuarios/${id}`, { method: 'DELETE' }),
+    request(`/usuarios/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/usuarios'); return r; }),
   cambiarPassword: ({ passwordNueva }) =>
     request('/usuarios/cambiar-password', {
       method: 'POST',
@@ -177,35 +213,50 @@ export const api = {
     }),
   getMovimientosProducto: (id, limit = 10) =>
     request(`/productos/${id}/movimientos?limit=${encodeURIComponent(limit)}`),
-  getEmpaques: () => request('/empaques'),
+  getEmpaques: () => cachedRequest('/empaques'),
   createEmpaque: (payload) =>
-    request('/empaques', { method: 'POST', body: JSON.stringify(payload) }),
+    request('/empaques', { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/empaques'); return r; }),
   updateEmpaque: (id, payload) =>
-    request(`/empaques/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request(`/empaques/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/empaques'); return r; }),
   deleteEmpaque: (id) =>
-    request(`/empaques/${id}`, { method: 'DELETE' }),
+    request(`/empaques/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/empaques'); return r; }),
 
   // Tipos IVA
-  getTiposIva: () => request('/tipos-iva'),
-  createTipoIva: (data) => request('/tipos-iva', { method: 'POST', body: JSON.stringify(data) }),
-  updateTipoIva: (id, data) => request(`/tipos-iva/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deleteTipoIva: (id) => request(`/tipos-iva/${id}`, { method: 'DELETE' }),
+  getTiposIva: () => cachedRequest('/tipos-iva'),
+  createTipoIva: (data) =>
+    request('/tipos-iva', { method: 'POST', body: JSON.stringify(data) })
+      .then(r => { cacheInvalidate('/tipos-iva'); return r; }),
+  updateTipoIva: (id, data) =>
+    request(`/tipos-iva/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+      .then(r => { cacheInvalidate('/tipos-iva'); return r; }),
+  deleteTipoIva: (id) =>
+    request(`/tipos-iva/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/tipos-iva'); return r; }),
 
-  getClientes: () => request('/clientes'),
+  getClientes: () => cachedRequest('/clientes'),
   createCliente: (payload) =>
-    request('/clientes', { method: 'POST', body: JSON.stringify(payload) }),
+    request('/clientes', { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/clientes'); return r; }),
   updateCliente: (id, payload) =>
-    request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/clientes'); return r; }),
   deleteCliente: (id) =>
-    request(`/clientes/${id}`, { method: 'DELETE' }),
+    request(`/clientes/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/clientes'); return r; }),
 
-  getDepartamentos: () => request('/ubicaciones/departamentos'),
+  getDepartamentos: () => cachedRequest('/ubicaciones/departamentos'),
   createDepartamento: (payload) =>
-    request('/ubicaciones/departamentos', { method: 'POST', body: JSON.stringify(payload) }),
+    request('/ubicaciones/departamentos', { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/ubicaciones/departamentos'); return r; }),
   updateDepartamento: (id, payload) =>
-    request(`/ubicaciones/departamentos/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    request(`/ubicaciones/departamentos/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/ubicaciones/departamentos'); return r; }),
   deleteDepartamento: (id) =>
-    request(`/ubicaciones/departamentos/${id}`, { method: 'DELETE' }),
+    request(`/ubicaciones/departamentos/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/ubicaciones/departamentos'); return r; }),
 
   getBarrios: (departamentoId) => {
     const url = departamentoId
@@ -307,24 +358,31 @@ export const api = {
   },
 
   // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────
-  getConfigEmpresa: () => request('/configuracion/empresa'),
+  getConfigEmpresa: () => cachedRequest('/configuracion/empresa'),
   updateConfigEmpresa: (payload) =>
-    request('/configuracion/empresa', { method: 'PUT', body: JSON.stringify(payload) }),
-  getConfigModulos: () => request('/configuracion/modulos'),
+    request('/configuracion/empresa', { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/configuracion/empresa'); return r; }),
+  getConfigModulos: () => cachedRequest('/configuracion/modulos'),
   updateConfigModulo: (codigo, habilitado) =>
     request(`/configuracion/modulos/${codigo}`, {
       method: 'PUT',
       body: JSON.stringify({ habilitado }),
-    }),
-  getConfigGanancias: () => request('/configuracion/ganancias'),
+    }).then(r => { cacheInvalidate('/configuracion/modulos'); return r; }),
+  getConfigGanancias: () => cachedRequest('/configuracion/ganancias'),
   updateConfigGanancias: (payload) =>
-    request('/configuracion/ganancias', { method: 'PUT', body: JSON.stringify(payload) }),
+    request('/configuracion/ganancias', { method: 'PUT', body: JSON.stringify(payload) })
+      .then(r => { cacheInvalidate('/configuracion/ganancias'); return r; }),
 
   // ── PERMISOS ────────────────────────────────────────────────────────────────
-  getRoles: () => request('/permisos/roles'),
-  crearRol: (nombre) => request('/permisos/roles', { method: 'POST', body: JSON.stringify({ nombre }) }),
-  eliminarRol: (id) => request(`/permisos/roles/${id}`, { method: 'DELETE' }),
-  getPermisos: (rolId) => request(`/permisos/${rolId}`),
+  getRoles: () => cachedRequest('/permisos/roles'),
+  crearRol: (nombre) =>
+    request('/permisos/roles', { method: 'POST', body: JSON.stringify({ nombre }) })
+      .then(r => { cacheInvalidate('/permisos'); return r; }),
+  eliminarRol: (id) =>
+    request(`/permisos/roles/${id}`, { method: 'DELETE' })
+      .then(r => { cacheInvalidate('/permisos'); return r; }),
+  getPermisos: (rolId) => cachedRequest(`/permisos/${rolId}`),
   updatePermisos: (rolId, permisos) =>
-    request(`/permisos/${rolId}`, { method: 'PUT', body: JSON.stringify(permisos) }),
+    request(`/permisos/${rolId}`, { method: 'PUT', body: JSON.stringify(permisos) })
+      .then(r => { cacheInvalidate('/permisos'); return r; }),
 };

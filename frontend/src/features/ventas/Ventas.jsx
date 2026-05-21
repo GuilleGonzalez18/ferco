@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import './Ventas.css';
 import { api } from '../../core/api';
 import { useConfig } from '../../core/ConfigContext';
@@ -246,6 +246,31 @@ const ProductoCatalogCard = memo(function ProductoCatalogCard({
   );
 });
 
+function CartItemQtyInput({ itemId, displayValue, onCommit, fieldId }) {
+  const [raw, setRaw] = useState(String(displayValue));
+  useEffect(() => { setRaw(String(displayValue)); }, [displayValue]);
+  const handleBlur = () => {
+    const parsed = Math.floor(toNumber(raw));
+    if (!raw.trim() || parsed < 1) {
+      setRaw(String(displayValue));
+    } else {
+      onCommit(itemId, parsed);
+      setRaw(String(parsed));
+    }
+  };
+  return (
+    <AppInput
+      id={fieldId}
+      type="number"
+      min="1"
+      step="1"
+      value={raw}
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={handleBlur}
+    />
+  );
+}
+
 const DiscountModal = memo(function DiscountModal({
   open,
   title,
@@ -388,6 +413,7 @@ export default function Ventas({
   const [ventaFinalizada, setVentaFinalizada] = useState(null);
   const [ticketImpreso, setTicketImpreso] = useState(false);
   const [cfeLoading, setCfeLoading] = useState(false);
+  const [submittingVenta, setSubmittingVenta] = useState(false);
   const [clientes, setClientes] = useState([]);
   const [carritoRestaurado, setCarritoRestaurado] = useState(false);
   const [flashIds, setFlashIds] = useState(new Set());
@@ -576,19 +602,22 @@ export default function Ventas({
     });
   }, [carritoKey]); // solo al montar (carritoKey es estable)
 
+  const busquedaDeferred = useDeferredValue(busqueda);
+  const busquedaClienteDeferred = useDeferredValue(busquedaCliente);
+
   const productosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = busquedaDeferred.trim().toLowerCase();
     if (!q) return productos;
     return productos.filter((p) =>
       `${p.nombre || ''} ${p.ean || ''}`.toLowerCase().includes(q)
     );
-  }, [productos, busqueda]);
+  }, [productos, busquedaDeferred]);
 
   const clientesFiltrados = useMemo(() => {
-    const q = busquedaCliente.trim().toLowerCase();
+    const q = busquedaClienteDeferred.trim().toLowerCase();
     if (!q) return clientes;
     return clientes.filter((c) => c.nombre.toLowerCase().includes(q));
-  }, [busquedaCliente, clientes]);
+  }, [busquedaClienteDeferred, clientes]);
 
   const abrirNuevoClienteModal = async () => {
     setNuevoClienteForm(NUEVO_CLIENTE_EMPTY);
@@ -1327,6 +1356,7 @@ export default function Ventas({
   };
 
   const confirmarVenta = async () => {
+    if (submittingVenta) return;
     if (!clienteId || !fechaEntrega) {
       await appAlert('Debes seleccionar cliente y fecha de entrega.');
       return;
@@ -1350,6 +1380,7 @@ export default function Ventas({
       return acc;
     }, {});
 
+    setSubmittingVenta(true);
     try {
       const ventaCreada = await api.createVenta({
         usuario_id: user?.id ?? null,
@@ -1434,6 +1465,8 @@ export default function Ventas({
       }
     } catch (error) {
       await appAlert(`No se pudo registrar la venta: ${error.message}`);
+    } finally {
+      setSubmittingVenta(false);
     }
   };
 
@@ -1720,17 +1753,15 @@ export default function Ventas({
                     <label htmlFor={ventasFieldId('item', itemIdPart, 'unidades')}>
                       {item.modoVenta === 'empaque' ? (item.tipoEmpaque || 'Empaques') : 'Unidades'}
                     </label>
-                    <AppInput
-                      id={ventasFieldId('item', itemIdPart, 'unidades')}
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={
+                    <CartItemQtyInput
+                      itemId={item.id}
+                      displayValue={
                         item.modoVenta === 'empaque'
                           ? Math.max(1, Math.floor(toNumber(item.unidadesSolicitadas) / Math.max(1, Math.floor(toNumber(item.unidadesPorEmpaque)))))
                           : item.unidadesSolicitadas
                       }
-                      onChange={(e) => updateUnits(item.id, e.target.value)}
+                      onCommit={updateUnits}
+                      fieldId={ventasFieldId('item', itemIdPart, 'unidades')}
                     />
                   </div>
                   <div className="descuentos-item">
@@ -1976,7 +2007,7 @@ export default function Ventas({
               ) : (
                 <>
                   <AppButton id={ventasButtonId('paso', 'pago', 'atras')} type="button" className="secundario" onClick={goBack}>Atrás</AppButton>
-                  <AppButton id={ventasButtonId('venta', 'confirmar')} type="button" className="confirmar" onClick={confirmarVenta}>Confirmar venta</AppButton>
+                  <AppButton id={ventasButtonId('venta', 'confirmar')} type="button" className="confirmar" onClick={confirmarVenta} disabled={submittingVenta}>{submittingVenta ? 'Confirmando...' : 'Confirmar venta'}</AppButton>
                 </>
               )}
             </div>
