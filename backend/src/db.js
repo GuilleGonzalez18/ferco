@@ -7,6 +7,10 @@ const { Pool } = pg;
 // muestra un día menos en zonas UTC-X.
 pg.types.setTypeParser(1082, (val) => val);
 
+// Mismo problema con TIMESTAMP WITHOUT TIME ZONE (OID 1114):
+// fecha_entrega en ventas está definida como este tipo.
+pg.types.setTypeParser(1114, (val) => val);
+
 export const pool = new Pool({
   host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
   port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),
