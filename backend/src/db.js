@@ -2,6 +2,11 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+// Devolver columnas DATE (OID 1082) como strings "YYYY-MM-DD" en vez de objetos Date.
+// Sin esto el driver las convierte a medianoche UTC y el frontend
+// muestra un día menos en zonas UTC-X.
+pg.types.setTypeParser(1082, (val) => val);
+
 export const pool = new Pool({
   host: process.env.PGHOST || process.env.DB_HOST || 'localhost',
   port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),

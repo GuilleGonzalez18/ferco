@@ -101,9 +101,12 @@ function formatDateTime(value) {
 
 function formatDateOnly(value) {
   if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString('es-UY', {
+  // Extraer solo YYYY-MM-DD del string (maneja tanto "2026-05-23" como "2026-05-23T00:00:00.000Z")
+  // y construir como fecha LOCAL para evitar el desplazamiento UTC-X.
+  const iso = String(value).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return String(value);
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-UY', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

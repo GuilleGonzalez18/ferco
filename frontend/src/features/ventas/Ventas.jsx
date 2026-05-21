@@ -1155,7 +1155,7 @@ export default function Ventas({
         `Dirección: ${ventaFinalizada.clienteDireccion || '-'}`,
       ],
       [
-        `Fecha entrega: ${new Date(ventaFinalizada.fechaEntrega).toLocaleDateString('es-UY')}`,
+        `Fecha entrega: ${(() => { const iso = String(ventaFinalizada.fechaEntrega || '').slice(0, 10); const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-UY'); })()}`,
         `Horarios: ${ventaFinalizada.clienteHorarios || '-'}`,
       ],
     ];
