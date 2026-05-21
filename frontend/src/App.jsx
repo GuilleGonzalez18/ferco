@@ -15,7 +15,11 @@ import { PermisosProvider } from './core/PermisosContext';
 function AppShell({ user, onLogout }) {
   const { empresa, loading } = useConfig();
   const [wizardCompleto, setWizardCompleto] = useState(false);
-  const [pantalla, setPantalla] = useState('');
+  const [pantalla, setPantalla] = useState(() => localStorage.getItem(PANTALLA_KEY) || '');
+
+  useEffect(() => {
+    localStorage.setItem(PANTALLA_KEY, pantalla);
+  }, [pantalla]);
   const [productos, setProductos] = useState([]);
   const [productosError, setProductosError] = useState('');
 
@@ -74,6 +78,7 @@ function AppShell({ user, onLogout }) {
 }
 
 const USER_KEY = 'mercatus_user';
+const PANTALLA_KEY = 'mercatus_pantalla';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -142,6 +147,7 @@ function App() {
   const handleLogout = () => {
     api.clearAuthToken();
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(PANTALLA_KEY);
     setUser(null);
   };
 
