@@ -1498,7 +1498,7 @@ export default function VentasHistorial() {
                 <span>{item.producto_nombre || `Producto #${item.producto_id}`}</span>
                 <span>{item.cantidad} u.</span>
                 <span>{formatCurrency(item.precio_unitario)}</span>
-                <strong>{formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0))}</strong>
+                <strong>{formatCurrency(Number(item.cantidad || 0) * Number(item.precio_unitario || 0) - Number(item.descuento_aplicado || 0) - Number(item.descuento_packs_aplicado || 0))}</strong>
               </li>
             ))}
           </ul>
